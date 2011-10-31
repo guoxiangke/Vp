@@ -1,0 +1,6 @@
+name = sina
+description = 表单执行顺序之需.
+core = 6.x
+package = A-DEV
+//dependencies[] = sina_vp
+//dependencies[] = sina_open

@@ -1,0 +1,45 @@
+<?php
+/**
+ * @author dale
+ * @version $Id$
+ * @copyright dale
+ * @package sina
+ */
+/**
+ * @Implement of hook_comment()
+ * copy form sina_open_comment()
+ */
+function sina_comment(&$comment, $op) {
+  if ($op == 'insert' && isset($comment['sina_vp_open']) && variable_get('sina_open_comment', 1)) {
+    if($comment['sina_vp_open']['check']) {
+      sina_open_t_set_tweet2(
+        $comment['sina_vp_open']['title'] ? $comment['sina_vp_open']['title'] : $comment['subject'],
+        url('node/'.$comment['nid'], array('absolute' => true, 'fragment' => 'comment-'. $comment['cid']))
+				,$comment //dale 新添comment
+      );
+    }
+  }
+}
+
+/**
+ * Implementation of hook_form_alter(). 
+ * @Where sina_vp_open_set_tweet_form in sina_open.module
+ * @Do before set_tweet ,insert into our Additional db_table sina_weibo2node info.
+ */
+function sina_form_alter(&$form, $form_state, $form_id) {
+	$dispalyNone_forms = array(
+		'devel_execute_block_form',
+		'search_theme_form',
+		'search_block_form',
+		'devel_switch_user_form',
+		'user_login_block'
+	);
+	if(in_array($form_id, $dispalyNone_forms)){
+		//donothing...
+	}else{
+		if(function_exists(dpm)) dpm($form,$form_id);
+	}
+}
+/**
+ * @} End of "sina.module".
+ */

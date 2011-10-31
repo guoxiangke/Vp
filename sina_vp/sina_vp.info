@@ -1,0 +1,6 @@
+name = sina_vp
+description = vp sina module.
+core = 6.x
+package = A-DEV
+dependencies[] = flag
+dependencies[] = sina_open

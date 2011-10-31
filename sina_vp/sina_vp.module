@@ -1,0 +1,451 @@
+<?php
+/**
+ * @author dale
+ * @version $Id$
+ * @copyright dale
+ * @package sina
+ */
+
+/**
+ * @file
+ * This is an sina_open module extended.
+ */
+module_load_include('inc', 'node', 'node.pages');//调用节点发布相关
+
+/**
+ * Implementation of hook_node_info().
+ * Define module-provided node types.
+ */
+function sina_vp_node_info() {
+  $items = array(
+    'weibo' => array(
+      'name' => t('weibo'),
+      'module' => 'sina',
+      'description' => 'weibo note type',
+      'title_label' => t('Title'),
+      //'has_body' => '1',
+      //'body_label' => 'Body',
+      'help' => 'sina_vp_node_info help',
+      'node_options' => array (
+        'status' => true,
+        'promote' => false,
+        'sticky' => false,
+        'revision' => false,
+      ),
+      'comment' => '1',
+    ),
+  );
+  return $items;
+}
+//If you implement this hook you MUST also implement a hook_form() 
+//if you want that node type to appear in the content type list.
+/*
+ * Implementation of hook_form().
+ * Display a node editing form. 
+ */
+function sina_vp_form(&$node, &$param) 
+{
+  $node_form = node_content_form($node, $form_state);
+  return $node_form;
+}
+
+/*
+ * Implementation of hook_nodeapi().
+ * Act on nodes defined by other modules.
+ */
+function sina_vp_nodeapi(&$node, $op) 
+{
+	//copy form sina_open_nodeapi
+	if ($op == 'insert' && variable_get('sina_open_node_'.$node->type, 1) && $node->sina_vp_open) {
+    global $user;
+
+    if($node->sina_vp_open['check']) {
+      if (db_result(db_query('SELECT uid FROM {sina_open_user} WHERE uid = %d', $user->uid))) {
+        $url = url('node/'.$node->nid, array('absolute' => true));
+        
+        sina_open_t_set_tweet2(//dale ,发布图片 add pram @$node->nid callback function sina.module
+          $node->sina_vp_open['title'] ? $node->sina_vp_open['title'] : $node->title,
+          url('node/'.$node->nid, array('absolute' => true))
+		  		,$node //传递节点 dale
+        );
+				//发布节点后不跳转node页 与简洁链接。dale
+				// 需完善 参 http://www.ludou.org/get_current_page_url.html
+				//$uri=preg_replace($patterns2, $replacements, $string);
+				//str_replace('q=','',$_SERVER['QUERY_STRING']);
+				//drupal_goto('vp/user_timeline');
+      } else {
+        drupal_set_message('您需要先绑定新浪微博帐号，才能够推送信息。', 'error');
+      }
+    }
+
+  }
+  switch( $node->type )
+  {
+    case 'weibo':
+      switch ($op) {
+        case 'insert':
+		  $node->body=$node->title;	
+	      drupal_write_record('node_revisions', $node, 'vid');	
+          break;
+        case 'update':
+          $node->body=$node->title;	
+	      drupal_write_record('node_revisions', $node, 'vid');
+          break;
+        case 'delete':    
+					$wid= sina_vp_get_wid($node->nid);
+					$request_url="http://api.t.sina.com.cn/statuses/destroy/$wid.json"; 
+					$result = sina_open_t_set_request($request_url);
+					if ($result->code == 200) {
+						drupal_set_message($message = '同步删除成功！', $type = 'status', $repeat = TRUE);
+						db_query("DELETE FROM {sina_vp_weibo2node} WHERE nid = %d", $node->nid); 			
+						if(function_exists(dpm)) dpm(json_decode($result->data));			
+					} else {
+						drupal_set_message($message = '同步删除失败！', $type = 'warning', $repeat = TRUE);
+						return false;
+					}	       
+          break;
+        case 'prepare':
+          //
+          break;
+        case 'view':
+          break;
+        case 'load':
+          break;
+      }
+      break;
+	//发布任务跳转列表页
+	case 'story':
+		 switch ($op) {
+	        case 'insert':
+		      drupal_goto('tasklist');	
+	          break;
+	        case 'update':
+	          drupal_goto('tasklist');
+	          break;
+			 }
+	break;
+  }
+}
+/**
+ * Implementation of hook_perm().
+ */
+function sina_vp_perm() {
+  return array(
+  'create weibo entries', 
+  'delete weibo entries', 
+  'delete any weibo entry', 
+  'edit weibo entries', 
+  'edit weibo entry'
+  );
+}
+
+/**
+ * Implementation of hook_access().
+ */
+function sina_vp_access($op, $node, $account) {
+  switch ($op) {
+    case 'create':
+      // Anonymous users cannot post even if they have the permission. 
+      return user_access('create weibo entries', $account) && $account->uid ? TRUE : NULL;
+    case 'update':
+      return user_access('edit any weibo entry', $account) || (user_access('edit own weibo entries', $account) && ($node->uid == $account->uid)) ? TRUE : NULL;
+    case 'delete':
+      return user_access('delete any weibo entry', $account) || (user_access('delete own weibo entries', $account) && ($node->uid == $account->uid)) ? TRUE : NULL;
+  }
+}
+function sina_vp_init(){
+  drupal_add_css(drupal_get_path('module', 'sina') .'/css/sina.user.page.css');
+}
+/**
+ * Implementation of hook_menu().
+ */
+function sina_vp_menu() {  
+	$items['vp'] = array(
+		'title' => t('Vp'),
+		//'menu_name' => 'primary-links',
+		'page callback' => 'public_page',
+		'access callback' => TRUE,
+		'file' => 'sina_vp.pages.inc',
+		'weight' => -20,
+  );
+  $items['vp/user_timeline'] = array(
+    'title' => t('MyVp'),//'menu_name' => 'Secondary_links',
+    'page callback' => 'sina_vp_user_timeline',
+    'access callback' => TRUE,
+    'description' => t('public_timeline'),
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -20,
+		//'type' => MENU_LOCAL_TASK,
+  );
+  $items['vp/public_timeline'] = array(
+    'title' => t('VpCenter'),//'menu_name' => 'Secondary_links',
+    'page callback' => 'sina_vp_public_timeline',
+    'access callback' => TRUE,
+    'description' => t('public_timeline'),
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -20,
+		//'type' => MENU_LOCAL_TASK,
+  ); 
+  $items['weibo/home/arguments/%/%'] = array(
+    'title' => 'Page example with arguments',
+    'page callback' => 'sina_vp_arguments',
+    'page arguments' => array(3, 4),
+    'access arguments' => array('access arguments page'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+/**
+ * 新添数据库记录关联节点，存储新浪微博元数据. 
+ */
+function _sina_vp_db_write($data,$node){
+		if(isset($node->type)){//if $node is a node 拥有type属性
+			$nid = $node->nid;
+			$cid = 0;
+			$datas = $node->title;
+		}elseif(isset($node[cid])){//if is $comment is_array &&cid属性
+			$nid = $node[nid];
+			$cid = $node[cid];
+			$datas = $node[subject];
+		}
+		global $user;
+		if(!empty($data)&&(!is_null($data))){//离线wdata字段为标题
+			$wdata = json_decode($data);
+			$datas = $data;
+		}  
+		$wid   = $wdata?$wdata->id:0;
+		$created_at = $wdata?strtotime($wdata->created_at):time();
+		db_query("INSERT INTO {sina_vp_weibo2node}(`nid` ,`uid` ,`cid`,`wid` ,`data`,`created_at`)
+			VALUES ('%d','%d','%d','%d','%s','%d')",$nid,$user->uid,$cid,$wid,$datas,$created_at);
+}
+/**
+ * Implementation of hook_form_alter(). 
+ * @Where sina_vp_open_set_tweet_form in sina_open.module
+ * @Do before set_tweet ,insert into our Additional db_table sina_weibo2node info.
+ */
+function sina_vp_form_alter(&$form, $form_state, $form_id) {
+	if($form['sina_open'] && $form_id != 'sina_open_set_tweet_form'){
+		$form['sina_vp_open']=$form['sina_open'];
+		unset($form['sina_open']);
+	}
+/**
+ * hidden other thing when post a new weibo (type) node..
+ */
+	if($form_id == 'weibo_node_form'){
+		$form['comment_settings']['#access']=FALSE;	
+		$form['menu']['#access']=FALSE;	
+		$form['revision_information']['#access']=FALSE;	
+		$form['buttons']['preview']['#access']=FALSE;	
+		$form['author']['#access']=FALSE;
+		$form['options']['#access']=FALSE;
+		$form['title']['#description'] = '最多140个字符，中英文均算一个字符。还可以输入<strong id="sina_open_tweet_text_count"></strong>个字符。';
+		//$form['title']['#type']='textarea';
+		$form['flag']['#access']=FALSE;
+		$form['body_field']['#access']=FALSE;			
+		//$form['sina_open']='hidden';	//寻找表单执行顺序。
+		$form['sina_vp_open']['check']['#default_value'] =1;//默认设置 发布微薄到新浪上
+		$form['sina_vp_open']['title']['#access']=FALSE;	
+		//$form['sina_open']['#access']=FALSE;
+	}
+	/**
+	 * hidden  comment-form for weibo node
+	 */
+	$node = node_load($form[nid]['#value']);
+	if(($form_id == 'comment_form')&&($node->type=='weibo')){
+		$form['sina_vp_open']['check']['#default_value'] =1;//默认设置 发布微薄到新浪上
+		$form['sina_vp_open']['title']['#access']=FALSE;	
+		$form['comment_filter']['comment']['#type'] = 'textfield';
+		//$form['comment_filter']['comment']['#size'] = '10';
+		$form['comment_filter']['comment']['#hieght'] = '2';
+		$form['comment_filter']['comment']['#maxlength'] = '140';
+		$form['_author']['#type']['#access']=FALSE;
+		$form['comment_filter']['format']['#type']['#access']=FALSE;
+		$form['comment_filter']['comment']['#description'] = '最多140个字符，中英文均算一个字符。还可以输入<strong id="sina_open_tweet_text_count"></strong>个字符。';
+		$form['preview']['#type']['#access']=FALSE;
+		drupal_add_js(drupal_get_path('module', 'sina_vp') .'/sina_vp_comment.js');
+	}
+  return $form;
+}
+/**
+ * 发带图片的微博   节点 
+ * @param (string) $text
+ *  文字内容
+ * @param (string) $url
+ *  访问地址
+ * @param (mixd) $node 
+ *  节点
+ */
+function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NUll
+  if (isset($url)) {
+    $len = drupal_strlen($url);
+  } else {
+    $len = 0;
+  }
+  $len = 140 - drupal_strlen($text) + $len;
+  
+  if ($len < 0) {
+    $text = drupal_substr($text, 0, $len);
+  }
+  //对评论或发布判断。
+  $donext=false;
+	if(isset($node->type)){//if is $node 拥有type属性
+		$donext=true;
+	}elseif(isset($node[cid])){//if is $comment is_array &&cid属性
+		$request_url='http://api.t.sina.com.cn/statuses/comment.json'; 
+		$wid= sina_vp_get_wid($node[nid]);
+		$params['id'] = $wid;
+		$params['comment'] = urlencode($text. $url);
+		$params['without_mention'] = 0;
+		$params['comment_ori'] = 1;
+		//watchdog('$params',print_r($params,true));
+		/* some API
+			id 	true 	int64 	要评论的微博消息ID
+			comment 	true 	string 	评论内容。必须做URLEncode,信息内容不超过140个汉字。
+			cid 	false 	int64 	要回复的评论ID。
+			without_mention 	false 	int 	1：回复中不自动加入“回复@用户名”，0：回复中自动加入“回复@用户名”.默认为0.
+			comment_ori 	false 	int 	当评论一条转发微博时，是否评论给原微博。0:不评论给原微博。1：评论给原微博。默认0. 
+		*/
+		$result = sina_open_t_set_request($request_url,$params);
+		//watchdog('$params22','<pre>'.print_r($result,true));
+		_sina_vp_db_write($result->data,$node);//dale $node or $comment  
+		if ($result->code == 200) {
+			//watchdog('success','已成功发送到新浪微博2026'); 			
+			if(function_exists(dpm)) dpm(json_decode($result->data));//没效果，注销了 
+			drupal_set_message('评论已成功发送到新浪微博');	//没效果，注销了	
+		} else {
+			drupal_set_message('评论转发失败 code:201109262026');
+			watchdog('warning','评论转发失败 code:201109262026');
+		}	
+	}
+	if($donext){//发布节点，同步新浪微博
+	  if(is_null($node->field_weibo_image[0])){
+	  	$result = sina_open_t_set_request(
+		    'http://api.t.sina.com.cn/statuses/update.json',
+		    array('status' => urlencode($text. $url))
+		  );
+		  _sina_vp_db_write($result->data,$node);//dale $node or $comment
+		  if ($result->code == 200) {	    	
+			if(function_exists(dpm)) dpm(json_decode($result->data),'微博返回信息');				  			
+			drupal_set_message('已成功发送到新浪微博');
+		  }else{
+		    drupal_set_message('发送到新浪微博失败，错误代码：2011100701，请联系管理员xiangkeguo@gmail.com。', 'warning');
+		  }
+	  }else{//发 布图片微薄
+	  	$status =	urlencode($text. $url);
+	  	$pic_path = $node->field_weibo_image[0][filepath];
+		  global $user;
+			module_load_include('php', 'sina', 'api/weibooauth');
+			module_load_include('php', 'sina', 'api/config'); //WB_AKEY , WB_SKEY	
+			$token = sina_open_get_access_token($user->uid);
+			if(empty($token)){
+				module_load_include('inc', 'sina_open', 'sina_open.pages');
+				return sina_open_page_config(user_load($user->uid));
+			}
+			$last_key[oauth_token]=$token->key;
+			$last_key[oauth_token_secret]=$token->secret;
+			$_SESSION['last_key'] = $last_key;
+		
+			$c = new WeiboClient( WB_AKEY , WB_SKEY ,$token->key ,$token->secret );
+			$result = $c->upload($status , $pic_path);
+			if(function_exists(dpm)) dpm($result,'图片微博返回数据');
+			//$result['id']=$result['mid'];
+			$result['id']=number_format($result['id'], 0, '', '');
+			_sina_vp_db_write(json_encode($result),$node);//dale $node
+			if (is_array($result)) {
+				drupal_set_message('已成功发送到新浪微博ok with pic');
+				//if(function_exists(dpm)) dpm(json_decode($result->data));				
+			} else {
+			  drupal_set_message('同步失败，请检查您的网络！', 'error');
+			  //return false;
+			}
+	  }
+  }	
+  return $result;
+}
+/**
+ * time format function.
+ */
+function sina_vp_time_format($created_at){
+	//$created_at= Thu Sep 22 14:34:21 +0800 2011
+	$created_at=strtotime($created_at);
+	$minutes=ceil((time()-$created_at)/60)+0;
+	if($minutes<60){
+		return $minutes.'分钟前';
+	}elseif($show_hours=ceil($minutes/60)<12){
+		return $show_hours.'小时前';
+	}elseif(ceil($minutes/60)<24){
+		return '今天 '.date("H:i",$created_at);
+	}else{
+		return date("m月d日 H:i",$created_at);
+	}
+}
+/**
+ *  replace a url text to <a>link</a> not use l()
+ *  天空蔚蓝，天空依然蔚蓝。http://t.cn/adPO8F
+ *  ==>天空蔚蓝，天空依然蔚蓝。<a href="http://t.cn/adPO8F">http://t.cn/adPO8F</a>
+ * */
+function sina_vp_url_replace($string){//http:\/\/([\w.]+\/?)\S*
+	$reg='/http:\/\/([\w.]+\/?)\S*/';
+	preg_match_all ($reg, $string, $patterns);
+	$replacements = array();
+	if(empty($patterns[1])){
+		return $string;
+	}
+	foreach($patterns[0] as $value){
+		$patterns2[]="/".preg_quote($value, '/')."/";//<-错误可能是这里的 /号
+		$replacements[]='<a href="'.$value.'">'.$value.'</a>';
+	}	
+	$result=preg_replace($patterns2, $replacements, $string);//报错
+	return $result;
+}
+/**
+ *  weibo_id
+ * */
+function get_nid_by_wid($wid){
+  $sql="SELECT nid
+          FROM {sina_vp_weibo2node}
+          WHERE wid ='".$wid."'";
+  $result =db_query($sql);
+  if($row= db_fetch_array($result)){
+     return $row['nid'];
+  }
+	drupal_set_message('error! when get nid by wid.'.__FILE__.__LINE__);
+	return 0;
+}
+
+/**
+ * get wid by nid
+ */
+function sina_vp_get_wid($nid){
+	$result=db_query("SELECT `wid` wid FROM {sina_vp_weibo2node} WHERE `nid`=%d and `cid`=0",$nid);
+	return db_result($result);
+}
+/**
+ *  node_link_alter
+ * */
+function node_link_alter($type, $node = NULL, $teaser = FALSE) {
+  $links = array();
+  if ($type == 'weibo') {
+    if ($teaser == 1 && $node->teaser && !empty($node->readmore)) {
+      $links['node_read_more'] = array(
+        'title' => t('Read more'), 
+        'href' => "node/$node->nid",
+        'attributes' => array('title' => t('Read the rest of !title.', array('!title' => $node->title))),
+      );
+    }
+  }
+  return $links;
+}
+/**
+ * Implementation of hook_theme()
+ */
+function sina_vp_theme() {
+  return array(
+  	'weibo_page_default' => array(
+    	'arguments' => array('form' => NULL)
+    ),
+  );
+}
+/**
+ * @} End of "sina.module".
+ */

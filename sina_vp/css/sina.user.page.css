@@ -1,0 +1,63 @@
+.feed_lists {
+    margin-top: 15px;
+}
+
+.W_texta, a.W_texta {
+    cursor: default;
+}
+.feed_list {
+	font-style:normal;
+    margin: 0 0 17px;
+    padding: 0 0 15px;
+	border-bottom: 1px dotted #305167;
+}
+.feed_list .face {
+    display: inline;
+    float: left;
+    padding: 3px 0 6px;
+    width: 50px;
+}
+.feed_list .content {
+    word-wrap: break-word;
+}
+.feed_list .content {
+    font-size: 14px;
+    line-height: 22px;
+    margin: 0 0 0 60px;
+	word-wrap: break-word;
+}
+.clear {
+    clear: both;
+    font: 0pt/0 Arial;
+    height: 0;
+    visibility: hidden;
+}
+.feed_list .face img {
+    display: block;
+	border: 0 none;
+}
+.feed_list .content p {
+    padding-bottom: 10px;
+}
+.feed_list .content p.info {
+    padding: 3px 0 0;
+}
+.feed_list .info span {
+    display: inline;
+    float: right;
+}
+address, caption, cite, code, dfn, em, i, th, var {
+    font-style: normal;
+    font-weight: normal;
+}
+.feed_list .piclist {
+    padding: 0 0 10px;
+}
+.feed_list .piclist li {
+    display: inline;
+    margin: 0 11px 0 0;
+    vertical-align: top;
+}
+.feed_list .piclist li img.bigcursor {
+    cursor: url("http://img.t.sinajs.cn/t4/style/images/common/big.cur"), auto;
+}
