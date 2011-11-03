@@ -57,9 +57,7 @@ function sina_vp_nodeapi(&$node, $op)
 {
 	//copy form sina_open_nodeapi
 	if ($op == 'insert' && variable_get('sina_open_node_'.$node->type, 1) && $node->sina_vp_open) {
-    global $user;
-
-    if($node->sina_vp_open['check']) {
+    global $user; 
       if (db_result(db_query('SELECT uid FROM {sina_open_user} WHERE uid = %d', $user->uid))) {
         $url = url('node/'.$node->nid, array('absolute' => true));
         
@@ -76,15 +74,13 @@ function sina_vp_nodeapi(&$node, $op)
       } else {
         drupal_set_message('您需要先绑定新浪微博帐号，才能够推送信息。', 'error');
       }
-    }
-
   }
   switch( $node->type )
   {
     case 'weibo':
       switch ($op) {
         case 'insert':
-		  $node->body=$node->title;	
+		  	$node->body=$node->title;	
 	      drupal_write_record('node_revisions', $node, 'vid');	
           break;
         case 'update':
@@ -127,6 +123,21 @@ function sina_vp_nodeapi(&$node, $op)
   }
 }
 /**
+ * @Implement of hook_comment()
+ * copy form sina_open_comment()
+ */
+function sina_vp_comment(&$comment, $op) {
+  if ($op == 'insert' && isset($comment['sina_vp_open']) && variable_get('sina_open_comment', 1)) {
+    if($comment['sina_vp_open']) {
+      sina_open_t_set_tweet2(
+        $comment['subject'],
+        url('node/'.$comment['nid'], array('absolute' => true, 'fragment' => 'comment-'. $comment['cid']))
+				,$comment //dale 新添comment
+      );
+    }
+  }
+}
+/**
  * Implementation of hook_perm().
  */
 function sina_vp_perm() {
@@ -154,7 +165,8 @@ function sina_vp_access($op, $node, $account) {
   }
 }
 function sina_vp_init(){
-  drupal_add_css(drupal_get_path('module', 'sina') .'/css/sina.user.page.css');
+	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/wbt-helper.js');
+  drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/sina.user.page.css');
 }
 /**
  * Implementation of hook_menu().
@@ -180,12 +192,21 @@ function sina_vp_menu() {
   $items['vp/public_timeline'] = array(
     'title' => t('VpCenter'),//'menu_name' => 'Secondary_links',
     'page callback' => 'sina_vp_public_timeline',
-    'access callback' => TRUE,
+    //'access callback' => 'create weibo entries',
+    'access arguments'=>  array('create weibo entries'),
     'description' => t('public_timeline'),
     'file' => 'sina_vp.pages.inc',
     'weight' => -20,
 		//'type' => MENU_LOCAL_TASK,
-  ); 
+  );
+  $items['vp/public_timeline/weibo_page_default/callback/%'] = array(
+
+    'page callback' => 'weibo_page_default_callback',
+    'page arguments' => array(4),
+    'access callback' => TRUE,
+    'file' => 'autotextfields2.inc',
+    'type' => MENU_CALLBACK,
+    );
   $items['weibo/home/arguments/%/%'] = array(
     'title' => 'Page example with arguments',
     'page callback' => 'sina_vp_arguments',
@@ -224,10 +245,6 @@ function _sina_vp_db_write($data,$node){
  * @Do before set_tweet ,insert into our Additional db_table sina_weibo2node info.
  */
 function sina_vp_form_alter(&$form, $form_state, $form_id) {
-	if($form['sina_open'] && $form_id != 'sina_open_set_tweet_form'){
-		$form['sina_vp_open']=$form['sina_open'];
-		unset($form['sina_open']);
-	}
 /**
  * hidden other thing when post a new weibo (type) node..
  */
@@ -238,14 +255,40 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		$form['buttons']['preview']['#access']=FALSE;	
 		$form['author']['#access']=FALSE;
 		$form['options']['#access']=FALSE;
-		$form['title']['#description'] = '最多140个字符，中英文均算一个字符。还可以输入<strong id="sina_open_tweet_text_count"></strong>个字符。';
-		//$form['title']['#type']='textarea';
+		drupal_add_js(drupal_get_path('module', 'sina_vp') .'/sina_vp.js');
+		drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/weibo-add.css','module','screen');
+		$form['title'] = array(
+		  '#type' => 'textarea',//textfield
+		  '#description' => '请文明发言，还可以输入<strong id="sina_open_tweet_text_count"></strong>字',
+		  '#title' => t('Title'),
+		  '#default_value' => $form['title']['#default_value'],
+		  '#maxlength' => 140,
+		  //'#element_validate' =>array('sina_vp_weibo_length_validate'),
+		  //'#prefix' => '<div id="weibo-add-page">',
+  		//'#suffix' => '</div>',
+		  //'#field_prefix' => 'users photo here',	  
+		  //'#field_suffix' => t('MB')
+		  //'#required' => TRUE,\
+		  '#resizable' => FALSE,
+		);
+		$form['title']['#attributes'] = array('class' => 'publish-weibo');
 		$form['flag']['#access']=FALSE;
-		$form['body_field']['#access']=FALSE;			
-		//$form['sina_open']='hidden';	//寻找表单执行顺序。
-		$form['sina_vp_open']['check']['#default_value'] =1;//默认设置 发布微薄到新浪上
-		$form['sina_vp_open']['title']['#access']=FALSE;	
-		//$form['sina_open']['#access']=FALSE;
+		$form['body_field']['#access']=FALSE;
+	}
+	if($form['sina_open'] && $form_id != 'sina_open_set_tweet_form'){
+		$showFace ='';
+		
+		$form['add_option']=array(
+			'#type' =>'item',
+			'#value' =>'<span id="face"><a onclick="showFace()" href="javascript:;">表情</a></span>|<span id="img"><a onclick="">图片</a></span>|<span id="topic"><a onclick="insertTopic();return false;" href="javascript:;">话题</a></span>|<span id="atta">@TA</span>',
+		);
+		$form['sina_vp_open'] = array(//['check']
+      '#type' => 'checkbox',
+      '#title' => '同步到新浪',
+      '#required' => true,
+      '#default_value' => 1,
+    );
+		unset($form['sina_open']);
 	}
 	/**
 	 * hidden  comment-form for weibo node
@@ -264,7 +307,29 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		$form['preview']['#type']['#access']=FALSE;
 		drupal_add_js(drupal_get_path('module', 'sina_vp') .'/sina_vp_comment.js');
 	}
+	$dispalyNone_forms = array(
+		'devel_execute_block_form',
+		'search_theme_form',
+		'search_block_form',
+		'devel_switch_user_form',
+		'user_login_block'
+	);
+	if(in_array($form_id, $dispalyNone_forms)){
+		//donothing...
+	}else{
+		if(function_exists(dpm)) dpm($form,$form_id);
+	}
   return $form;
+}
+/**
+ * 验证》140字  noyong
+ * */
+function sina_vp_weibo_length_validate($element, &$form_state) {
+	dpm($element,'nitididi');	dpm($form_state,'2nitididi');
+  if (isset($element['#value']['title'])) {    
+      form_error($element['title'], t('The area code is invalid.'));
+  }
+  return $element;
 }
 /**
  * 发带图片的微博   节点 
@@ -281,7 +346,7 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
   } else {
     $len = 0;
   }
-  $len = 140 - drupal_strlen($text) + $len;
+  $len = 140 - drupal_strlen($text) - $len;//+ ? - 
   
   if ($len < 0) {
     $text = drupal_substr($text, 0, $len);
@@ -324,8 +389,8 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 		    array('status' => urlencode($text. $url))
 		  );
 		  _sina_vp_db_write($result->data,$node);//dale $node or $comment
-		  if ($result->code == 200) {	    	
-			if(function_exists(dpm)) dpm(json_decode($result->data),'微博返回信息');				  			
+		  if(function_exists(dpm)) dpm(json_decode($result->data),'微博返回信息');		
+		  if ($result->code == 200) {	    					  			
 			drupal_set_message('已成功发送到新浪微博');
 		  }else{
 		    drupal_set_message('发送到新浪微博失败，错误代码：2011100701，请联系管理员xiangkeguo@gmail.com。', 'warning');
@@ -446,6 +511,7 @@ function sina_vp_theme() {
     ),
   );
 }
+
 /**
  * @} End of "sina.module".
  */

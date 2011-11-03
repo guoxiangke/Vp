@@ -8,7 +8,6 @@
  * post a weibo in node.
  */
 function page_weibo_add(){
-	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/sina_vp.js');
 	//module_load_include('inc', 'node', 'node.pages');//调用节点发布相关
 	return node_add('weibo');
 }
@@ -26,7 +25,6 @@ function page_user_timeline() {
  */
 function output_weibo($ms){
 	//Final output string
-		drupal_add_css($path .  '/css/sina.user.page.css', 'module', 'screen');
     $output = '<div class="feed_lists W_linka W_texta" node-type="feed_list" pagenum="1">';
     //first   
     $timezone = "Asia/Chongqing";
@@ -104,7 +102,7 @@ function output_weibo($ms){
 									<i class="W_vline">|</i>';
 		$output .= flag_create_link('bookmarks', $node->nid);
 		$output .= '<i class="W_vline">|</i>
-									<a action-type="feed_list_comment" href="javascript:void(0);">评论('.$comments.')</a>
+									<a href="?q=examples/ahah_example/autotextfields/callback">评论</a>
 									</span>
 									<a node-type="feed_list_item_date" class="date" date="'.$created_at.'" title="'.date('Y-m-d H:m:i',$created_at).'" href="node/'.$nid.'">'.$time_string.'</a> 来自'.$source.'
 								</p>
@@ -159,7 +157,6 @@ function user_timeline_page_form_sina($delete=true){
 	drupal_set_title('user_timeline');
 	global $user;
 	$path = drupal_get_path('module', 'sina');
-	drupal_add_css($path .  '/css/sina.user.page.css', 'module', 'screen');	
 	$http_url="http://api.t.sina.com.cn/statuses/user_timeline.json";
 	$w_user_id=sina_open_t_get_info($user)->id;
 	$values=array(
@@ -221,12 +218,12 @@ function vp_center_page(){
  * Menu callback; Generate a listing of weibo nodes.
  * LIKE node_page_default IN node.module
  */
-function weibo_page_default(){	
+function weibo_page_default(&$form_state){
 	drupal_set_title('public_timeline');
   $num_rows = FALSE;	
 	$sql="select * from {sina_vp_weibo2node} WHERE cid=0 AND wid<>0 AND is_deleted=0 ORDER BY id DESC";
 	$count_query="select count(*) from {sina_vp_weibo2node} WHERE cid=0 AND is_deleted=0 AND wid<>0";
-	$result = pager_query(db_rewrite_sql($sql),1, $element = 0, $count_query);
+	$result = pager_query(db_rewrite_sql($sql),2, $element = 0, $count_query);
 	while ($record = db_fetch_object($result)) {
 			$weibo_obj=json_decode($record->data);
 			//form format weibo_obj
@@ -261,16 +258,42 @@ function weibo_page_default(){
 			$form['original_pic'][$record->nid] = array('#value' =>$original_pic);		
 			$retweeted_status=$weibo_obj->retweeted_status;//: 转发的博文，内容为status，如果不是转发，则没有此字段
 			$form['retweeted_status'][$record->nid] = array('#value' =>$retweeted_status);
+			
+			$default_first_name = !empty($form_state['values']['ask_first_name'][$record->nid]) ? $form_state['values']['ask_first_name'][$record->nid] : FALSE;
+			$form['ask_first_name'][$record->nid]['ask_first_name'] = array(
+			  '#type' => 'checkbox',
+			  '#title' => t('Add new comment'),
+			  '#default_value' => $default_first_name,
+			  '#ahah' => array(
+			    'path' => 'vp/public_timeline/weibo_page_default/callback/'.$record->nid,
+			    'wrapper' => 'textfield-wrapper-'.$record->nid,
+			    'effect' => 'fade',
+					)
+			);
+			$form['textfields'][$record->nid]['textfields'] = array(
+		    '#title' => t("Generated text fields for first and last name"),
+		    '#prefix' => '<div id="textfield-wrapper-'.$record->nid.'">',
+		    '#suffix' => '</div>',
+		    '#type' => 'fieldset',
+		    '#description' => t('This is where we put automatically generated textfields'),
+		  );
+			dpm($form_state,'001-->$form_state');
+			if (!empty($form_state['values']['ask_first_name'])) {
+		    $form['textfields'][$record->nid]['textfields']['first_name'] = array(
+		      '#type' => 'textfield',
+		      '#title' => t('First Name'),
+		    );
+		  }
 	}
  	$form['pager'] = array('#value' => theme('pager', NULL, 1, 0));
 	$form['#theme'] = 'weibo_page_default';
-	//$form['#cache'] = TRUE;
   return $form;
 }
 /**
  * 主题化 微博列表.
  */
 function theme_weibo_page_default($form){
+  $path = drupal_get_path('module', 'sina_vp');
   $has_posts = isset($form['nid']) && is_array($form['nid']);
   $select_header['width'] = '26px';
   $header = array();// t('nid'), t('wid'), t('text'), t('created_at'), t('Status2'), t('source'), t('wuid')
@@ -278,20 +301,20 @@ function theme_weibo_page_default($form){
   if ($has_posts) {
 	$output = '<div class="feed_lists W_linka W_texta" node-type="feed_list" pagenum="1">';
     foreach (element_children($form['nid']) as $key) {
-	  $row_info['nid'] = drupal_render($form['nid'][$key]);
-      $row_info['wid'] = drupal_render($form['wid'][$key]);
-      $row_info['text'] = drupal_render($form['text'][$key]);
-      $row_info['created_at'] = drupal_render($form['created_at'][$key]);
-      $row_info['screen_name'] = drupal_render($form['screen_name'][$key]);
-	  $row_info['source'] = drupal_render($form['source'][$key]);
-	  $row_info['w_uid'] = drupal_render($form['w_uid'][$key]);    
-	   
-	  $row_info['thumbnail_pic'] = drupal_render($form['thumbnail_pic']);
-	  $row_info['bmiddle_pic'] = drupal_render($form['bmiddle_pic']);
-	  $row_info['original_pic'] = drupal_render($form['original_pic']);
-	  $row_info['profile_image_url'] = drupal_render($form['profile_image_url']);
-	  $row_info['domain'] = drupal_render($form['domain']);
-	  $row_info['retweeted_status'] = drupal_render($form['retweeted_status']);
+			$row_info['nid'] = drupal_render($form['nid'][$key]);
+			$row_info['wid'] = drupal_render($form['wid'][$key]);
+			$row_info['text'] = drupal_render($form['text'][$key]);
+			$row_info['created_at'] = drupal_render($form['created_at'][$key]);
+			$row_info['screen_name'] = drupal_render($form['screen_name'][$key]);
+			$row_info['source'] = drupal_render($form['source'][$key]);
+			$row_info['w_uid'] = drupal_render($form['w_uid'][$key]);    
+			 
+			$row_info['thumbnail_pic'] = drupal_render($form['thumbnail_pic']);
+			$row_info['bmiddle_pic'] = drupal_render($form['bmiddle_pic']);
+			$row_info['original_pic'] = drupal_render($form['original_pic']);
+			$row_info['profile_image_url'] = drupal_render($form['profile_image_url']);
+			$row_info['domain'] = drupal_render($form['domain']);
+			$row_info['retweeted_status'] = drupal_render($form['retweeted_status']);
 	  $row = array();
 	  $row['nid'] =array('data' => '<img src="'.$row_info['profile_image_url'].'"/>', 'class' => 'profile_image');
       $row['wid'] =$row_info['wid'];
@@ -302,20 +325,20 @@ function theme_weibo_page_default($form){
 	  $row['w_uid'] = $row_info['w_uid'];  
 	  	   
       $rows[] = $row;
-	  $output .= '<dl class="feed_list " action-type="feed_list_item" mid="3360362947067368">';
-  	  $output .= '<dt class="face">
+			$output .= '<dl class="feed_list " action-type="feed_list_item" mid="3360362947067368">';
+			$output .= '<dt class="face">
 									<a href="'.$w_user_url.'" uid="'.$form['w_uid'][$key]['#value'].'" namecard="true" action-type="namecard" action-data="????">
 									<img src="'.$form['profile_image_url'][$key]['#value'].'" imagetype="head" uid="'.$form['w_uid'][$key]['#value'].'" title="'.$form['screen_name'][$key]['#value'].'">
 									</a>
 								</dt>';
-	  $output .= '<dd class="content">
+			$output .= '<dd class="content">
 								<p node-type="feed_list_content">
 									<a usercard="id='.$form['w_uid'][$key]['#value'].'" href="'.$w_user_url.'" title="'.$name.'" nick-name="'.$form['screen_name'][$key]['#value'].'">'.$form['screen_name'][$key]['#value'].'</a>
 									：
 									<em>'.$form['text'][$key]['#value'].'</em>
 								</p>';
 		if($thumbnail_pic){
-			$output .= '<ul node-type="feed_list_media_prev" class="piclist">
+		$output .= '<ul node-type="feed_list_media_prev" class="piclist">
 									<li>
 										<img action-type="feed_list_media_img" alt="" src="'.$thumbnail_pic.'" class="bigcursor">
 										<img class="loading_gif" src="http://img.t.sinajs.cn/t4/style/images/common/loading.gif" style="left: 39.5px; top: 52px; display: none;">
@@ -331,21 +354,22 @@ function theme_weibo_page_default($form){
 			$output .= '<dl class="comment" node-type="feed_list_media_disp" style="display: none;"></dl>';	
 		}
 		$nid = get_nid_by_wid($form['wid'][$key]['#value']);
-		if($nid==0) continue;
+		if($nid==0) continue; //>????
 		$node = node_load($nid);
 		$output .= '<p class="info W_linkb W_textb">
 									<span>
 									<a href="javascript:void(0);">转发('.$rt.')</a>
 									<i class="W_vline">|</i>';
 		$output .= flag_create_link('bookmarks', $node->nid);
-		$output .= '<i class="W_vline">|</i>
-									<a action-type="feed_list_comment" href="/comment/reply/'.$form['nid'][$key]['#value'].'#comment-form">评论('.$comments.')</a>
-									</span>
+		$output .= '<i class="W_vline">|</i>';
+		$output .= drupal_render($form['ask_first_name'][$node->nid]);
+		$output .= '</span>
 									<a node-type="feed_list_item_date" class="date" date="'.$form['created_at'][$key]['#value'].'"   href="/node/'.$node->nid.'">'.$form['created_at'][$key]['#value'].'</a> 来自'.$form['source'][$key]['#value'].'
 								</p>
 								<div class="repeat" style="display:none;" node-type="feed_list_repeat"></div>';
 								
 		$output.='</dd>';
+		$output.=drupal_render($form['textfields'][$node->nid]);
 		$output.='<dd class="clear"></dd>';
 		$output.='</dl>';
    
@@ -411,5 +435,5 @@ function sina_vp_user_timeline(){
  */
 function sina_vp_public_timeline(){
 	$output=drupal_get_form('weibo_page_default');
-	return sina_vp_linked_info().page_weibo_add().$output;
+	return sina_vp_linked_info().$output;//.page_weibo_add()
 }
