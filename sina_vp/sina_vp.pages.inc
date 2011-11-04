@@ -12,14 +12,6 @@ function page_weibo_add(){
 	return node_add('weibo');
 }
 /**
- * page_user_timeline.
- */
-module_load_include('inc', 'sina', 'sina.user.page');
-function page_user_timeline() {
-	drupal_set_title(t('个人中心'));
-	return page_weibo_add().user_timeline_page();
-}
-/**
  * weibo list output function
  * @ weibo data objs .
  */
@@ -203,10 +195,18 @@ function weibo_page_default(&$form_state, $type = NULL) {
 			$form['retweeted_status'][$nid] = array('#value' =>$retweeted_status);
 			//注释从这里开始。
 			//$default_first_name = !empty($form_state['values']['ask_first_name'][$nid]) ? $form_state['values']['ask_first_name'][$nid] : FALSE;
+			$form['comments'][$nid]['re_comment'] = array(
+			  '#type' => 'checkbox',
+			  '#title' => t('转发'),//.'('.$node->comment_count.')',
+			  '#ahah' => array(
+			    'path' => 'vp/weibo_page_default/comment_ahah_callback/'.$nid, //含参数的调用。
+			    'wrapper' => 'textfield-wrapper-'.$nid,
+			    'effect' => 'fade',
+					)
+			);
 			$form['comments'][$nid]['add_comment'] = array(
 			  '#type' => 'checkbox',
-			  '#title' => t('评论'),
-			  '#default_value' => $default_first_name,
+			  '#title' => t('评论').'('.$node->comment_count.')',
 			  '#ahah' => array(
 			    'path' => 'vp/weibo_page_default/comment_ahah_callback/'.$nid, //含参数的调用。
 			    'wrapper' => 'textfield-wrapper-'.$nid,
@@ -222,20 +222,24 @@ function weibo_page_default(&$form_state, $type = NULL) {
 		  );
 			//dpm($form_state,'001-->$form_state');//表单状态，点击后可以查看下与之前的不同。
 			if (!empty($form_state['values']['add_comment'])) {				
-				//module_load_include('inc', 'comment', 'comment.pages');
-		    $form['textfields'][$nid]['textfields']['first_name'] = array(
-		      '#type' => 'textarea',
-		      '#title' => t('test inner textarea'),
-		      '#value' => '如何在这里调用评论发布框和评论列表？',
-		    );
-				$form['textfields'][$nid]['textfields']['makeup'] = 
-				//drupal_get_form('comment_form',$form_state,$array=array('nid'=>$nid));
+				module_load_include('inc', 'sina_vp', 'comment.pages');
+				$form['textfields'][$nid]['textfields']['makeup'] = array(
+		      '#type' => 'markup',
+		      '#value' => comment_reply($node, $pid = NULL),//drupal_get_form('comment_form',$form_state,$array=array('nid'=>$nid)),
+		    );				
+				//comment_form(&$form_state, $edit, $title = NULL);
+				//drupal_retrieve_form($form_id='comment_form', &$form_state);
+				//form_builder($form_id='comment_form', $form_comment, &$form_state);
+				//	drupal_get_form('comment_form',$form_state,$array=array('nid'=>$nid));
 				//comment_reply($node, $pid = NULL)//drupal_get_form('comment_form')
-				array(
-		      '#type' => 'textarea',
-		      '#value' => comment_render($node) ,		     
-		    );
+				//drupal_retrieve_form('comment_form',&$form_state);
 		  }
+			if (!empty($form_state['values']['re_comment'])) {				
+				$form['textfields'][$nid]['textfields']['makeup'] = array(
+		      '#type' => 'markup',
+		      '#value' => page_weibo_add(),
+		    );
+			}
 	}
  	$form['pager'] = array('#value' => theme('pager', NULL, 1, 0));
 	$form['#theme'] = 'weibo_page_default';
@@ -322,7 +326,6 @@ function theme_weibo_page_default($form){
 								<div class="repeat" style="display:none;" node-type="feed_list_repeat"></div>';
 								
 		$output.='</dd>';
-		
 		$output.=drupal_render($form['textfields'][$node->nid]);
 		$output.='<dd class="clear"></dd>';
 		$output.='</dl>';
@@ -346,7 +349,7 @@ function theme_weibo_page_default($form){
  * give info who is not login call from sina_open.
  */
 function sina_vp_linked_info(){
-	$linked_info='';
+	$linked_info= NULL;
 	global $user;
 	$token = sina_open_get_access_token($user->uid);
 	if(empty($token)){
@@ -359,8 +362,10 @@ function sina_vp_linked_info(){
  * vp_center_public not login page.
  */
 function sina_vp_user_timeline(){
-	$output = sina_vp_linked_info();
-	$output.= page_weibo_add();
+	$output =sina_vp_linked_info();
+	if(!isset($output)){
+		$output.= page_weibo_add();		
+	}
 	drupal_set_title(t('user_timeline'));
 	//$output.= user_timeline_page();
 	$type = 'user_timeline';
@@ -371,8 +376,10 @@ function sina_vp_user_timeline(){
  * vp_public_timeline.
  */
 function sina_vp_public_timeline(){
-	$output = sina_vp_linked_info();
-	$output.= page_weibo_add();
+	$output =sina_vp_linked_info();
+	if(!isset($output)){
+		$output.= page_weibo_add();		
+	}
 	$type = 'public_timeline';
 	$output.= drupal_get_form('weibo_page_default',$type);
 	return $output;//
@@ -381,8 +388,10 @@ function sina_vp_public_timeline(){
  * sina_vp_friend_timeline.
  */
 function sina_vp_friend_timeline(){
-	$output = sina_vp_linked_info();
-	$output.= page_weibo_add();
+	$output =sina_vp_linked_info();
+	if(!isset($output)){
+		$output.= page_weibo_add();		
+	}
 	$type = 'friend_timeline';
 	$output.= drupal_get_form('weibo_page_default',$type);
 	return $output;

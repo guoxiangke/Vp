@@ -204,13 +204,13 @@ function sina_vp_menu() {
     'weight' => -19,
 		'type' => MENU_LOCAL_TASK,
   );
-  $items['vp/weibo_page_default/comment_ahah_callback/%'] = array(
+  $items['vp/weibo_page_default/comment_ahah_callback/%'] = array(//评论
     'page callback' => 'weibo_page_default_callback',
     'page arguments' => array(3),
     'access callback' => TRUE,
     'file' => 'sina_comment_ahah.inc',
     'type' => MENU_CALLBACK,
-    );
+  );
   return $items;
 }
 /**
@@ -273,13 +273,11 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		$form['body_field']['#access']=FALSE;
 	}
 	if($form['sina_open'] && $form_id == 'weibo_node_form'){
-		$showFace ='';
-		
 		$form['add_option']=array(
 			'#type' =>'item',
 			'#value' =>'<span id="face"><a onclick="showFace()" href="javascript:;">表情</a></span>|<span id="img"><a onclick="">图片</a></span>|<span id="topic"><a onclick="insertTopic();return false;" href="javascript:;">话题</a></span>|<span id="atta">@TA</span>',
 		);
-		$form['sina_vp_open'] = array(//['check']
+		$form['sina_vp_open'] = array(
       '#type' => 'checkbox',
       '#title' => '同步到新浪',
       '#required' => true,
@@ -292,11 +290,16 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 	 */
 	$node = node_load($form[nid]['#value']);
 	if(($form_id == 'comment_form')&&($node->type=='weibo')){
-		$form['sina_vp_open']['check']['#default_value'] =1;//默认设置 发布微薄到新浪上
-		$form['sina_vp_open']['title']['#access']=FALSE;	
-		$form['comment_filter']['comment']['#type'] = 'textfield';
-		//$form['comment_filter']['comment']['#size'] = '10';
-		$form['comment_filter']['comment']['#hieght'] = '2';
+		$form['sina_vp_open'] = array(
+      '#type' => 'checkbox',
+      '#title' => '同步到新浪',
+      '#required' => true,
+      '#default_value' => 1,
+    );
+		unset($form['sina_open']);
+		$form['comment_filter']['comment']['#type'] = 'textarea';
+		$form['comment_filter']['comment']['#rows'] = '3';
+		//$form['comment_filter']['comment']['#resizable'] = FALSE;
 		$form['comment_filter']['comment']['#maxlength'] = '140';
 		$form['_author']['#type']['#access']=FALSE;
 		$form['comment_filter']['format']['#type']['#access']=FALSE;
@@ -431,12 +434,12 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 function sina_vp_time_format($created_at){
 	//$created_at= Thu Sep 22 14:34:21 +0800 2011
 	$created_at=strtotime($created_at);
-	$minutes=ceil((time()-$created_at)/60)+0;
+	$minutes=ceil((time()-$created_at)/60)+2;
 	if($minutes<60){
 		return $minutes.'分钟前';
 	}elseif($show_hours=ceil($minutes/60)<12){
 		return $show_hours.'小时前';
-	}elseif(ceil($minutes/60)<24){
+	}elseif(ceil($minutes/60)<24 && date("d",time())==date("d",$created_at)){
 		return '今天 '.date("H:i",$created_at);
 	}else{
 		return date("m月d日 H:i",$created_at);
