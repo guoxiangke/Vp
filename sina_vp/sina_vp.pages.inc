@@ -223,65 +223,75 @@ function weibo_page_default(&$form_state){
   $num_rows = FALSE;	
 	$sql="select * from {sina_vp_weibo2node} WHERE cid=0 AND wid<>0 AND is_deleted=0 ORDER BY id DESC";
 	$count_query="select count(*) from {sina_vp_weibo2node} WHERE cid=0 AND is_deleted=0 AND wid<>0";
-	$result = pager_query(db_rewrite_sql($sql),2, $element = 0, $count_query);
+	$result = pager_query(db_rewrite_sql($sql),1, $element = 0, $count_query);
 	while ($record = db_fetch_object($result)) {
 			$weibo_obj=json_decode($record->data);
+			$nid = $record->nid;
+			$node = node_load($nid);
 			//form format weibo_obj
 			$created_at=strtotime($weibo_obj->created_at);
 			$time_string=sina_vp_time_format($weibo_obj->created_at);
-			$form['nid'][$record->nid] = array('#value' =>$record->nid);
-			$id=number_format($weibo_obj->id, 0, '', '');//==if(function_exists(dpm)) dpm($weibo_obj->mid);
+			$form['nid'][$nid] = array('#value' =>$nid);
+			$id=number_format($weibo_obj->id, 0, '', '');
 			$mid=$weibo_obj->mid;
-			$form['wid'][$record->nid] = array('#value' =>$id);	
-   			$form['created_at'][$record->nid] = array('#value' =>$time_string);
-			//$text=node_load($record->nid)->body;
+			$form['wid'][$nid] = array('#value' =>$id);	
+   		$form['created_at'][$nid] = array('#value' =>$time_string);
 			$text=sina_vp_url_replace($weibo_obj->text);//
-			$form['text'][$record->nid] = array('#value' =>$text);
-			$form['source'][$record->nid] = array('#value' =>$weibo_obj->source);
+			$form['text'][$nid] = array('#value' =>$text);
+			$form['source'][$nid] = array('#value' =>$weibo_obj->source);
 			$w_user=$weibo_obj->user;//: 作者信息
 			$w_uid=$w_user->id;
-			$form['w_uid'][$record->nid] = array('#value' =>$w_uid);
+			$form['w_uid'][$nid] = array('#value' =>$w_uid);
 			$domain=empty($w_user->domain)?$w_uid:$w_user->domain;
-			$form['domain'][$record->nid] = array('#value' =>$domain);
+			$form['domain'][$nid] = array('#value' =>$domain);
 			$profile_image_url = $w_user->profile_image_url.'.jpg';
-			$form['profile_image_url'][$record->nid] = array('#value' =>$profile_image_url);
+			$form['profile_image_url'][$nid] = array('#value' =>$profile_image_url);
 			$name = empty($w_user->screen_name)?$w_user->name:$w_user->screen_name;
-			$form['screen_name'][$record->nid] = array('#value' =>$name);
+			$form['screen_name'][$nid] = array('#value' =>$name);
 			
 			$favorited=$weibo_obj->favorited;//: 是否已收藏
-			$form['favorited'][$record->nid] = array('#value' =>$favorited);
+			$form['favorited'][$nid] = array('#value' =>$favorited);
 			$thumbnail_pic=$weibo_obj->thumbnail_pic;//: 缩略图
-			$form['thumbnail_pic'][$record->nid] = array('#value' =>$thumbnail_pic);
+			$form['thumbnail_pic'][$nid] = array('#value' =>$thumbnail_pic);
 			$bmiddle_pic=$weibo_obj->bmiddle_pic;//: 中型图片
-			$form['bmiddle_pic'][$record->nid] = array('#value' =>$bmiddle_pic);
+			$form['bmiddle_pic'][$nid] = array('#value' =>$bmiddle_pic);
 			$original_pic=$weibo_obj->original_pic;//：原始图片
-			$form['original_pic'][$record->nid] = array('#value' =>$original_pic);		
+			$form['original_pic'][$nid] = array('#value' =>$original_pic);		
 			$retweeted_status=$weibo_obj->retweeted_status;//: 转发的博文，内容为status，如果不是转发，则没有此字段
-			$form['retweeted_status'][$record->nid] = array('#value' =>$retweeted_status);
-			
-			$default_first_name = !empty($form_state['values']['ask_first_name'][$record->nid]) ? $form_state['values']['ask_first_name'][$record->nid] : FALSE;
-			$form['ask_first_name'][$record->nid]['ask_first_name'] = array(
+			$form['retweeted_status'][$nid] = array('#value' =>$retweeted_status);
+			//注释从这里开始。
+			//$default_first_name = !empty($form_state['values']['ask_first_name'][$nid]) ? $form_state['values']['ask_first_name'][$nid] : FALSE;
+			$form['comments'][$nid]['add_comment'] = array(
 			  '#type' => 'checkbox',
-			  '#title' => t('Add new comment'),
+			  '#title' => t('评论'),
 			  '#default_value' => $default_first_name,
 			  '#ahah' => array(
-			    'path' => 'vp/public_timeline/weibo_page_default/callback/'.$record->nid,
-			    'wrapper' => 'textfield-wrapper-'.$record->nid,
+			    'path' => 'vp/public_timeline/weibo_page_default/callback/'.$nid, //含参数的调用。
+			    'wrapper' => 'textfield-wrapper-'.$nid,
 			    'effect' => 'fade',
 					)
 			);
-			$form['textfields'][$record->nid]['textfields'] = array(
-		    '#title' => t("Generated text fields for first and last name"),
-		    '#prefix' => '<div id="textfield-wrapper-'.$record->nid.'">',
+			$form['textfields'][$nid]['textfields'] = array(
+		    '#title' => t('评论'),
+		    '#prefix' => '<div id="textfield-wrapper-'.$nid.'">',
 		    '#suffix' => '</div>',
 		    '#type' => 'fieldset',
-		    '#description' => t('This is where we put automatically generated textfields'),
+		    //'#description' => t('This is where we put automatically generated textfields'),
 		  );
-			dpm($form_state,'001-->$form_state');
-			if (!empty($form_state['values']['ask_first_name'])) {
-		    $form['textfields'][$record->nid]['textfields']['first_name'] = array(
-		      '#type' => 'textfield',
-		      '#title' => t('First Name'),
+			//dpm($form_state,'001-->$form_state');//表单状态，点击后可以查看下与之前的不同。
+			if (!empty($form_state['values']['add_comment'])) {				
+				//module_load_include('inc', 'comment', 'comment.pages');
+		    $form['textfields'][$nid]['textfields']['first_name'] = array(
+		      '#type' => 'textarea',
+		      '#title' => t('test inner textarea'),
+		      '#value' => '如何在这里调用评论发布框和评论列表？',
+		    );
+				$form['textfields'][$nid]['textfields']['makeup'] = 
+				//drupal_get_form('comment_form',$form_state,$array=array('nid'=>$nid));
+				array(
+		      '#type' => 'button',
+		      '#value' => '咋办呢' ,
+		      //comment_reply($node, $pid = NULL)//drupal_get_form('comment_form')
 		    );
 		  }
 	}
@@ -354,21 +364,22 @@ function theme_weibo_page_default($form){
 			$output .= '<dl class="comment" node-type="feed_list_media_disp" style="display: none;"></dl>';	
 		}
 		$nid = get_nid_by_wid($form['wid'][$key]['#value']);
-		if($nid==0) continue; //>????
+		//if($nid==0) continue; >????
 		$node = node_load($nid);
 		$output .= '<p class="info W_linkb W_textb">
 									<span>
 									<a href="javascript:void(0);">转发('.$rt.')</a>
 									<i class="W_vline">|</i>';
 		$output .= flag_create_link('bookmarks', $node->nid);
+		$output .= drupal_render($form['comments'][$node->nid]).'('.$node->comment_count.')';
 		$output .= '<i class="W_vline">|</i>';
-		$output .= drupal_render($form['ask_first_name'][$node->nid]);
 		$output .= '</span>
 									<a node-type="feed_list_item_date" class="date" date="'.$form['created_at'][$key]['#value'].'"   href="/node/'.$node->nid.'">'.$form['created_at'][$key]['#value'].'</a> 来自'.$form['source'][$key]['#value'].'
 								</p>
 								<div class="repeat" style="display:none;" node-type="feed_list_repeat"></div>';
 								
 		$output.='</dd>';
+		
 		$output.=drupal_render($form['textfields'][$node->nid]);
 		$output.='<dd class="clear"></dd>';
 		$output.='</dl>';
@@ -435,5 +446,5 @@ function sina_vp_user_timeline(){
  */
 function sina_vp_public_timeline(){
 	$output=drupal_get_form('weibo_page_default');
-	return sina_vp_linked_info().$output;//.page_weibo_add()
+	return sina_vp_linked_info().page_weibo_add().$output;//
 }

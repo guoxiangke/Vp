@@ -140,14 +140,8 @@ function sina_vp_comment(&$comment, $op) {
 /**
  * Implementation of hook_perm().
  */
-function sina_vp_perm() {
-  return array(
-  'create weibo entries', 
-  'delete weibo entries', 
-  'delete any weibo entry', 
-  'edit weibo entries', 
-  'edit weibo entry'
-  );
+function sina_vp_perm(){
+  return array();
 }
 
 /**
@@ -171,7 +165,7 @@ function sina_vp_init(){
 /**
  * Implementation of hook_menu().
  */
-function sina_vp_menu() {  
+function sina_vp_menu() {
 	$items['vp'] = array(
 		'title' => t('Vp'),
 		//'menu_name' => 'primary-links',
@@ -200,20 +194,12 @@ function sina_vp_menu() {
 		//'type' => MENU_LOCAL_TASK,
   );
   $items['vp/public_timeline/weibo_page_default/callback/%'] = array(
-
     'page callback' => 'weibo_page_default_callback',
     'page arguments' => array(4),
     'access callback' => TRUE,
-    'file' => 'autotextfields2.inc',
+    'file' => 'sina_comment_ahah.inc',
     'type' => MENU_CALLBACK,
     );
-  $items['weibo/home/arguments/%/%'] = array(
-    'title' => 'Page example with arguments',
-    'page callback' => 'sina_vp_arguments',
-    'page arguments' => array(3, 4),
-    'access arguments' => array('access arguments page'),
-    'type' => MENU_CALLBACK,
-  );
   return $items;
 }
 /**
@@ -308,6 +294,7 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		drupal_add_js(drupal_get_path('module', 'sina_vp') .'/sina_vp_comment.js');
 	}
 	$dispalyNone_forms = array(
+		'weibo_page_default',
 		'devel_execute_block_form',
 		'search_theme_form',
 		'search_block_form',
