@@ -113,7 +113,7 @@ function sina_vp_nodeapi(&$node, $op)
 	case 'story':
 		 switch ($op) {
 	        case 'insert':
-		      drupal_goto('tasklist');	
+		      	drupal_goto('tasklist');	
 	          break;
 	        case 'update':
 	          drupal_goto('tasklist');
@@ -146,6 +146,7 @@ function sina_vp_perm(){
 
 /**
  * Implementation of hook_access().
+ * del=true
  */
 function sina_vp_access($op, $node, $account) {
   switch ($op) {
@@ -167,35 +168,45 @@ function sina_vp_init(){
  */
 function sina_vp_menu() {
 	$items['vp'] = array(
-		'title' => t('Vp'),
-		//'menu_name' => 'primary-links',
-		'page callback' => 'public_page',
+		'title' => t('Vp'),//'menu_name' => 'primary-links',
+		'page callback' => 'sina_vp_public_timeline',
 		'access callback' => TRUE,
 		'file' => 'sina_vp.pages.inc',
 		'weight' => -20,
   );
+	$items['vp/public_timeline'] = array(
+    'title' => t('public_timeline'),//'menu_name' => 'Secondary_links',
+    'page callback' => 'sina_vp_public_timeline',
+    'access callback' => TRUE,
+    //'access callback' => 'create weibo entries',
+    //'access arguments'=>  array('create weibo entries'),
+    'description' => t('public_timeline'),
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -20,
+		'type' => MENU_LOCAL_TASK,		
+		//'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
   $items['vp/user_timeline'] = array(
-    'title' => t('MyVp'),//'menu_name' => 'Secondary_links',
+    'title' => t('user_timeline'),//'menu_name' => 'Secondary_links',
     'page callback' => 'sina_vp_user_timeline',
     'access callback' => TRUE,
     'description' => t('public_timeline'),
     'file' => 'sina_vp.pages.inc',
     'weight' => -20,
-		//'type' => MENU_LOCAL_TASK,
+		'type' => MENU_LOCAL_TASK,
   );
-  $items['vp/public_timeline'] = array(
-    'title' => t('VpCenter'),//'menu_name' => 'Secondary_links',
-    'page callback' => 'sina_vp_public_timeline',
-    //'access callback' => 'create weibo entries',
-    'access arguments'=>  array('create weibo entries'),
-    'description' => t('public_timeline'),
+	$items['vp/friend_timeline'] = array(
+    'title' => t('friend_timeline'),//'menu_name' => 'Secondary_links',
+    'page callback' => 'sina_vp_friend_timeline',
+    'access callback' => TRUE,
+    'description' => t('friend_timeline'),
     'file' => 'sina_vp.pages.inc',
-    'weight' => -20,
-		//'type' => MENU_LOCAL_TASK,
+    'weight' => -19,
+		'type' => MENU_LOCAL_TASK,
   );
-  $items['vp/public_timeline/weibo_page_default/callback/%'] = array(
+  $items['vp/weibo_page_default/comment_ahah_callback/%'] = array(
     'page callback' => 'weibo_page_default_callback',
-    'page arguments' => array(4),
+    'page arguments' => array(3),
     'access callback' => TRUE,
     'file' => 'sina_comment_ahah.inc',
     'type' => MENU_CALLBACK,
@@ -261,7 +272,7 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		$form['flag']['#access']=FALSE;
 		$form['body_field']['#access']=FALSE;
 	}
-	if($form['sina_open'] && $form_id != 'sina_open_set_tweet_form'){
+	if($form['sina_open'] && $form_id == 'weibo_node_form'){
 		$showFace ='';
 		
 		$form['add_option']=array(

@@ -136,93 +136,35 @@ function output_comment($comment){
 }
 
 /**
- * page_user_timeline.
- */
-function user_timeline_page(){
-	drupal_set_title('user_timeline');
-	global $user;
-	$sql="select * from {sina_vp_weibo2node} WHERE cid=0 AND is_deleted=0 AND uid=$user->uid AND wid<>0 ORDER BY id DESC";
-	$result = db_query($sql);
-	while ($record = db_fetch_object($result)) {
-		$ms[]  = json_decode($record->data);
-		$flag = true;
-	}
-	if(function_exists(dpm)) dpm($ms['0'],"微博信息[0]");
-	 //Final output string
-	if($flag){
-		return output_weibo($ms);	
-	}  
-}
-function user_timeline_page_form_sina($delete=true){
-	drupal_set_title('user_timeline');
-	global $user;
-	$path = drupal_get_path('module', 'sina');
-	$http_url="http://api.t.sina.com.cn/statuses/user_timeline.json";
-	$w_user_id=sina_open_t_get_info($user)->id;
-	$values=array(
-								'user_id' => $w_user_id,
-								'count'=>3,
-								'base_app'=>1
-	);
-	$result  = sina_open_t_set_request($http_url, $values, $headers = array(), $method = 'POST');
-	 if ($result->code == 200) {
-    //drupal_set_message('信息获取成功');
-		if(function_exists(dpm)) dpm(__FILE__.__LINE__,'信息获取成功!');
-		//_sina_weibo2node($result->data);
-  } else {
-    drupal_set_message('信息获取失败', 'error');
-    return false;
-  }
-	$ms  = json_decode($result->data);
-	if(function_exists(dpm)) dpm($ms,"ms");
-	 //Final output string
-  return output_weibo($ms);
-	
-}
-/**
- * 微铺大厅 page展示页 public_timeline
- */
-function vp_center_page_with_post(){
-	return page_update().vp_center_page();
-}
-/**
- * 不要了，最后2行有用。
- */
-function vp_center_page(){
-	/*global $user;
-	$path = drupal_get_path('module', 'sina');
-
-	$http_url="http://api.t.sina.com.cn/statuses/public_timeline.json";//3360192113599959
-	$w_user_id=sina_open_t_get_info($user)->id;
-	$values=array(
-								'count'=>200,
-								'base_app'=>1
-	);
-	$result  = sina_open_t_set_request($http_url, $values, $headers = array(), $method = 'POST');
-	 if ($result->code == 200) {
-    //drupal_set_message('信息获取成功');
-		if(function_exists(dpm)) dpm(__FILE__.__LINE__,'信息获取成功vp_center_page!');
-		//_sina_weibo2node($result->data);
-  } else {
-    drupal_set_message('信息获取失败', 'error');
-    return false;
-  }
-	$ms  = json_decode($result->data);
-	if(function_exists(dpm)) dpm($ms,"ms");*/
-	 //Final output string
-	//drupal_get_form(weibo_page_default);
-	 //return  page_weibo_add().public_page();
-	 
-}
-/**
  * Menu callback; Generate a listing of weibo nodes.
  * LIKE node_page_default IN node.module
  */
-function weibo_page_default(&$form_state){
-	drupal_set_title('public_timeline');
+function weibo_page_default(&$form_state, $type = NULL) {
+	global $user;
+	if ($type) {
+		$form['page_title'] = array('#value' =>$type);
+		switch ($type) {
+			case 'public_timeline':
+				$sql="select * from {sina_vp_weibo2node} WHERE cid=0 AND wid<>0 AND is_deleted=0 ORDER BY id DESC";
+				$count_query="select count(*) from {sina_vp_weibo2node} WHERE cid=0 AND is_deleted=0 AND wid<>0";
+				break;
+			case 'user_timeline':
+				$sql="select * from {sina_vp_weibo2node} WHERE cid=0 AND is_deleted=0 AND uid=$user->uid AND wid<>0 ORDER BY id DESC";
+				$count_query="select count(*) from {sina_vp_weibo2node} WHERE cid=0 AND is_deleted=0 AND uid=$user->uid AND wid<>0";
+				break;
+			case 'friend_timeline':
+				//1.从新浪微博获取 friends
+				//2.系统自带friendship
+				$sql="select * from {sina_vp_weibo2node} WHERE cid=0 AND is_deleted=0 AND uid=$user->uid AND wid<>0 ORDER BY id DESC";
+				$count_query="select count(*) from {sina_vp_weibo2node} WHERE cid=0 AND is_deleted=0 AND uid=$user->uid AND wid<>0";
+				break;			
+			default://默认 = public_timeline
+				$sql="select * from {sina_vp_weibo2node} WHERE cid=0 AND wid<>0 AND is_deleted=0 ORDER BY id DESC";
+				$count_query="select count(*) from {sina_vp_weibo2node} WHERE cid=0 AND is_deleted=0 AND wid<>0";
+				break;
+		}
+	}
   $num_rows = FALSE;	
-	$sql="select * from {sina_vp_weibo2node} WHERE cid=0 AND wid<>0 AND is_deleted=0 ORDER BY id DESC";
-	$count_query="select count(*) from {sina_vp_weibo2node} WHERE cid=0 AND is_deleted=0 AND wid<>0";
 	$result = pager_query(db_rewrite_sql($sql),1, $element = 0, $count_query);
 	while ($record = db_fetch_object($result)) {
 			$weibo_obj=json_decode($record->data);
@@ -266,7 +208,7 @@ function weibo_page_default(&$form_state){
 			  '#title' => t('评论'),
 			  '#default_value' => $default_first_name,
 			  '#ahah' => array(
-			    'path' => 'vp/public_timeline/weibo_page_default/callback/'.$nid, //含参数的调用。
+			    'path' => 'vp/weibo_page_default/comment_ahah_callback/'.$nid, //含参数的调用。
 			    'wrapper' => 'textfield-wrapper-'.$nid,
 			    'effect' => 'fade',
 					)
@@ -288,10 +230,10 @@ function weibo_page_default(&$form_state){
 		    );
 				$form['textfields'][$nid]['textfields']['makeup'] = 
 				//drupal_get_form('comment_form',$form_state,$array=array('nid'=>$nid));
+				//comment_reply($node, $pid = NULL)//drupal_get_form('comment_form')
 				array(
-		      '#type' => 'button',
-		      '#value' => '咋办呢' ,
-		      //comment_reply($node, $pid = NULL)//drupal_get_form('comment_form')
+		      '#type' => 'textarea',
+		      '#value' => comment_render($node) ,		     
 		    );
 		  }
 	}
@@ -303,6 +245,7 @@ function weibo_page_default(&$form_state){
  * 主题化 微博列表.
  */
 function theme_weibo_page_default($form){
+	drupal_set_title(drupal_render($form['page_title']));
   $path = drupal_get_path('module', 'sina_vp');
   $has_posts = isset($form['nid']) && is_array($form['nid']);
   $select_header['width'] = '26px';
@@ -397,10 +340,10 @@ function theme_weibo_page_default($form){
  	$output .= theme('table', $header, $rows);
  
   $output .= drupal_render($form);
-  return  $output;//theme_pager_link('第一回合',null,$element = 0);
+  return  $output;
 }
 /**
- * vp_center_public not login page.
+ * give info who is not login call from sina_open.
  */
 function sina_vp_linked_info(){
 	$linked_info='';
@@ -415,36 +358,89 @@ function sina_vp_linked_info(){
 /**
  * vp_center_public not login page.
  */
-function public_page(){
-	drupal_set_title('public_page');	
-	$output = '';
-	$output = sina_vp_linked_info();
-	$output .= page_weibo_add();
-	
-	$sql="select * from {sina_vp_weibo2node} WHERE cid=0 AND is_deleted=0 AND wid<>0 ORDER BY id DESC limit 0,20";
-	$result = db_query($sql);
-	$flag=false;
-	while ($record = db_fetch_object($result)) {
-		$ms[]  = json_decode($record->data);
-		$flag = true;
-	}	
-	if(function_exists(dpm)) dpm($ms[0],"ms[0]");
-	if($flag){
-		$output .= output_weibo($ms);
-	}
-	 //Final output string		
-  return $output;
-}
-/**
- * vp_center_public not login page.
- */
 function sina_vp_user_timeline(){
-  return  $output = sina_vp_linked_info().page_weibo_add().user_timeline_page();
+	$output = sina_vp_linked_info();
+	$output.= page_weibo_add();
+	drupal_set_title(t('user_timeline'));
+	//$output.= user_timeline_page();
+	$type = 'user_timeline';
+	$output.= drupal_get_form('weibo_page_default',$type);
+	return $output;
 }
 /**
  * vp_public_timeline.
  */
 function sina_vp_public_timeline(){
-	$output=drupal_get_form('weibo_page_default');
-	return sina_vp_linked_info().page_weibo_add().$output;//
+	$output = sina_vp_linked_info();
+	$output.= page_weibo_add();
+	$type = 'public_timeline';
+	$output.= drupal_get_form('weibo_page_default',$type);
+	return $output;//
+}
+/**
+ * sina_vp_friend_timeline.
+ */
+function sina_vp_friend_timeline(){
+	$output = sina_vp_linked_info();
+	$output.= page_weibo_add();
+	$type = 'friend_timeline';
+	$output.= drupal_get_form('weibo_page_default',$type);
+	return $output;
+}
+
+//del.....
+function user_timeline_page_form_sina($delete=true){
+	drupal_set_title('user_timeline');
+	global $user;
+	$path = drupal_get_path('module', 'sina');
+	$http_url="http://api.t.sina.com.cn/statuses/user_timeline.json";
+	$w_user_id=sina_open_t_get_info($user)->id;
+	$values=array(
+								'user_id' => $w_user_id,
+								'count'=>3,
+								'base_app'=>1
+	);
+	$result  = sina_open_t_set_request($http_url, $values, $headers = array(), $method = 'POST');
+	 if ($result->code == 200) {
+    //drupal_set_message('信息获取成功');
+		if(function_exists(dpm)) dpm(__FILE__.__LINE__,'信息获取成功!');
+		//_sina_weibo2node($result->data);
+  } else {
+    drupal_set_message('信息获取失败', 'error');
+    return false;
+  }
+	$ms  = json_decode($result->data);
+	if(function_exists(dpm)) dpm($ms,"ms");
+	 //Final output string
+  return output_weibo($ms);
+	
+}
+/**
+ * 不要了，最后2行有用。
+ */
+function vp_center_page($delete=true){
+	/*global $user;
+	$path = drupal_get_path('module', 'sina');
+
+	$http_url="http://api.t.sina.com.cn/statuses/public_timeline.json";//3360192113599959
+	$w_user_id=sina_open_t_get_info($user)->id;
+	$values=array(
+								'count'=>200,
+								'base_app'=>1
+	);
+	$result  = sina_open_t_set_request($http_url, $values, $headers = array(), $method = 'POST');
+	 if ($result->code == 200) {
+    //drupal_set_message('信息获取成功');
+		if(function_exists(dpm)) dpm(__FILE__.__LINE__,'信息获取成功vp_center_page!');
+		//_sina_weibo2node($result->data);
+  } else {
+    drupal_set_message('信息获取失败', 'error');
+    return false;
+  }
+	$ms  = json_decode($result->data);
+	if(function_exists(dpm)) dpm($ms,"ms");*/
+	 //Final output string
+	//drupal_get_form(weibo_page_default);
+	 //return  page_weibo_add().public_page();
+	 
 }
