@@ -197,7 +197,7 @@ function weibo_page_default(&$form_state, $type = NULL) {
 			//$default_first_name = !empty($form_state['values']['ask_first_name'][$nid]) ? $form_state['values']['ask_first_name'][$nid] : FALSE;
 			$form['comments'][$nid]['re_comment'] = array(
 			  '#type' => 'checkbox',
-			  '#title' => t('转发'),//.'('.$node->comment_count.')',
+			  '#title' => t('转发').'(N)',
 			  '#ahah' => array(
 			    'path' => 'vp/weibo_page_default/comment_ahah_callback/'.$nid, //含参数的调用。
 			    'wrapper' => 'textfield-wrapper-'.$nid,
@@ -326,6 +326,7 @@ function theme_weibo_page_default($form){
 								<div class="repeat" style="display:none;" node-type="feed_list_repeat"></div>';
 								
 		$output.='</dd>';
+		$output.=drupal_render($form['textfields'][$node->nid]['textfields']['makeup']);
 		$output.=drupal_render($form['textfields'][$node->nid]);
 		$output.='<dd class="clear"></dd>';
 		$output.='</dl>';
