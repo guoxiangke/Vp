@@ -1,5 +1,0 @@
-name = user_rigester_alter
-description = 修改用户注册表单的注释
-core = 6.x
-package = A-DEV
-
