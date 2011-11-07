@@ -30,7 +30,7 @@ function output_weibo($ms){
 		//if(now()-$created_at) {$created_at_str}
 		$id=number_format($weibo_obj->id, 0, '', '');//==if(function_exists(dpm)) dpm($weibo_obj->mid);
 		$mid=$weibo_obj->mid;
-		$text=sina_vp_url_replace($weibo_obj->text);
+		$text=sina_vp_url_format($weibo_obj->text);
 		$source =$weibo_obj->source;
 		$favorited=$weibo_obj->favorited;//: 是否已收藏
 		$truncated=$weibo_obj->truncated;//: 是否被截断
@@ -126,7 +126,27 @@ function output_comment($comment){
 					<dd node-type="feed_list_media_disp" style="display: none;" class="expand"></dd>
 					<dd class="info W_linkb W_textb"><span><a href="/1762675215/xpfDUj3Bb?type=repost">转发(187)</a><i class="W_vline">|</i><a href="/1762675215/xpfDUj3Bb">评论(32)</a></span><a href="/1762675215/xpfDUj3Bb" class="date">9月21日 22:00</a> 来自<a rel="nofollow" href="http://www.hers.com.cn" target="_blank">Hers爱物网</a></dd>		 		</dl>';
 }
-
+/*
+ * 获取新浪转发数 counts
+ * @param $nid
+ *   $node->id.
+ * @return
+ * 	未登录时随机10-100（其实不会显示的。）
+ * */
+function weibo_rt_counts($nid){
+	global $user;
+	$uid=$user->uid;
+	$wid = sina_vp_get_wid($nid);
+	if($uid!=0){
+		$counts = sina_open_t_set_request('http://api.t.sina.com.cn/statuses/counts.json', array('ids'=>$wid));
+		$counts = json_decode($counts->data);
+		//dpm($counts,'$counts');
+		if(!is_array($counts)){drupal_set_message('貌似您还没绑定微博，尽力为您拉取转发数目失败！意思是说转发数目是不可靠的，嘿嘿^_^','status');return rand(10, 100);}
+		$comments =$counts[0]->comments;
+		return $rt =$counts[0]->rt;
+	}
+	return rand(10, 100);
+}
 /**
  * Menu callback; Generate a listing of weibo nodes.
  * LIKE node_page_default IN node.module
@@ -170,7 +190,7 @@ function weibo_page_default(&$form_state, $type = NULL) {
 			$mid=$weibo_obj->mid;
 			$form['wid'][$nid] = array('#value' =>$id);	
    		$form['created_at'][$nid] = array('#value' =>$time_string);
-			$text=sina_vp_url_replace($weibo_obj->text);//
+			$text=sina_vp_url_format($weibo_obj->text);//
 			$form['text'][$nid] = array('#value' =>$text);
 			$form['source'][$nid] = array('#value' =>$weibo_obj->source);
 			$w_user=$weibo_obj->user;//: 作者信息
@@ -194,32 +214,40 @@ function weibo_page_default(&$form_state, $type = NULL) {
 			$retweeted_status=$weibo_obj->retweeted_status;//: 转发的博文，内容为status，如果不是转发，则没有此字段
 			$form['retweeted_status'][$nid] = array('#value' =>$retweeted_status);
 			//注释从这里开始。
-			//$default_first_name = !empty($form_state['values']['ask_first_name'][$nid]) ? $form_state['values']['ask_first_name'][$nid] : FALSE;
-			$form['comments'][$nid]['re_comment'] = array(
-			  '#type' => 'checkbox',
-			  '#title' => t('转发').'(N)',
-			  '#ahah' => array(
-			    'path' => 'vp/weibo_page_default/comment_ahah_callback/'.$nid, //含参数的调用。
-			    'wrapper' => 'textfield-wrapper-'.$nid,
-			    'effect' => 'fade',
-					)
-			);
-			$form['comments'][$nid]['add_comment'] = array(
-			  '#type' => 'checkbox',
-			  '#title' => t('评论').'('.$node->comment_count.')',
-			  '#ahah' => array(
-			    'path' => 'vp/weibo_page_default/comment_ahah_callback/'.$nid, //含参数的调用。
-			    'wrapper' => 'textfield-wrapper-'.$nid,
-			    'effect' => 'fade',
-					)
-			);
-			$form['textfields'][$nid]['textfields'] = array(
-		    '#title' => t('评论'),
-		    '#prefix' => '<div id="textfield-wrapper-'.$nid.'">',
-		    '#suffix' => '</div>',
-		    '#type' => 'fieldset',
-		    //'#description' => t('This is where we put automatically generated textfields'),
-		  );
+			if (user_access('create weibo content')) {
+				$form['comments'][$nid]['re_comment'] = array(
+				  '#type' => 'checkbox',
+				  '#title' => t('转发').'('.weibo_rt_counts($nid).')',
+				  '#ahah' => array(
+				    'path' => 'vp/weibo_page_default/comment_ahah_callback/'.$nid, //含参数的调用。
+				    'wrapper' => 'textfield-wrapper-'.$nid,
+				    'effect' => 'fade',
+						)
+				);
+				$form['comments'][$nid]['favorite'] = array(
+				  '#title' => t('收藏').'(N)',
+				  '#type' => 'markup',
+		      '#value' => flag_create_link('bookmarks', $nid),
+				);
+			}
+			if (user_access('post comments')) {
+				$form['comments'][$nid]['add_comment'] = array(
+				  '#type' => 'checkbox',
+				  '#title' => t('评论').'('.$node->comment_count.')',
+				  '#ahah' => array(
+				    'path' => 'vp/weibo_page_default/comment_ahah_callback/'.$nid, //含参数的调用。
+				    'wrapper' => 'textfield-wrapper-'.$nid,
+				    'effect' => 'fade',
+						)
+				);
+				
+			}$form['comments'][$nid]['textfields'] = array(//$form['textfields'][$nid]['textfields']
+			    '#title' => t('评论'),
+			    '#prefix' => '<div id="textfield-wrapper-'.$nid.'">',
+			    '#suffix' => '</div>',
+			    '#type' => 'fieldset',
+			    '#description' => t('This is where we put automatically generated textfields'),
+			  );
 			//dpm($form_state,'001-->$form_state');//表单状态，点击后可以查看下与之前的不同。
 			if (!empty($form_state['values']['add_comment'])) {				
 				module_load_include('inc', 'sina_vp', 'comment.pages');
@@ -240,6 +268,7 @@ function weibo_page_default(&$form_state, $type = NULL) {
 		      '#value' => page_weibo_add(),
 		    );
 			}
+			//dpm($form,'$form000000');
 	}
  	$form['pager'] = array('#value' => theme('pager', NULL, 1, 0));
 	$form['#theme'] = 'weibo_page_default';
@@ -315,13 +344,13 @@ function theme_weibo_page_default($form){
 		$node = node_load($nid);
 		$output .= '<p class="info W_linkb W_textb">
 									<span>
-									<a href="javascript:void(0);">转发('.$rt.')</a>
+
 									<i class="W_vline">|</i>';
-		$output .= flag_create_link('bookmarks', $node->nid);
+		//$output .= flag_create_link('bookmarks', $node->nid);
 		$output .= drupal_render($form['comments'][$node->nid]).'('.$node->comment_count.')';
 		$output .= '<i class="W_vline">|</i>';
 		$output .= '</span>
-									<a node-type="feed_list_item_date" class="date" date="'.$form['created_at'][$key]['#value'].'"   href="/node/'.$node->nid.'">'.$form['created_at'][$key]['#value'].'</a> 来自'.$form['source'][$key]['#value'].'
+									<a node-type="feed_list_item_date" class="date" date="'.$form['created_at'][$key]['#value'].'"   href="?q=/node/'.$node->nid.'">'.$form['created_at'][$key]['#value'].'</a> 来自'.$form['source'][$key]['#value'].'
 								</p>
 								<div class="repeat" style="display:none;" node-type="feed_list_repeat"></div>';
 								
