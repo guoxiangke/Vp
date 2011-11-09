@@ -1,0 +1,3 @@
+<?php
+
+include_once('fox_slideshow.features.inc');

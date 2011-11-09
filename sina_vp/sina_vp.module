@@ -22,9 +22,10 @@ function sina_vp_node_info() {
       'name' => t('weibo'),
       'module' => 'sina',
       'description' => 'weibo note type',
+      'has_title' => '1',
       'title_label' => t('Title'),
-      //'has_body' => '1',
-      //'body_label' => 'Body',
+      'has_body' => '1',
+      'body_label' => 'Body',
       'help' => 'sina_vp_node_info help',
       'node_options' => array (
         'status' => true,
@@ -57,7 +58,7 @@ function sina_vp_nodeapi(&$node, $op)
 {
 	//copy form sina_open_nodeapi
 	if ($op == 'insert' && variable_get('sina_open_node_'.$node->type, 1) && $node->sina_vp_open) {
-    global $user; 
+    global $user;
       if (db_result(db_query('SELECT uid FROM {sina_open_user} WHERE uid = %d', $user->uid))) {
         $url = url('node/'.$node->nid, array('absolute' => true));
         
@@ -127,6 +128,7 @@ function sina_vp_nodeapi(&$node, $op)
  * copy form sina_open_comment()
  */
 function sina_vp_comment(&$comment, $op) {
+	dpm(&$comment);
   if ($op == 'insert' && isset($comment['sina_vp_open']) && variable_get('sina_open_comment', 1)) {
     if($comment['sina_vp_open']) {
       sina_open_t_set_tweet2(
@@ -143,8 +145,12 @@ function sina_vp_comment(&$comment, $op) {
 function sina_vp_perm(){
   return array(
 		'add new product',//新产品
-		'add new activity',//店铺活动
+		'add new activity',//活动
+		'add new special',
+		'add new sale',
+		'add new transfer',
 		'add new show',//真人秀
+		'add new forward'//转发权
 	);
 }
 
@@ -216,33 +222,78 @@ function sina_vp_menu() {
     'type' => MENU_CALLBACK,
   );
 	//通过api里的元数据实现不同页面微博发布时的tags记录来区分是那种类型的weibo。
-	$items['node/add/product'] = array(
-    'title' => t('New products'),//卖家发布的新品 + 所有该卖家发布的新品页面，即user_timeline
-    'page callback' => 'sina_vp_user_timeline',
+	//新品，活动，爆款，，转让，真人秀
+	$items['vp/add/Product'] = array(
+    'title' => t('新品'),//卖家发布的新品 + 所有该卖家发布的新品页面，即user_timeline
+    'page callback' => 'sina_vp_new_content',
+    'page arguments' => array(2),
     'access arguments' => array('add new product'),
     'description' => '发布新产品到店铺',
     'file' => 'sina_vp.pages.inc',
     'weight' => -20,
-		//'type' => MENU_DEFAULT_LOCAL_TASK,
+		'type' => MENU_DEFAULT_LOCAL_TASK,
   );	
-  $items['node/add/activity'] = array(
-    'title' => t('New activity'),//卖家发布的新品或者活动信息
-    'page callback' => 'sina_vp_user_timeline',
+  $items['vp/add/Activity'] = array(
+    'title' => t('活动'),//卖家发布的新品或者活动信息
+    'page callback' => 'sina_vp_new_content',
+    'page arguments' => array(2),
     'access arguments' => array('add new activity'),
     'description' => '发布店铺活动信息',
     'file' => 'sina_vp.pages.inc',
-    'weight' => -20,
-		//'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -19,
+		'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-	$items['node/add/show'] = array(
-    'title' => t('New reality television'),//真人秀
-    'page callback' => 'sina_vp_user_timeline',
+	$items['vp/add/Special'] = array(
+    'title' => t('爆款'),//卖家发布的新品或者活动信息
+    'page callback' => 'sina_vp_new_content',
+    'page arguments' => array(2),
+    'access arguments' => array('add new special'),
+    'description' => '爆款',
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -18,
+		'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+	$items['vp/add/Sale'] = array(
+    'title' => t('特卖'),//卖家发布的新品或者活动信息
+    'page callback' => 'sina_vp_new_content',
+    'page arguments' => array(2),
+    'access arguments' => array('add new sale'),
+    'description' => '特卖',
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -17,
+		'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+	$items['vp/add/Transfer/%'] = array(//nid
+    'title' => t('转让'),
+    'page callback' => 'sina_vp_new_content',
+    'page arguments' => array(2,3),
+    'access arguments' => array('add new transfer'),
+    'description' => '转让',
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -16,
+		'type' => MENU_DEFAULT_LOCAL_TASK,
+  );	
+  $items['vp/Reality/Show/%'] = array(//nid
+    'title' => t('真人秀'),
+    'page callback' => 'sina_vp_new_content',
+    'page arguments' => array(2,3),
     'access arguments' => array('add new show'),
     'description' => '真人秀',
     'file' => 'sina_vp.pages.inc',
-    'weight' => -20,
-		//'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -1,
+		'type' => MENU_DEFAULT_LOCAL_TASK,
+  );  
+  $items['vp/forward/%/%'] = array(//Show/nid
+    'title' => t('转发'),
+    'page callback' => 'sina_vp_new_forward',
+    'page arguments' => array(2,3),
+    'access arguments' => array('add new forward'),
+    'description' => '转发',
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -15,
+		'type' => MENU_DEFAULT_LOCAL_TASK,
   );
+	
 	$items['shop/%'] = array( //shop/uid|shop_name
     'title callback' => 'user_shop_title',//不同店长角色的user店铺名称
     'title arguments' => array(1),
@@ -253,7 +304,84 @@ function sina_vp_menu() {
     'weight' => -20,
 		//'type' => MENU_DEFAULT_LOCAL_TASK,
   );
+	$items['VpCenter'] = array(
+    'title' => t('微铺大厅'),
+    'page callback' => 'sina_vp_center_page_default',
+    'access callback' => TRUE,
+    'description' => '微铺大厅',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+		//'type' => MENU_DEFAULT_LOCAL_TASK,
+  );	
+	$items['VpCenter/Product'] = array(
+    'title' => t('新品'),
+    'page callback' => 'sina_vp_center_page_default',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '新品',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+    'type' => MENU_LOCAL_TASK,
+  );
+	$items['VpCenter/Activity'] = array(
+    'title' => t('活动'),
+    'page callback' => 'sina_vp_center_page_default',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '活动',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+    'type' => MENU_LOCAL_TASK,
+  );
+	$items['VpCenter/Special'] = array(
+    'title' => t('爆款'),
+    'page callback' => 'sina_vp_center_page_default',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '爆款',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+    'type' => MENU_LOCAL_TASK,
+  );	
+  $items['VpCenter/Sale'] = array(
+    'title' => t('特卖'),
+    'page callback' => 'sina_vp_center_page_default',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '特卖',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+    'type' => MENU_LOCAL_TASK,
+  );
+	$items['VpCenter/Transfer'] = array(
+    'title' => t('转让'),
+    'page callback' => 'sina_vp_center_page_default',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '转让',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+    'type' => MENU_LOCAL_TASK,
+  );
+	$items['VpCenter/Show'] = array(
+    'title' => t('真人秀'),
+    'page callback' => 'sina_vp_center_page_default',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '真人秀',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+    'type' => MENU_LOCAL_TASK,
+  );
   return $items;
+}
+
+function sina_vp_menu_alter(&$items) {
+  // Example - disable the page at node/add
+  $items['node/add']['access callback'] = FALSE;
+  $items['node/add/weibo']['access callback'] = FALSE;
+	$items['vp/add/Transfer']['access callback'] = FALSE;
+	$items['vp/add/Show']['access callback'] = FALSE;
 }
 /**
  * Menu item title callback - use the user name if it's not the current user.
@@ -267,7 +395,32 @@ function user_shop_title($account) {
 /**
  * 新添数据库记录关联节点，存储新浪微博元数据. 
  */
-function _sina_vp_db_write($data,$node){
+function sina_vp_type_preprocess($sina_vp_type){
+	switch ($sina_vp_type) {
+		case 'value':
+			
+			break;
+		
+		default:
+			
+			break;
+	}
+	
+}
+
+/**
+ * weibo数据库写入.
+ *
+ * @param $data
+ * 	新浪微博返回的json data.
+ * @param $node
+ *   节点或评论
+ * @param $sina_vp_type
+ *   string weibo频道
+ * @param $zid
+ *   被转发节点id
+ */
+function _sina_vp_db_write($data,$node,$sina_vp_type=NUll,$zid=NULL){
 		if(isset($node->type)){//if $node is a node 拥有type属性
 			$nid = $node->nid;
 			$cid = 0;
@@ -284,8 +437,15 @@ function _sina_vp_db_write($data,$node){
 		}  
 		$wid   = $wdata?$wdata->id:0;
 		$created_at = $wdata?strtotime($wdata->created_at):time();
-		db_query("INSERT INTO {sina_vp_weibo2node}(`nid` ,`uid` ,`cid`,`wid` ,`data`,`created_at`)
-			VALUES ('%d','%d','%d','%d','%s','%d')",$nid,$user->uid,$cid,$wid,$datas,$created_at);
+		//
+		if(is_string($sina_vp_type)){
+			$sina_vp_type=sina_vp_get_type_by_string($sina_vp_type);
+		}
+		db_query("INSERT INTO {sina_vp_weibo2node}
+							(`nid` ,`uid` ,`cid`,`wid` ,`data`,`created_at`,`sina_vp_type`,`zid`)
+							VALUES ('%d','%d','%d','%d','%s','%d','%d','%d')"
+							,$nid,$user->uid,$cid,$wid,$datas,$created_at,$sina_vp_type,$zid);
+							//more... 是否需要分2个表 nid zid
 }
 /**
  * Implementation of hook_form_alter(). 
@@ -316,18 +476,19 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
   		//'#suffix' => '</div>',
 		  //'#field_prefix' => 'users photo here',	  
 		  //'#field_suffix' => t('MB')
-		  //'#required' => TRUE,\
+		  '#required' => TRUE,
 		  '#resizable' => FALSE,
 		);
 		$form['title']['#attributes'] = array('class' => 'publish-weibo');
 		$form['flag']['#access']=FALSE;
-		$form['body_field']['#access']=FALSE;
+		$form['body_field']['#access']=FALSE;				
+		$form['taxonomy']['#access']=FALSE;
 	}
 	if($form['sina_open'] && $form_id == 'weibo_node_form'){
 		$form['add_option']=array(
 			'#type' =>'item',
 		    '#value' =>'<span id="face"><a class="facexy" href="javascript:;">表情</a></span>|<span id="img"><a onclick="">图片</a></span>|<span id="topic"><a class="topic"  href="javascript:;">话题</a></span>|<span id="atta">@TA</span>
-			            <div id="faceWrap" style="display:none;"><a href="javascript:;" title="[呵呵]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/eb/smile.gif"></a><a href="javascript:;" title="[嘻嘻]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/c2/tooth.gif"></a><a href="javascript:;" title="[哈哈]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/6a/laugh.gif"></a><a href="javascript:;" title="[爱你]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/7e/love.gif"></a><a href="javascript:;" title="[晕]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/a4/dizzy.gif"></a><a href="javascript:;" title="[泪]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d8/sad.gif"></a><a href="javascript:;" title="[馋嘴]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/b8/cz_org.gif"></a><a href="javascript:;" title="[抓狂]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/4d/crazy.gif"></a><a href="javascript:;" title="[哼]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/19/hate.gif"></a><a href="javascript:;" title="[可爱]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/9c/tz_org.gif"></a><a href="javascript:;" title="[怒]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/57/angry.gif"></a><a href="javascript:;" title="[汗]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/13/sweat.gif"></a><a href="javascript:;" title="[困]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/8b/sleepy.gif"></a><a href="javascript:;" title="[害羞]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/05/shame_org.gif"></a><a href="javascript:;" title="[睡觉]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/7d/sleep_org.gif"></a><a href="javascript:;" title="[钱]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/90/money_org.gif"></a><a href="javascript:;" title="[偷笑]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/7e/hei_org.gif"></a><a href="javascript:;" title="[酷]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/40/cool_org.gif"></a><a href="javascript:;" title="[衰]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/af/cry.gif"></a><a href="javascript:;" title="[吃惊]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/f4/cj_org.gif"></a><a href="javascript:;" title="[闭嘴]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/29/bz_org.gif"></a><a href="javascript:;" title="[鄙视]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/71/bs2_org.gif"></a><a href="javascript:;" title="[挖鼻屎]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/b6/kbs_org.gif"></a><a href="javascript:;" title="[花心]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/64/hs_org.gif"></a><a href="javascript:;" title="[鼓掌]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/1b/gz_org.gif"></a><a href="javascript:;" title="[失望]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/0c/sw_org.gif"></a><a href="javascript:;" title="[思考]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/e9/sk_org.gif"></a><a href="javascript:;" title="[生病]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/b6/sb_org.gif"></a><a href="javascript:;" title="[亲亲]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/8f/qq_org.gif"></a><a href="javascript:;" title="[怒骂]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/89/nm_org.gif"></a><a href="javascript:;" title="[太开心]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/58/mb_org.gif"></a><a href="javascript:;" title="[懒得理你]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/17/ldln_org.gif"></a><a href="javascript:;" title="[右哼哼]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/98/yhh_org.gif"></a><a href="javascript:;" title="[左哼哼]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/6d/zhh_org.gif"></a><a href="javascript:;" title="[嘘]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/a6/x_org.gif"></a><a href="javascript:;" title="[委屈]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/73/wq_org.gif"></a><a href="javascript:;" title="[吐]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/9e/t_org.gif"></a><a href="javascript:;" title="[可怜]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/af/kl_org.gif"></a><a href="javascript:;" title="[打哈气]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/f3/k_org.gif"></a><a href="javascript:;" title="[做鬼脸]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/88/zgl_org.gif"></a><a href="javascript:;" title="[握手]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/0c/ws_org.gif"></a><a href="javascript:;" title="[耶]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d9/ye_org.gif"></a><a href="javascript:;" title="[good]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d8/good_org.gif"></a><a href="javascript:;" title="[弱]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d8/sad_org.gif"></a><a href="javascript:;" title="[不要]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/c7/no_org.gif"></a><a href="javascript:;" title="[ok]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d6/ok_org.gif"></a><a href="javascript:;" title="[赞]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d0/z2_org.gif"></a><a href="javascript:;" title="[来]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/40/come_org.gif"></a><a href="javascript:;" title="[蛋糕]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/6a/cake.gif"></a><a href="javascript:;" title="[心]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/6d/heart.gif"></a><a href="javascript:;" title="[伤心]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/ea/unheart.gif"></a><a href="javascript:;" title="[钟]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d3/clock_org.gif"></a><a href="javascript:;" title="[猪头]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/58/pig.gif"></a><a href="javascript:;" title="[咖啡]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/64/cafe_org.gif"></a><a href="javascript:;" title="[话筒]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/1b/m_org.gif"></a><a href="javascript:;" title="[干杯]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/bd/cheer.gif"></a><a href="javascript:;" title="[绿丝带]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/b8/green.gif"></a><a href="javascript:;" title="[蜡烛]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/cc/candle.gif"></a><a href="javascript:;" title="[微风]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/a5/wind_org.gif"></a><a href="javascript:;" title="[月亮]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/b9/moon.gif"></a><a href="javascript:;" title="[织]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/41/zz2_org.gif"></a><a href="javascript:;" title="[围观]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/f2/wg_org.gif"></a><a href="javascript:;" title="[威武]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/70/vw_org.gif"></a><a href="javascript:;" title="[奥特曼]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/bc/otm_org.gif"></a><a href="javascript:;" title="[宅]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d7/z_org.gif"></a><a href="javascript:;" title="[帅]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/36/s2_org.gif"></a><a href="javascript:;" title="[跳舞花]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/70/twh_org.gif"></a><a href="javascript:;" title="[围脖]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/3f/weijin_org.gif"></a><a href="javascript:;" title="[温暖帽子]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/f1/wennuanmaozi_org.gif"></a><a href="javascript:;" title="[手套]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/72/shoutao_org.gif"></a><a href="javascript:;" title="[雪]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/00/snow_org.gif"></a><a href="javascript:;" title="[雪人]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d9/xx2_org.gif"></a><a href="javascript:;" title="[左抱抱]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/54/left_org.gif"></a><a href="javascript:;" title="[右抱抱]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/0d/right_org.gif"></a><a href="javascript:;" title="[礼物]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/c4/liwu_org.gif"></a><a href="javascript:;" title="[爱心传递]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/c9/axcd_org.gif"></a><a href="javascript:;" title="[照相机]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/33/camera_org.gif"></a><a href="javascript:;" title="[落叶]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/79/yellowMood_org.gif"></a><a href="javascript:;" title="[白云]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/ff/y3_org.gif"></a><a href="javascript:;" title="[给力]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/c9/geili_org.gif"></a></div>',
+			            	<div id="faceWrap" style="display:none;"><a href="javascript:;" title="[呵呵]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/eb/smile.gif"></a><a href="javascript:;" title="[嘻嘻]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/c2/tooth.gif"></a><a href="javascript:;" title="[哈哈]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/6a/laugh.gif"></a><a href="javascript:;" title="[爱你]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/7e/love.gif"></a><a href="javascript:;" title="[晕]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/a4/dizzy.gif"></a><a href="javascript:;" title="[泪]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d8/sad.gif"></a><a href="javascript:;" title="[馋嘴]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/b8/cz_org.gif"></a><a href="javascript:;" title="[抓狂]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/4d/crazy.gif"></a><a href="javascript:;" title="[哼]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/19/hate.gif"></a><a href="javascript:;" title="[可爱]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/9c/tz_org.gif"></a><a href="javascript:;" title="[怒]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/57/angry.gif"></a><a href="javascript:;" title="[汗]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/13/sweat.gif"></a><a href="javascript:;" title="[困]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/8b/sleepy.gif"></a><a href="javascript:;" title="[害羞]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/05/shame_org.gif"></a><a href="javascript:;" title="[睡觉]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/7d/sleep_org.gif"></a><a href="javascript:;" title="[钱]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/90/money_org.gif"></a><a href="javascript:;" title="[偷笑]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/7e/hei_org.gif"></a><a href="javascript:;" title="[酷]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/40/cool_org.gif"></a><a href="javascript:;" title="[衰]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/af/cry.gif"></a><a href="javascript:;" title="[吃惊]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/f4/cj_org.gif"></a><a href="javascript:;" title="[闭嘴]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/29/bz_org.gif"></a><a href="javascript:;" title="[鄙视]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/71/bs2_org.gif"></a><a href="javascript:;" title="[挖鼻屎]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/b6/kbs_org.gif"></a><a href="javascript:;" title="[花心]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/64/hs_org.gif"></a><a href="javascript:;" title="[鼓掌]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/1b/gz_org.gif"></a><a href="javascript:;" title="[失望]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/0c/sw_org.gif"></a><a href="javascript:;" title="[思考]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/e9/sk_org.gif"></a><a href="javascript:;" title="[生病]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/b6/sb_org.gif"></a><a href="javascript:;" title="[亲亲]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/8f/qq_org.gif"></a><a href="javascript:;" title="[怒骂]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/89/nm_org.gif"></a><a href="javascript:;" title="[太开心]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/58/mb_org.gif"></a><a href="javascript:;" title="[懒得理你]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/17/ldln_org.gif"></a><a href="javascript:;" title="[右哼哼]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/98/yhh_org.gif"></a><a href="javascript:;" title="[左哼哼]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/6d/zhh_org.gif"></a><a href="javascript:;" title="[嘘]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/a6/x_org.gif"></a><a href="javascript:;" title="[委屈]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/73/wq_org.gif"></a><a href="javascript:;" title="[吐]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/9e/t_org.gif"></a><a href="javascript:;" title="[可怜]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/af/kl_org.gif"></a><a href="javascript:;" title="[打哈气]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/f3/k_org.gif"></a><a href="javascript:;" title="[做鬼脸]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/88/zgl_org.gif"></a><a href="javascript:;" title="[握手]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/0c/ws_org.gif"></a><a href="javascript:;" title="[耶]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d9/ye_org.gif"></a><a href="javascript:;" title="[good]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d8/good_org.gif"></a><a href="javascript:;" title="[弱]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d8/sad_org.gif"></a><a href="javascript:;" title="[不要]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/c7/no_org.gif"></a><a href="javascript:;" title="[ok]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d6/ok_org.gif"></a><a href="javascript:;" title="[赞]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d0/z2_org.gif"></a><a href="javascript:;" title="[来]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/40/come_org.gif"></a><a href="javascript:;" title="[蛋糕]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/6a/cake.gif"></a><a href="javascript:;" title="[心]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/6d/heart.gif"></a><a href="javascript:;" title="[伤心]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/ea/unheart.gif"></a><a href="javascript:;" title="[钟]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d3/clock_org.gif"></a><a href="javascript:;" title="[猪头]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/58/pig.gif"></a><a href="javascript:;" title="[咖啡]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/64/cafe_org.gif"></a><a href="javascript:;" title="[话筒]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/1b/m_org.gif"></a><a href="javascript:;" title="[干杯]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/bd/cheer.gif"></a><a href="javascript:;" title="[绿丝带]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/b8/green.gif"></a><a href="javascript:;" title="[蜡烛]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/cc/candle.gif"></a><a href="javascript:;" title="[微风]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/a5/wind_org.gif"></a><a href="javascript:;" title="[月亮]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/b9/moon.gif"></a><a href="javascript:;" title="[织]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/41/zz2_org.gif"></a><a href="javascript:;" title="[围观]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/f2/wg_org.gif"></a><a href="javascript:;" title="[威武]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/70/vw_org.gif"></a><a href="javascript:;" title="[奥特曼]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/bc/otm_org.gif"></a><a href="javascript:;" title="[宅]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d7/z_org.gif"></a><a href="javascript:;" title="[帅]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/36/s2_org.gif"></a><a href="javascript:;" title="[跳舞花]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/70/twh_org.gif"></a><a href="javascript:;" title="[围脖]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/3f/weijin_org.gif"></a><a href="javascript:;" title="[温暖帽子]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/f1/wennuanmaozi_org.gif"></a><a href="javascript:;" title="[手套]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/72/shoutao_org.gif"></a><a href="javascript:;" title="[雪]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/00/snow_org.gif"></a><a href="javascript:;" title="[雪人]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/d9/xx2_org.gif"></a><a href="javascript:;" title="[左抱抱]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/54/left_org.gif"></a><a href="javascript:;" title="[右抱抱]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/0d/right_org.gif"></a><a href="javascript:;" title="[礼物]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/c4/liwu_org.gif"></a><a href="javascript:;" title="[爱心传递]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/c9/axcd_org.gif"></a><a href="javascript:;" title="[照相机]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/33/camera_org.gif"></a><a href="javascript:;" title="[落叶]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/79/yellowMood_org.gif"></a><a href="javascript:;" title="[白云]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/ff/y3_org.gif"></a><a href="javascript:;" title="[给力]"><img width="22px" height="22px" src="http://img.t.sinajs.cn/t3/style/images/common/face/ext/normal/c9/geili_org.gif"></a></div>',
 		);
 		$form['sina_vp_open'] = array(
       '#type' => 'checkbox',
@@ -354,11 +515,109 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		//$form['comment_filter']['comment']['#resizable'] = FALSE;
 		$form['comment_filter']['comment']['#maxlength'] = '140';
 		$form['_author']['#type']['#access']=FALSE;
-		$form['comment_filter']['format']['#type']['#access']=FALSE;
+		$form['comment_filter']['format']['#access']=FALSE;
 		$form['comment_filter']['comment']['#description'] = '最多140个字符，中英文均算一个字符。还可以输入<strong id="sina_open_tweet_text_count"></strong>个字符。';
 		$form['preview']['#type']['#access']=FALSE;
-		drupal_add_js(drupal_get_path('module', 'sina_vp') .'/sina_vp_comment.js');
+		//drupal_add_js(drupal_get_path('module', 'sina_vp') .'/sina_vp_comment.js');
 	}
+	//
+	if(($form_id == 'weibo_node_form' && arg(0)=='vp'&& (arg(1)=='add' || arg(1)=='Reality'))
+			||($form_id == 'weibo_node_form' && arg(0)=='vp'&& arg(1)=='forward')	){
+		//hook_taxonomy
+		//taxonomy_overview_vocabularies()
+	  $vocabularies = taxonomy_get_vocabularies();
+	  //$form = array('#tree' => TRUE);
+	  foreach ($vocabularies as $vocabulary) {
+	    if(check_plain($vocabulary->name)==t('微薄频道')){
+	    	$vid=$vocabulary->vid;
+				break;
+	    }
+	  }
+		if(!$vid){			
+			drupal_set_message('没有设置微博频道哎！^_^','error');
+			return t('E11090732:没有设置微博频道哎^_^');
+		}
+		//define('PRODUCT', 0); need more
+		$sina_vp_type=arg(2);
+		switch (arg(2)) {
+			case 'Product':
+				// 2 可以进一步处理
+				$form['taxonomy'][$vid]['#default_value'] = 1;
+				$form['taxonomy'][$vid]['#description'] = 'Product新品';
+				//博文类型
+				$form['sina_vp_type'] = array(
+					'#type' => 'value',
+					'#default_value' =>1,
+					'#access' => FALSE,
+					'#description' => 'Product新品',
+				);
+				break;
+			case 'Activity':
+				$form['taxonomy'][$vid]['#default_value'] = 2;
+				$form['taxonomy'][$vid]['#description'] = 'Activity活动';
+				//博文类型
+				$form['sina_vp_type'] = array(
+					'#type' => 'value',
+					'#default_value' =>2,
+					'#access' => FALSE,
+					'#description' => 'Activity活动',
+				);
+				break;
+			case 'Special':
+				$form['taxonomy'][$vid]['#default_value'] = 3;
+				$form['taxonomy'][$vid]['#description'] = 'Special爆款';
+				//博文类型
+				$form['sina_vp_type'] = array(
+					'#type' => 'value',
+					'#default_value' =>3,
+					'#access' => FALSE,
+					'#description' => 'Special爆款',
+				);
+				break;
+			case 'Sale':
+				$form['taxonomy'][$vid]['#default_value'] = 4;
+				$form['taxonomy'][$vid]['#description'] = 'Sale特卖';
+				//博文类型
+				$form['sina_vp_type'] = array(
+					'#type' => 'value',
+					'#default_value' =>4,
+					'#access' => FALSE,
+					'#description' => 'Sale特卖',
+				);
+				break;
+			case 'Transfer':
+				$form['taxonomy'][$vid]['#default_value'] = 5;
+				$form['taxonomy'][$vid]['#description'] = 'Transfer转让';
+				//博文类型
+				$form['sina_vp_type'] = array(
+					'#type' => 'value',
+					'#default_value' =>5,
+					'#access' => FALSE,
+					'#description' => 'Transfer转让',
+				);
+				break;
+			case 'Show':
+				$form['taxonomy'][$vid]['#default_value'] = 6;
+				$form['taxonomy'][$vid]['#description'] = 'Show真人秀';
+				//博文类型
+				$form['sina_vp_type'] = array(
+					'#type' => 'value',
+					'#default_value' =>6,
+					'#access' => FALSE,
+					'#description' => 'Show真人秀',
+				);
+				break;
+			default:
+				drupal_set_message('链接请求错误，请到指定页面发布微博^_^','error');
+				break;
+		}
+	}
+//
+		$weibo_type_array=array('Product','Activity','Special','Sale','Transfer','Show'); 	
+	  if(arg(0)=='vp' && arg(1)=='forward' && $form_id == 'weibo_node_form'){ 
+	  	//转发api /vp/forward/Product/139 不可以带图片
+			$form['field_weibo_image']['#access']=FALSE;
+		}
 	$dispalyNone_forms = array(
 		'weibo_page_default',
 		'devel_execute_block_form',
@@ -375,10 +634,116 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
   return $form;
 }
 /**
+ * weibo type taxonomy termid 2=微薄频道下的  (1-6)新品，活动，爆款，特卖，转让，真人秀
+ * @param $sina_vp_type
+ *   int
+ * @return
+ *   string
+ */
+function sina_vp_get_type_by_int($sina_vp_type){
+	if(is_int($sina_vp_type)){
+		switch ($sina_vp_type) {
+			case '1':
+				$sina_vp_type = 'Product';
+				break;
+			case '2':
+				$sina_vp_type = 'Activity';
+				break;
+			case '3':
+				$sina_vp_type = 'Special';
+				break;
+			case '4':
+				$sina_vp_type = 'Sale';
+				break;
+			case '5':
+				$sina_vp_type = 'Transfer';
+				break;
+			case '6':
+				$sina_vp_type = 'Show';
+				break;
+			default:
+				drupal_set_message('no get_sina_vp_type','error');
+				break;
+		}
+	}
+	return $sina_vp_type;
+}
+/**
+ * weibo type taxonomy termid 2=微薄频道下的  (1-6)新品，活动，爆款，特卖，转让，真人秀
+ * @param $sina_vp_type
+ *   string
+ * @return
+ *   int
+ */
+function sina_vp_get_type_by_string($sina_vp_type){
+	if(is_string($sina_vp_type)){
+		switch ($sina_vp_type) {
+			case 'Product':
+				$sina_vp_type = 1;
+				break;
+			case 'Activity':
+				$sina_vp_type = 2;
+				break;
+			case 'Special':
+				$sina_vp_type = 3;
+				break;
+			case 'Sale':
+				$sina_vp_type = 4;
+				break;
+			case 'Transfer':
+				$sina_vp_type = 5;
+				break;
+			case 'Show':
+				$sina_vp_type = 6;
+				break;
+			default:
+				drupal_set_message('no get_sina_vp_type','error');
+				break;
+		}
+	}
+	return $sina_vp_type;
+}
+/**
+  * @return
+ *   string
+ */
+function sina_vp_get_type_by_node($nid){
+	$node = node_load($nid);
+	foreach($node->taxonomy as $key=>$value){
+		return sina_vp_get_type_by_int($key);
+	};
+}
+/**
+ * hook_link_alter
+ */
+function sina_vp_link_alter(&$links, $node, $comment=NULL){
+	global $user;
+	if($node->type == 'weibo'){// && $node   && !$links['forward_link']
+		if(user_access('add new forward')){			
+			$links['forward_link'] = array(
+		    'title' => t('转发'), 
+		    'href' => 'vp/forward/'.sina_vp_get_type_by_node($node->nid).'/'.$node->nid, 
+		    //'query' => 'redirect=node', 
+		    //'fragment' => 'anchorname', 
+		    'attributes' => array('title' => t('转发')),
+	  	);
+		}
+		if(user_access('add new show')){	//vp/add/Show/%		
+			$links['show_link'] = array(
+		    'title' => t('秀一下'), 
+		    'href' => 'vp/Reality/Show/'.$node->nid, 
+		    //'query' => 'redirect=node', 
+		    //'fragment' => 'anchorname', 
+		    'attributes' => array('title' => t('秀一下')),
+	  	);
+		}
+	}
+	return $links;
+}
+/**
  * 验证》140字  noyong
  * */
 function sina_vp_weibo_length_validate($element, &$form_state) {
-	dpm($element,'nitididi');	dpm($form_state,'2nitididi');
   if (isset($element['#value']['title'])) {    
       form_error($element['title'], t('The area code is invalid.'));
   }
@@ -394,6 +759,7 @@ function sina_vp_weibo_length_validate($element, &$form_state) {
  *  节点
  */
 function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NUll
+	$zid=arg(3);dpm($zid,'$zid');
   if (isset($url)) {
     $len = drupal_strlen($url);
   } else {
@@ -415,7 +781,7 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 		$params['comment'] = urlencode($text. $url);
 		$params['without_mention'] = 0;
 		$params['comment_ori'] = 1;
-		//watchdog('$params',print_r($params,true));
+		watchdog('$zid-pl',print_r($zid,true));
 		/* some API
 			id 	true 	int64 	要评论的微博消息ID
 			comment 	true 	string 	评论内容。必须做URLEncode,信息内容不超过140个汉字。
@@ -425,7 +791,8 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 		*/
 		$result = sina_open_t_set_request($request_url,$params);
 		//watchdog('$params22','<pre>'.print_r($result,true));
-		_sina_vp_db_write($result->data,$node);//dale $node or $comment  
+		$sina_vp_type=sina_vp_get_type_by_node($node[nid]);
+		_sina_vp_db_write($result->data,$node,$sina_vp_type);//dale $node or $comment  
 		if ($result->code == 200) {
 			//watchdog('success','已成功发送到新浪微博2026'); 			
 			if(function_exists(dpm)) dpm(json_decode($result->data));//没效果，注销了 
@@ -435,19 +802,45 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 			watchdog('warning','评论转发失败 code:201109262026');
 		}	
 	}
-	if($donext){//发布节点，同步新浪微博
+	if($donext){//发布节点，同步新浪微博	
+	  $weibo_type_array=array('Product','Activity','Special','Sale','Transfer','Show'); 	
+	  if(arg(0)=='vp' && arg(1)=='forward'){ //转发api /vp/forward/Product/139
+			if(!in_array($sina_vp_type=arg(2), $weibo_type_array)){
+				drupal_set_message('转发失败 ,指定频道不对！');
+				return t('转发失败 ,指定频道不对！');
+			}
+			if(!(node_load($zid=arg(3)))){
+				drupal_set_message('转发失败 ,找到不您要转发的微博（已删除）！');
+				return t('转发失败 ,找到不您要转发的微博（已删除）！');
+			}
+			$params['id'] = sina_vp_get_wid($zid);
+			$params['status'] = urlencode($text. $url);
+			//是否在转发的同时发表评论。0表示不发表评论，1表示发表评论给当前微博，2表示发表评论给原微博，3是1、2都发表。默认为0。 
+			$params['is_comment'] = 0;
+			$request_url = 'http://api.t.sina.com.cn/statuses/repost.json';
+			$result = sina_open_t_set_request($request_url,$params);
+		  _sina_vp_db_write($result->data,$node,$sina_vp_type,$zid);
+		  if(function_exists(dpm)) dpm(json_decode($result->data),'微博返回信息');		
+		  if ($result->code == 200) {	    					  			
+				drupal_set_message('已成功发送到新浪微博');
+		  }else{
+		    drupal_set_message('发送到新浪微博失败，错误代码：2011100701，请联系管理员xiangkeguo@gmail.com。', 'warning');
+		  }
+			return;
+		}
 	  if(is_null($node->field_weibo_image[0])){
 	  	$result = sina_open_t_set_request(
 		    'http://api.t.sina.com.cn/statuses/update.json',
 		    array('status' => urlencode($text. $url))
 		  );
-		  _sina_vp_db_write($result->data,$node);//dale $node or $comment
+		  _sina_vp_db_write($result->data,$node,$sina_vp_type=arg(2),$zid=arg(3));
 		  if(function_exists(dpm)) dpm(json_decode($result->data),'微博返回信息');		
 		  if ($result->code == 200) {	    					  			
-			drupal_set_message('已成功发送到新浪微博');
+				drupal_set_message('已成功发送到新浪微博');
 		  }else{
 		    drupal_set_message('发送到新浪微博失败，错误代码：2011100701，请联系管理员xiangkeguo@gmail.com。', 'warning');
 		  }
+			return;
 	  }else{//发 布图片微薄
 	  	$status =	urlencode($text. $url);
 	  	$pic_path = $node->field_weibo_image[0][filepath];
@@ -468,7 +861,7 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 			if(function_exists(dpm)) dpm($result,'图片微博返回数据');
 			//$result['id']=$result['mid'];
 			$result['id']=number_format($result['id'], 0, '', '');
-			_sina_vp_db_write(json_encode($result),$node);//dale $node
+			_sina_vp_db_write(json_encode($result),$node,$sina_vp_type=arg(2),$zid=arg(3));
 			if (is_array($result)) {
 				drupal_set_message('已成功发送到新浪微博ok with pic');
 				//if(function_exists(dpm)) dpm(json_decode($result->data));				
@@ -476,9 +869,9 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 			  drupal_set_message('同步失败，请检查您的网络！', 'error');
 			  //return false;
 			}
+		return;
 	  }
-  }	
-  return $result;
+  }
 }
 /**
  * time format function.

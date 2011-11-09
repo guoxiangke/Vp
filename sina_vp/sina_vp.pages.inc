@@ -387,8 +387,7 @@ function sina_vp_linked_info(){
 		$linked_info = sina_open_page_config(user_load($user->id));
 	}
 	return $linked_info;
-}
-/**
+}/**
  * vp_center_public not login page.
  */
 function sina_vp_user_timeline(){
@@ -427,6 +426,43 @@ function sina_vp_friend_timeline(){
 	return $output;
 }
 
+
+
+/**
+ * sina_vp_new_content page.
+ */
+function sina_vp_new_content($type=NULL,$nid=NULL){
+	$output =sina_vp_linked_info();
+	if(!isset($output)){
+		$output.= page_weibo_add();		
+	}
+	drupal_set_title('发布'.$type.'信息');
+	if($type=='Transfer' || $type=='Show'){
+		if(!node_load($nid)){
+			return t('E11081810:链接请求错误，请到指定页面发布微博^_^');
+		}
+	}
+	return $output;
+}
+/**
+ * sina_vp_new_forward page.转发
+ */
+function sina_vp_new_forward($type=NULL,$nid=NULL){
+	if(!$node=node_load($nid)){
+		return t('E11090955:链接请求错误(请选择一条微博)，请到指定页面转发微博^_^');
+	}
+	foreach($node->taxonomy as $key=>$value){
+		if(sina_vp_get_type_by_int($key)!=$type){
+			return t('E11090956:链接请求错误（转发的微博类型不对），请到指定页面转发微博^_^');
+		}
+	};
+	$output =sina_vp_linked_info();
+	if(!isset($output)){
+		$output.= page_weibo_add();		
+	}
+	drupal_set_title('转发#'.$type.'#'.$node->title);
+	return $output;
+}
 //del.....
 function user_timeline_page_form_sina($delete=true){
 	drupal_set_title('user_timeline');
