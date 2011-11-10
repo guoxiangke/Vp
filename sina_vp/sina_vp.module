@@ -146,9 +146,9 @@ function sina_vp_perm(){
   return array(
 		'add new product',//新产品
 		'add new activity',//活动
-		'add new special',
+		'add new special',//爆款
 		'add new sale',
-		'add new transfer',
+		'add new transfer',//发布转让信息
 		'add new show',//真人秀
 		'add new forward'//转发权
 	);
@@ -177,6 +177,7 @@ function sina_vp_init(){
  * Implementation of hook_menu().
  */
 function sina_vp_menu() {
+	global $user;
 	$items['vp'] = array(
 		'title' => t('Vp'),//'menu_name' => 'primary-links',
 		'page callback' => 'sina_vp_public_timeline',
@@ -196,7 +197,7 @@ function sina_vp_menu() {
 		'type' => MENU_LOCAL_TASK,		
 		//'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-  $items['vp/user_timeline'] = array(
+  /*$items['vp/user_timeline'] = array(
     'title' => t('user_timeline'),//'menu_name' => 'Secondary_links',
     'page callback' => 'sina_vp_user_timeline',
     'access callback' => TRUE,
@@ -214,6 +215,16 @@ function sina_vp_menu() {
     'weight' => -19,
 		'type' => MENU_LOCAL_TASK,
   );
+	$items['shop/%'] = array( //shop/uid|shop_name
+    'title callback' => 'user_shop_title',//不同店长角色的user店铺名称
+    'title arguments' => array(1),
+    'page callback' => 'sina_vp_user_timeline',
+    'access arguments' => array('view shops'),
+    'description' => '我的店铺',
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -20,
+		//'type' => MENU_DEFAULT_LOCAL_TASK,
+  );*/
   $items['vp/weibo_page_default/comment_ahah_callback/%'] = array(//评论
     'page callback' => 'weibo_page_default_callback',
     'page arguments' => array(3),
@@ -227,91 +238,97 @@ function sina_vp_menu() {
     'title' => t('新品'),//卖家发布的新品 + 所有该卖家发布的新品页面，即user_timeline
     'page callback' => 'sina_vp_new_content',
     'page arguments' => array(2),
+    'access callback' => 'user_access',
     'access arguments' => array('add new product'),
     'description' => '发布新产品到店铺',
     'file' => 'sina_vp.pages.inc',
     'weight' => -20,
-		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'type' => MENU_CALLBACK,
   );	
   $items['vp/add/Activity'] = array(
     'title' => t('活动'),//卖家发布的新品或者活动信息
     'page callback' => 'sina_vp_new_content',
     'page arguments' => array(2),
+    'access callback' => 'user_access',
     'access arguments' => array('add new activity'),
     'description' => '发布店铺活动信息',
     'file' => 'sina_vp.pages.inc',
     'weight' => -19,
-		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'type' => MENU_CALLBACK,
   );
 	$items['vp/add/Special'] = array(
     'title' => t('爆款'),//卖家发布的新品或者活动信息
     'page callback' => 'sina_vp_new_content',
     'page arguments' => array(2),
+    'access callback' => 'user_access',
     'access arguments' => array('add new special'),
     'description' => '爆款',
     'file' => 'sina_vp.pages.inc',
     'weight' => -18,
-		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'type' => MENU_CALLBACK,
   );
 	$items['vp/add/Sale'] = array(
     'title' => t('特卖'),//卖家发布的新品或者活动信息
     'page callback' => 'sina_vp_new_content',
     'page arguments' => array(2),
+    'access callback' => 'user_access',
     'access arguments' => array('add new sale'),
     'description' => '特卖',
     'file' => 'sina_vp.pages.inc',
     'weight' => -17,
-		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'type' => MENU_CALLBACK,
   );
 	$items['vp/add/Transfer/%'] = array(//nid
     'title' => t('转让'),
     'page callback' => 'sina_vp_new_content',
     'page arguments' => array(2,3),
+    'access callback' => 'user_access',
     'access arguments' => array('add new transfer'),
-    'description' => '转让',
+    'description' => '转让潮',
     'file' => 'sina_vp.pages.inc',
     'weight' => -16,
-		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'type' => MENU_CALLBACK,
   );	
-  $items['vp/Reality/Show/%'] = array(//nid
+  $items['vp/add/Show/%'] = array(//nid
     'title' => t('真人秀'),
     'page callback' => 'sina_vp_new_content',
     'page arguments' => array(2,3),
+    'access callback' => 'user_access',
     'access arguments' => array('add new show'),
     'description' => '真人秀',
     'file' => 'sina_vp.pages.inc',
     'weight' => -1,
-		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'type' => MENU_CALLBACK,
   );  
   $items['vp/forward/%/%'] = array(//Show/nid
     'title' => t('转发'),
     'page callback' => 'sina_vp_new_forward',
     'page arguments' => array(2,3),
+    'access callback' => 'user_access',
     'access arguments' => array('add new forward'),
     'description' => '转发',
     'file' => 'sina_vp.pages.inc',
     'weight' => -15,
-		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'type' => MENU_CALLBACK,
   );
-	
-	$items['shop/%'] = array( //shop/uid|shop_name
-    'title callback' => 'user_shop_title',//不同店长角色的user店铺名称
-    'title arguments' => array(1),
-    'page callback' => 'sina_vp_user_timeline',
-    'access arguments' => array('view shops'),
-    'description' => '我的店铺',
-    'file' => 'sina_vp.pages.inc',
-    'weight' => -20,
+	///
+	$items['VpCenter'] = array(
+    'title' => t('微铺街'),
+    'page callback' => 'sina_vp_center_page_default',
+    'access callback' => TRUE,
+    'description' => '微铺街',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
 		//'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-	$items['VpCenter'] = array(
+	$items['VpCenter/All'] = array(
     'title' => t('微铺大厅'),
     'page callback' => 'sina_vp_center_page_default',
     'access callback' => TRUE,
     'description' => '微铺大厅',
     'file' => 'sina_vp_center.inc',
     'weight' => -15,
-		//'type' => MENU_DEFAULT_LOCAL_TASK,
+		'type' => MENU_DEFAULT_LOCAL_TASK,
   );	
 	$items['VpCenter/Product'] = array(
     'title' => t('新品'),
@@ -353,24 +370,103 @@ function sina_vp_menu() {
     'weight' => -15,
     'type' => MENU_LOCAL_TASK,
   );
-	$items['VpCenter/Transfer'] = array(
-    'title' => t('转让'),
+	$items['Transfer'] = array(
+    'title' => t('转让潮'),
     'page callback' => 'sina_vp_center_page_default',
-    'page arguments' => array(1),
+    'page arguments' => array(0),
     'access callback' => TRUE,
-    'description' => '转让',
+    'description' => '转让潮',
     'file' => 'sina_vp_center.inc',
     'weight' => -15,
-    'type' => MENU_LOCAL_TASK,
   );
-	$items['VpCenter/Show'] = array(
+	$items['Show'] = array(
     'title' => t('真人秀'),
     'page callback' => 'sina_vp_center_page_default',
-    'page arguments' => array(1),
+    'page arguments' => array(0),
     'access callback' => TRUE,
     'description' => '真人秀',
     'file' => 'sina_vp_center.inc',
     'weight' => -15,
+  );
+	/////买家或卖家中心，根据角色而定
+	$items['UCenter'] = array(
+    'title' => t('我的微铺街'),
+    'page callback' => 'sina_vp_UCenter_page',
+    'access callback' => TRUE,
+    'description' => '我的微铺街',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+		//'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+	$items['UCenter/All'] = array(
+    'title' => t('我的微铺街'),
+    'page callback' => 'sina_vp_UCenter_page',
+    'access callback' => TRUE,
+    'description' => '我的微铺大厅',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+		'type' => MENU_DEFAULT_LOCAL_TASK,
+  );	
+	$items['UCenter/Product'] = array(
+    'title' => t('新品'),
+    'page callback' => 'sina_vp_UCenter_page',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '我关注的新品',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+    'type' => MENU_LOCAL_TASK,
+  );
+	$items['UCenter/Activity'] = array(
+    'title' => t('活动'),
+    'page callback' => 'sina_vp_UCenter_page',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '我关注的活动',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+    'type' => MENU_LOCAL_TASK,
+  );
+	$items['UCenter/Special'] = array(
+    'title' => t('爆款'),
+    'page callback' => 'sina_vp_UCenter_page',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '我关注的爆款',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+    'type' => MENU_LOCAL_TASK,
+  );	
+  $items['UCenter/Sale'] = array(
+    'title' => t('特卖'),
+    'page callback' => 'sina_vp_UCenter_page',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '我关注的特卖',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -15,
+    'type' => MENU_LOCAL_TASK,
+  );	
+	$items['UCenter/Transfer'] = array(
+    'title' => t('my转让潮'),
+    'page callback' => 'sina_vp_UCenter_page',
+    'page arguments' => array(1),
+    'access callback' => 'user_access',
+    'access arguments' => array('add new transfer'),
+    'description' => '我订阅的转让潮',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -14,
+    'type' => MENU_LOCAL_TASK,
+  );
+	$items['UCenter/Show'] = array(
+    'title' => t('my真人秀'),
+    'page callback' => 'sina_vp_UCenter_page',
+    'page arguments' => array(1),
+    'access callback' => 'user_access',
+    'access arguments' => array('add new show'),
+    'description' => '我订阅的真人秀',
+    'file' => 'sina_vp_center.inc',
+    'weight' => -13,
     'type' => MENU_LOCAL_TASK,
   );
   return $items;
@@ -382,6 +478,11 @@ function sina_vp_menu_alter(&$items) {
   $items['node/add/weibo']['access callback'] = FALSE;
 	$items['vp/add/Transfer']['access callback'] = FALSE;
 	$items['vp/add/Show']['access callback'] = FALSE;
+	global $user;
+	if(in_array('Seller',$user->roles)){
+		$items['UCenter/Transfer']['hidden'] = 1;
+		$items['UCenter/Show']['hidden'] = 1;
+	}
 }
 /**
  * Menu item title callback - use the user name if it's not the current user.
@@ -482,7 +583,7 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		$form['title']['#attributes'] = array('class' => 'publish-weibo');
 		$form['flag']['#access']=FALSE;
 		$form['body_field']['#access']=FALSE;				
-		$form['taxonomy']['#access']=FALSE;
+		//$form['taxonomy']['#access']=FALSE;
 	}
 	if($form['sina_open'] && $form_id == 'weibo_node_form'){
 		$form['add_option']=array(
@@ -521,7 +622,7 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		//drupal_add_js(drupal_get_path('module', 'sina_vp') .'/sina_vp_comment.js');
 	}
 	//
-	if(($form_id == 'weibo_node_form' && arg(0)=='vp'&& (arg(1)=='add' || arg(1)=='Reality'))
+	if(($form_id == 'weibo_node_form' && arg(0)=='vp')
 			||($form_id == 'weibo_node_form' && arg(0)=='vp'&& arg(1)=='forward')	){
 		//hook_taxonomy
 		//taxonomy_overview_vocabularies()
@@ -613,9 +714,13 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		}
 	}
 //
-		$weibo_type_array=array('Product','Activity','Special','Sale','Transfer','Show'); 	
+		$weibo_type_array=array('Product','Activity','Special','Sale','Transfer','Show');
 	  if(arg(0)=='vp' && arg(1)=='forward' && $form_id == 'weibo_node_form'){ 
 	  	//转发api /vp/forward/Product/139 不可以带图片
+			$form['field_weibo_image']['#access']=FALSE;
+		}
+		if(FALSE){ 
+	  	//转让可不可以带图片呢？？？ more...
 			$form['field_weibo_image']['#access']=FALSE;
 		}
 	$dispalyNone_forms = array(
@@ -718,23 +823,34 @@ function sina_vp_get_type_by_node($nid){
  */
 function sina_vp_link_alter(&$links, $node, $comment=NULL){
 	global $user;
-	if($node->type == 'weibo'){// && $node   && !$links['forward_link']
+	if($node->uid!=$user->uid && $node->type == 'weibo'){
+		$sina_vp_type = sina_vp_get_type_by_node($node->nid);
 		if(user_access('add new forward')){			
 			$links['forward_link'] = array(
-		    'title' => t('转发'), 
-		    'href' => 'vp/forward/'.sina_vp_get_type_by_node($node->nid).'/'.$node->nid, 
+		    'title' => t('分享'), 
+		    'href' => 'vp/forward/'.$sina_vp_type.'/'.$node->nid, 
 		    //'query' => 'redirect=node', 
 		    //'fragment' => 'anchorname', 
-		    'attributes' => array('title' => t('转发')),
+		    'attributes' => array('title' => t('分享给新浪和你的朋友')),
 	  	);
 		}
-		if(user_access('add new show')){	//vp/add/Show/%		
+		if(user_access('add new show') && $sina_vp_type!='Show' && $sina_vp_type!='Transfer'){
+				//vp/add/Show/%		 转让和分享不能再秀了！～
 			$links['show_link'] = array(
 		    'title' => t('秀一下'), 
-		    'href' => 'vp/Reality/Show/'.$node->nid, 
+		    'href' => 'vp/add/Show/'.$node->nid, 
 		    //'query' => 'redirect=node', 
 		    //'fragment' => 'anchorname', 
-		    'attributes' => array('title' => t('秀一下')),
+		    'attributes' => array('title' => t('发布真人秀')),
+	  	);
+		}
+		if(user_access('add new transfer') && $sina_vp_type!='Show' && $sina_vp_type!='Transfer'){				
+			$links['transfer_link'] = array(
+		    'title' => t('转让'), 
+		    'href' => 'vp/add/Transfer/'.$node->nid, 
+		    //'query' => 'redirect=node', 
+		    //'fragment' => 'anchorname', 
+		    'attributes' => array('title' => t('发布转让该产品')),
 	  	);
 		}
 	}

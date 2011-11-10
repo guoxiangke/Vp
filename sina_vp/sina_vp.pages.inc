@@ -180,6 +180,7 @@ function weibo_page_default(&$form_state, $type = NULL) {
 	$result = pager_query(db_rewrite_sql($sql),1, $element = 0, $count_query);
 	while ($record = db_fetch_object($result)) {
 			$weibo_obj=json_decode($record->data);
+			dpm($weibo_obj,'$weibo_obj');
 			$nid = $record->nid;
 			$node = node_load($nid);
 			//form format weibo_obj
@@ -460,7 +461,7 @@ function sina_vp_new_forward($type=NULL,$nid=NULL){
 	if(!isset($output)){
 		$output.= page_weibo_add();		
 	}
-	drupal_set_title('转发#'.$type.'#'.$node->title);
+	drupal_set_title('转发分享#'.$type.'#【'.$node->title.'】');
 	return $output;
 }
 //del.....
