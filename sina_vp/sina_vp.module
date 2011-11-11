@@ -55,10 +55,10 @@ function sina_vp_form(&$node, &$param)
  * Act on nodes defined by other modules.
  */
 function sina_vp_nodeapi(&$node, $op) 
-{
+{ global $user;
 	//copy form sina_open_nodeapi
 	if ($op == 'insert' && variable_get('sina_open_node_'.$node->type, 1) && $node->sina_vp_open) {
-    global $user;
+
       if (db_result(db_query('SELECT uid FROM {sina_open_user} WHERE uid = %d', $user->uid))) {
         $url = url('node/'.$node->nid, array('absolute' => true));
         
@@ -104,9 +104,12 @@ function sina_vp_nodeapi(&$node, $op)
         case 'prepare':
           //
           break;
+        case 'load':
+          break;
         case 'view':
           break;
-        case 'load':
+				case 'alter':
+					//sina_vp_context_preprocess(&$node);
           break;
       }
       break;
@@ -150,7 +153,8 @@ function sina_vp_perm(){
 		'add new sale',
 		'add new transfer',//发布转让信息
 		'add new show',//真人秀
-		'add new forward'//转发权
+		'add new forward',//转发权
+		'view my follows' //查看粉丝
 	);
 }
 
@@ -320,6 +324,7 @@ function sina_vp_menu() {
     'file' => 'sina_vp_center.inc',
     'weight' => -15,
 		//'type' => MENU_DEFAULT_LOCAL_TASK,
+		'menu_name' => 'primary-links',
   );
 	$items['VpCenter/All'] = array(
     'title' => t('微铺大厅'),
@@ -328,7 +333,7 @@ function sina_vp_menu() {
     'description' => '微铺大厅',
     'file' => 'sina_vp_center.inc',
     'weight' => -15,
-		'type' => MENU_DEFAULT_LOCAL_TASK,
+		//'type' => MENU_DEFAULT_LOCAL_TASK,
   );	
 	$items['VpCenter/Product'] = array(
     'title' => t('新品'),
@@ -338,7 +343,7 @@ function sina_vp_menu() {
     'description' => '新品',
     'file' => 'sina_vp_center.inc',
     'weight' => -15,
-    'type' => MENU_LOCAL_TASK,
+    //'type' => MENU_LOCAL_TASK,
   );
 	$items['VpCenter/Activity'] = array(
     'title' => t('活动'),
@@ -348,7 +353,7 @@ function sina_vp_menu() {
     'description' => '活动',
     'file' => 'sina_vp_center.inc',
     'weight' => -15,
-    'type' => MENU_LOCAL_TASK,
+    //'type' => MENU_LOCAL_TASK,
   );
 	$items['VpCenter/Special'] = array(
     'title' => t('爆款'),
@@ -358,7 +363,7 @@ function sina_vp_menu() {
     'description' => '爆款',
     'file' => 'sina_vp_center.inc',
     'weight' => -15,
-    'type' => MENU_LOCAL_TASK,
+    //'type' => MENU_LOCAL_TASK,
   );	
   $items['VpCenter/Sale'] = array(
     'title' => t('特卖'),
@@ -368,7 +373,7 @@ function sina_vp_menu() {
     'description' => '特卖',
     'file' => 'sina_vp_center.inc',
     'weight' => -15,
-    'type' => MENU_LOCAL_TASK,
+    //'type' => MENU_LOCAL_TASK,
   );
 	$items['Transfer'] = array(
     'title' => t('转让潮'),
@@ -378,6 +383,7 @@ function sina_vp_menu() {
     'description' => '转让潮',
     'file' => 'sina_vp_center.inc',
     'weight' => -15,
+    'menu_name' => 'primary-links',
   );
 	$items['Show'] = array(
     'title' => t('真人秀'),
@@ -387,6 +393,7 @@ function sina_vp_menu() {
     'description' => '真人秀',
     'file' => 'sina_vp_center.inc',
     'weight' => -15,
+    'menu_name' => 'primary-links',
   );
 	/////买家或卖家中心，根据角色而定
 	$items['UCenter'] = array(
@@ -469,6 +476,24 @@ function sina_vp_menu() {
     'weight' => -13,
     'type' => MENU_LOCAL_TASK,
   );
+	//个人中心 菜单项
+	//用户关系user_relationships
+	//module_load_include('inc', 'relationships', 'user_relationships_ui.pages');//调用节点发布相关
+	//drupal_get_path('module', 'relationships').
+  $items['relationships/follows'] = array(
+    'title'             => '我的粉丝',
+    'access callback' => 'user_access',
+    'access arguments' => array('view my follows'),
+    //'access callback'   => 'user_relationships_ui_check_access',
+    //'access arguments'  => array('edit'),
+    'type'              => MENU_NORMAL_ITEM|MENU_LOCAL_TASK,
+    'weight'            => -9,
+    'page callback'     => 'user_relationships_page',
+    'page arguments'    => array(NULL, 1),
+    'file'              => 'user_relationships_ui.pages.inc',
+    'hidden'            => 1,
+  );
+	//$items['UCenter/follows'] = $items['relationships/follows'];
   return $items;
 }
 
@@ -483,6 +508,12 @@ function sina_vp_menu_alter(&$items) {
 		$items['UCenter/Transfer']['hidden'] = 1;
 		$items['UCenter/Show']['hidden'] = 1;
 	}
+
+	//dpm(user_relationships_load(array("user" => $user->uid),array("count" => TRUE)),'关注总数');
+	//dpm(user_relationships_load(array("user" => $user->uid,"rtid" => '2'),array("count" => TRUE)),'关注的卖家');
+	//dpm(user_relationships_load(array("user" => $user->uid,"rtid" => '1'),array("count" => TRUE)),'关注的买家');
+	//dpm(user_relationships_load(array("requestee_id" => $user->uid),array("count" => TRUE)),'关注我的');
+	
 }
 /**
  * Menu item title callback - use the user name if it's not the current user.
@@ -1081,7 +1112,51 @@ function sina_vp_theme() {
     ),
   );
 }
-
+/**
+ * 节点输出对title或body的微博分类输出
+ * [卖家/买家]发布了[新品/爆款](XXXX)
+ */
+function sina_vp_context_preprocess(&$node){
+	$sina_vp_type = sina_vp_get_type_by_node($node->nid);
+	global $user;
+	$output ='';
+	//转发了 发布了 分享了 秀了 转让了	
+	if((is_null(arg(1)) && (arg(0)=='VpCenter' || arg(0)=='UCenter'))){
+		$output .= '【'.t($sina_vp_type).'】';
+		if($node->uid==$user->uid){//我发布的内容不添加标签，但是在大厅里要添加，频道里不添加							
+		}else{			
+			$output .= t('<a href="@user">@'.user_load($node->uid)->name.' </a>',array('@user' => url('user/').$node->uid));
+		}
+	}elseif(is_null(arg(1)) && (arg(0)=='Show' || arg(0)=='Transfer')){
+		if($node->uid==$user->uid){//我发布的内容不添加标签，但是在大厅里要添加，频道里不添加							
+		}else{			
+			$output .= t('<a href="@user">@'.user_load($node->uid)->name.' </a>',array('@user' => url('user/').$node->uid));
+		}
+	}else{
+		if($node->uid==$user->uid){//我发布的内容不添加标签，但是在大厅里要添加，频道里不添加							
+		}else{			
+			$output .= t('<a href="@user">@'.user_load($node->uid)->name.' </a>',array('@user' => url('user/').$node->uid));
+		}	
+	}
+	return $output;
+} 
+/**
+ * 默认获取当前用户的粉丝uid数组.
+ * @param $uid=null 
+ * @return array() $follows_uid[]
+ */
+function get_follows($uid=NULL)
+{
+	if(is_null($uid)){
+		global $user;
+		$uid = $user->uid;
+	}	
+	$array=user_relationships_load(array("requestee_id" => $uid),array("sort" => 'requester_id'));
+	foreach($array as $key=>$value){
+		$follows_uid[] =$key; //取得粉丝用户uid
+	}
+	return $follows_uid;
+}
 /**
  * @} End of "sina.module".
  */

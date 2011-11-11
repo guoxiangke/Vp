@@ -70,10 +70,14 @@ function sina_vp_UCenter_page($sina_vp_type = NULL) {
 	dpm(user_relationships_load(array("user" => $user->uid,"rtid" => '1'),array("count" => TRUE)),'关注的买家');
 	dpm(user_relationships_load(array("requestee_id" => $user->uid),array("count" => TRUE)),'关注我的');
 	$array=user_relationships_load(array("user" => $user->uid),array("sort" => 'requestee_id'));
-	$follows_uid ="'1'";
+	//$follows_uid ="'1'"; 
 	foreach($array as $key=>$value){
-		$follows_uid .=",'$key'"; //逗号问题 more 。。。
+		$follows_uid[] =$key; //取得粉丝用户uid
 	}
+	if(empty($array)){
+		$follows_uid[] ='1';//没有任何订阅时，默认推送管理员的信息 more....
+	}
+	$follows_uid = implode(",",$follows_uid);
 	if(in_array('Buyer',$user->roles)){		
 		$sql = 'SELECT n.nid, n.sticky, n.created FROM {node} n ';
 		$sql_where = 'WHERE n.type in ("weibo") AND n.promote = 1 AND n.status = 1 ';
