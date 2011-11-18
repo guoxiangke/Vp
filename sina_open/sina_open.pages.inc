@@ -102,12 +102,12 @@ function _sina_open_t_login($tok = NULL) {
             $account = $user;
             db_query("INSERT INTO {sina_open_user} (uid, sina_uid, sina_name, token, config) VALUES ('%s', '%s', '%s', '%s', '')",
             $user->uid, $sina_uid, $authname, serialize($tok));
-            /**
-             * drupal 不支持远程图片做为头像
+            
             if (db_affected_rows() && !$user->picture) {
               db_query("UPDATE {users} SET picture = '%s' WHERE uid = %d", $json->profile_image_url, $user->uid);
             }
-            */
+            /**
+             * drupal 不支持远程图片做为头像*/
           }
           
         } else {
@@ -124,9 +124,9 @@ function _sina_open_t_login($tok = NULL) {
           $pass = user_password();
           $ac = array(
             'name' => $new_name,
-            'mail' => $new_name.'@t.sina.com.cn', // 默认使用新浪微博的域名做为邮件
+            'mail' => $new_name.'@weipujie.com', // 默认使用新浪微博的域名做为邮件 dale302
             'pass' => $pass,
-            //'picture' => $json->profile_image_url,
+            'picture' => $json->profile_image_url,
             'status' => variable_get('user_register', 1) == 1,
             'auth_sina_open' => $new_name
           );

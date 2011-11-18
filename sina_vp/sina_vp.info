@@ -4,4 +4,4 @@ core = 6.x
 package = A-DEV
 ;dependencies[] = flag
 dependencies[] = sina_open
-dependencies[] = user_relationships
+dependencies[] = user_relationships_ui

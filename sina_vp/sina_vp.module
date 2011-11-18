@@ -81,20 +81,20 @@ function sina_vp_nodeapi(&$node, $op)
     case 'weibo':
       switch ($op) {
         case 'insert':
-		  	$node->body=$node->title;	
-	      drupal_write_record('node_revisions', $node, 'vid');	
+			  	$node->body=$node->title;	
+		      drupal_write_record('node_revisions', $node, 'vid');	
           break;
         case 'update':
           $node->body=$node->title;	
-	      drupal_write_record('node_revisions', $node, 'vid');
+	     		drupal_write_record('node_revisions', $node, 'vid');
           break;
         case 'delete':    
 					$wid= sina_vp_get_wid($node->nid);
 					$request_url="http://api.t.sina.com.cn/statuses/destroy/$wid.json"; 
 					$result = sina_open_t_set_request($request_url);
+					db_query("DELETE FROM {sina_vp_weibo2node} WHERE nid = %d", $node->nid); 	
 					if ($result->code == 200) {
 						drupal_set_message($message = '同步删除成功！', $type = 'status', $repeat = TRUE);
-						db_query("DELETE FROM {sina_vp_weibo2node} WHERE nid = %d", $node->nid); 			
 						if(function_exists(dpm)) dpm(json_decode($result->data));			
 					} else {
 						drupal_set_message($message = '同步删除失败！', $type = 'warning', $repeat = TRUE);
@@ -131,7 +131,6 @@ function sina_vp_nodeapi(&$node, $op)
  * copy form sina_open_comment()
  */
 function sina_vp_comment(&$comment, $op) {
-	dpm(&$comment);
   if ($op == 'insert' && isset($comment['sina_vp_open']) && variable_get('sina_open_comment', 1)) {
     if($comment['sina_vp_open']) {
       sina_open_t_set_tweet2(
@@ -154,7 +153,10 @@ function sina_vp_perm(){
 		'add new transfer',//发布转让信息
 		'add new show',//真人秀
 		'add new forward',//转发权
-		'view my follows' //查看粉丝
+		'view my follows', //查看粉丝
+		
+		'add new Seller info',//卖家权限
+		'add new Buyer info',//买家权限
 	);
 }
 
@@ -174,8 +176,9 @@ function sina_vp_access($op, $node, $account) {
   }
 } */
 function sina_vp_init(){
-	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/wbt-helper.js');
   drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/sina.user.page.css');
+	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/jquery.lazyload.mini.js');
+	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/lazyload.js');
 }
 /**
  * Implementation of hook_menu().
@@ -236,245 +239,143 @@ function sina_vp_menu() {
     'file' => 'sina_comment_ahah.inc',
     'type' => MENU_CALLBACK,
   );
-	//通过api里的元数据实现不同页面微博发布时的tags记录来区分是那种类型的weibo。
-	//新品，活动，爆款，，转让，真人秀
-	$items['vp/add/Product'] = array(
-    'title' => t('新品'),//卖家发布的新品 + 所有该卖家发布的新品页面，即user_timeline
-    'page callback' => 'sina_vp_new_content',
-    'page arguments' => array(2),
+	//根据term 动态生成不同的频道。
+	//获取$vocabulary = 微博频道  下 $parent = Seller|Buyer 的所有term
+	$vocabularies = taxonomy_get_vocabularies(t('weibo'));
+	$vid ='';
+	foreach($vocabularies as $key=>$vocabulary){
+		if($vocabulary->name == t('微博频道')) {
+			$vid = $key;
+		}
+	}
+	$Seller_tid = taxonomy_get_term_by_name(t('Seller'));
+	$parent = $Seller_tid['0']->tid; //22
+	$Seller_taxonomy_tree=taxonomy_get_tree($vid, $parent, $depth = -1, $max_depth = NULL);
+	foreach($Seller_taxonomy_tree as $term){
+		$items["new/$term->tid"] = array(//卖家发布信息
+    'title' => $term->name,
+    'page callback' => 'sina_vp_new',
+    'page arguments' => array(1),
     'access callback' => 'user_access',
-    'access arguments' => array('add new product'),
-    'description' => '发布新产品到店铺',
+    'access arguments' => array('add new Seller info'),
     'file' => 'sina_vp.pages.inc',
-    'weight' => -20,
 		'type' => MENU_CALLBACK,
-  );	
-  $items['vp/add/Activity'] = array(
-    'title' => t('活动'),//卖家发布的新品或者活动信息
-    'page callback' => 'sina_vp_new_content',
-    'page arguments' => array(2),
+ 	 );	
+	}
+	$Buyer_tid = taxonomy_get_term_by_name(t('Buyer'));
+	$parent = $Buyer_tid['0']->tid; //23
+	$Buyer_taxonomy_tree=taxonomy_get_tree($vid, $parent, $depth = -1, $max_depth = NULL);
+	foreach($Buyer_taxonomy_tree as $term){
+		$items["new/$term->tid/%"] = array(//vp/add/Transfer/% 买家发布信息
+    'title' => $term->name,
+    'page callback' => 'sina_vp_new',
+    'page arguments' => array(1,2),
     'access callback' => 'user_access',
-    'access arguments' => array('add new activity'),
-    'description' => '发布店铺活动信息',
+    'access arguments' => array('add new Buyer info'),
     'file' => 'sina_vp.pages.inc',
-    'weight' => -19,
-		'type' => MENU_CALLBACK,
-  );
-	$items['vp/add/Special'] = array(
-    'title' => t('爆款'),//卖家发布的新品或者活动信息
-    'page callback' => 'sina_vp_new_content',
-    'page arguments' => array(2),
-    'access callback' => 'user_access',
-    'access arguments' => array('add new special'),
-    'description' => '爆款',
-    'file' => 'sina_vp.pages.inc',
-    'weight' => -18,
-		'type' => MENU_CALLBACK,
-  );
-	$items['vp/add/Sale'] = array(
-    'title' => t('特卖'),//卖家发布的新品或者活动信息
-    'page callback' => 'sina_vp_new_content',
-    'page arguments' => array(2),
-    'access callback' => 'user_access',
-    'access arguments' => array('add new sale'),
-    'description' => '特卖',
-    'file' => 'sina_vp.pages.inc',
-    'weight' => -17,
-		'type' => MENU_CALLBACK,
-  );
-	$items['vp/add/Transfer/%'] = array(//nid
-    'title' => t('转让'),
-    'page callback' => 'sina_vp_new_content',
-    'page arguments' => array(2,3),
-    'access callback' => 'user_access',
-    'access arguments' => array('add new transfer'),
-    'description' => '转让潮',
-    'file' => 'sina_vp.pages.inc',
-    'weight' => -16,
-		'type' => MENU_CALLBACK,
-  );	
-  $items['vp/add/Show/%'] = array(//nid
-    'title' => t('真人秀'),
-    'page callback' => 'sina_vp_new_content',
-    'page arguments' => array(2,3),
-    'access callback' => 'user_access',
-    'access arguments' => array('add new show'),
-    'description' => '真人秀',
-    'file' => 'sina_vp.pages.inc',
-    'weight' => -1,
-		'type' => MENU_CALLBACK,
-  );  
-  $items['vp/forward/%/%'] = array(//Show/nid
-    'title' => t('转发'),
+		'type' => MENU_NORMAL_ITEM,
+ 	 );	
+	}
+	//新品，活动，爆款，特卖，转让，真人秀
+  $items['forward/%/%'] = array(//转发 tid/nid
+    'title' => t('分享'),
     'page callback' => 'sina_vp_new_forward',
-    'page arguments' => array(2,3),
+    'page arguments' => array(1,2),
     'access callback' => 'user_access',
     'access arguments' => array('add new forward'),
-    'description' => '转发',
+    'description' => '转发分享',
     'file' => 'sina_vp.pages.inc',
     'weight' => -15,
 		'type' => MENU_CALLBACK,
   );
+	/////买家或卖家中心，根据角色而定
+	$items['UCenter'] = array(
+    'title' => t('我的微铺街'),
+    'page callback' => 'sina_UCenter_page',
+    'access callback' => TRUE,
+    'description' => '我的微铺街',
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -15,
+		'type' => MENU_NORMAL_ITEM,
+  );
+	$items['UCenter/All'] = array(
+    'title' => t('我的微铺街'),
+    'access callback' => TRUE,
+		'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+	foreach($Seller_taxonomy_tree as $term){
+		$items["UCenter/$term->tid"] = array(
+    'title' => $term->name,
+    'page callback' => 'sina_UCenter_page',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'file' => 'sina_vp.pages.inc',
+    'weight' => $term->weight,
+    'description' => '我关注的'.$term->name,
+		'type' => MENU_NORMAL_ITEM|MENU_LOCAL_TASK,
+ 	 );	
+	}
+	foreach($Buyer_taxonomy_tree as $term){
+		$items["UCenter/$term->tid"] = array(//my转让潮 my真人秀
+    'title' => 'my'.$term->name,
+    'page callback' => 'sina_UCenter_page',
+    'page arguments' => array(1),    
+    'access arguments' => array('add new Buyer info'),
+    'file' => 'sina_vp.pages.inc',
+    'weight' => $term->weight+20,
+		'description' => '我关注的'.$term->name,
+		'type' => MENU_NORMAL_ITEM|MENU_LOCAL_TASK,
+		'hidden' => 1,
+ 	 );	
+	}
 	///
 	$items['VpCenter'] = array(
     'title' => t('微铺街'),
-    'page callback' => 'sina_vp_center_page_default',
+    'page callback' => 'sina_VpCenter_page',
     'access callback' => TRUE,
     'description' => '微铺街',
-    'file' => 'sina_vp_center.inc',
+    'file' => 'sina_vp.pages.inc',
     'weight' => -15,
-		//'type' => MENU_DEFAULT_LOCAL_TASK,
+		'type' => MENU_NORMAL_ITEM,
 		'menu_name' => 'primary-links',
   );
 	$items['VpCenter/All'] = array(
     'title' => t('微铺大厅'),
-    'page callback' => 'sina_vp_center_page_default',
-    'access callback' => TRUE,
     'description' => '微铺大厅',
-    'file' => 'sina_vp_center.inc',
     'weight' => -15,
-		//'type' => MENU_DEFAULT_LOCAL_TASK,
-  );	
-	$items['VpCenter/Product'] = array(
-    'title' => t('新品'),
-    'page callback' => 'sina_vp_center_page_default',
-    'page arguments' => array(1),
-    'access callback' => TRUE,
-    'description' => '新品',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -15,
-    //'type' => MENU_LOCAL_TASK,
+		'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-	$items['VpCenter/Activity'] = array(
-    'title' => t('活动'),
-    'page callback' => 'sina_vp_center_page_default',
+	foreach($Seller_taxonomy_tree as $term){
+		$items["VpCenter/$term->tid"] = array(
+    'title' => $term->name,
+    'page callback' => 'sina_VpCenter_page',
     'page arguments' => array(1),
     'access callback' => TRUE,
-    'description' => '活动',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -15,
-    //'type' => MENU_LOCAL_TASK,
-  );
-	$items['VpCenter/Special'] = array(
-    'title' => t('爆款'),
-    'page callback' => 'sina_vp_center_page_default',
-    'page arguments' => array(1),
-    'access callback' => TRUE,
-    'description' => '爆款',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -15,
-    //'type' => MENU_LOCAL_TASK,
-  );	
-  $items['VpCenter/Sale'] = array(
-    'title' => t('特卖'),
-    'page callback' => 'sina_vp_center_page_default',
-    'page arguments' => array(1),
-    'access callback' => TRUE,
-    'description' => '特卖',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -15,
-    //'type' => MENU_LOCAL_TASK,
-  );
+    'file' => 'sina_vp.pages.inc',
+    'weight' => $term->weight,
+		'type' => MENU_NORMAL_ITEM|MENU_LOCAL_TASK,
+ 	 );	
+	}
+	
 	$items['Transfer'] = array(
     'title' => t('转让潮'),
-    'page callback' => 'sina_vp_center_page_default',
-    'page arguments' => array(0),
+    'page callback' => 'sina_VpCenter_page',
+    'page arguments' => array('5'),
     'access callback' => TRUE,
     'description' => '转让潮',
-    'file' => 'sina_vp_center.inc',
+    'file' => 'sina_vp.pages.inc',
     'weight' => -15,
     'menu_name' => 'primary-links',
   );
 	$items['Show'] = array(
     'title' => t('真人秀'),
-    'page callback' => 'sina_vp_center_page_default',
-    'page arguments' => array(0),
+    'page callback' => 'sina_VpCenter_page',
+    'page arguments' => array('6'),
     'access callback' => TRUE,
     'description' => '真人秀',
-    'file' => 'sina_vp_center.inc',
+    'file' => 'sina_vp.pages.inc',
     'weight' => -15,
     'menu_name' => 'primary-links',
-  );
-	/////买家或卖家中心，根据角色而定
-	$items['UCenter'] = array(
-    'title' => t('我的微铺街'),
-    'page callback' => 'sina_vp_UCenter_page',
-    'access callback' => TRUE,
-    'description' => '我的微铺街',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -15,
-		//'type' => MENU_DEFAULT_LOCAL_TASK,
-  );
-	$items['UCenter/All'] = array(
-    'title' => t('我的微铺街'),
-    'page callback' => 'sina_vp_UCenter_page',
-    'access callback' => TRUE,
-    'description' => '我的微铺大厅',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -15,
-		'type' => MENU_DEFAULT_LOCAL_TASK,
-  );	
-	$items['UCenter/Product'] = array(
-    'title' => t('新品'),
-    'page callback' => 'sina_vp_UCenter_page',
-    'page arguments' => array(1),
-    'access callback' => TRUE,
-    'description' => '我关注的新品',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -15,
-    'type' => MENU_LOCAL_TASK,
-  );
-	$items['UCenter/Activity'] = array(
-    'title' => t('活动'),
-    'page callback' => 'sina_vp_UCenter_page',
-    'page arguments' => array(1),
-    'access callback' => TRUE,
-    'description' => '我关注的活动',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -15,
-    'type' => MENU_LOCAL_TASK,
-  );
-	$items['UCenter/Special'] = array(
-    'title' => t('爆款'),
-    'page callback' => 'sina_vp_UCenter_page',
-    'page arguments' => array(1),
-    'access callback' => TRUE,
-    'description' => '我关注的爆款',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -15,
-    'type' => MENU_LOCAL_TASK,
-  );	
-  $items['UCenter/Sale'] = array(
-    'title' => t('特卖'),
-    'page callback' => 'sina_vp_UCenter_page',
-    'page arguments' => array(1),
-    'access callback' => TRUE,
-    'description' => '我关注的特卖',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -15,
-    'type' => MENU_LOCAL_TASK,
-  );	
-	$items['UCenter/Transfer'] = array(
-    'title' => t('my转让潮'),
-    'page callback' => 'sina_vp_UCenter_page',
-    'page arguments' => array(1),
-    'access callback' => 'user_access',
-    'access arguments' => array('add new transfer'),
-    'description' => '我订阅的转让潮',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -14,
-    'type' => MENU_LOCAL_TASK,
-  );
-	$items['UCenter/Show'] = array(
-    'title' => t('my真人秀'),
-    'page callback' => 'sina_vp_UCenter_page',
-    'page arguments' => array(1),
-    'access callback' => 'user_access',
-    'access arguments' => array('add new show'),
-    'description' => '我订阅的真人秀',
-    'file' => 'sina_vp_center.inc',
-    'weight' => -13,
-    'type' => MENU_LOCAL_TASK,
   );
 	//个人中心 菜单项
 	//用户关系user_relationships
@@ -482,38 +383,110 @@ function sina_vp_menu() {
 	//drupal_get_path('module', 'relationships').
   $items['relationships/follows'] = array(
     'title'             => '我的粉丝',
+    'title callback'  => 'relationships_follows_title_callback',
+    'title arguments'  => array('300'),//$rtid=
     'access callback' => 'user_access',
     'access arguments' => array('view my follows'),
     //'access callback'   => 'user_relationships_ui_check_access',
     //'access arguments'  => array('edit'),
-    'type'              => MENU_NORMAL_ITEM|MENU_LOCAL_TASK,
+    'type'              => MENU_NORMAL_ITEM,
     'weight'            => -9,
-    'page callback'     => 'user_relationships_page',
-    'page arguments'    => array(NULL, 1),
-    'file'              => 'user_relationships_ui.pages.inc',
-    'hidden'            => 1,
+    'page callback'     => 'user_relationships_page0',
+    //'page arguments'    => array(NULL, 1),
+    //'file'              => 'user_relationships_ui.pages.inc',
   );
-	//$items['UCenter/follows'] = $items['relationships/follows'];
-  return $items;
+	//
+	return $items;
 }
+function user_relationships_page0(){ //暂时用这个
+	global $user;
+	return t('我的粉丝数量').user_relationships_load(array("requestee_id" => $user->uid),array("count" => TRUE));
+}
+function relationships_follows_title_callback($rtid = NULL) {
+  global $user;
+	if($rtid)$count = user_relationships_load(array("user" => $user->uid,"rtid" => $rtid),array("count" => TRUE));
+	if($rtid==300)$count = user_relationships_load(array("requestee_id" => $user->uid),array("count" => TRUE));
+	//dpm(user_relationships_load(array("user" => $user->uid),array("count" => TRUE)),'关注');
+	//dpm(user_relationships_load(array("user" => $user->uid,"rtid" => '2'),array("count" => TRUE)),'关注的卖家');
+	//dpm(user_relationships_load(array("user" => $user->uid,"rtid" => '1'),array("count" => TRUE)),'关注的买家');
+	//dpm(user_relationships_load(array("requestee_id" => $user->uid),array("count" => TRUE)),'关注我的');	
+  if ($count > 0) {
+    //return format_plural($count, 'Messages (1 new)', '我的粉丝 (@count new)');
+  }
+	switch ($rtid) {
+		case '300':
+			  return t('我的粉丝(').$count.')';
+			break;
+		case '1':
+			  return t('我的关注(').$count.')';
+			break;
+		case '2':
+		  return t('我关注的买家(').$count.')';
+		break;
+		default:
+			return t('有错误吧！');
+			break;
+	}
 
+}
 function sina_vp_menu_alter(&$items) {
-  // Example - disable the page at node/add
+	global $user;
+	if(in_array('Seller',$user->roles)&&0){
+		//对于卖家，个人中心不显示  my转让   my真人秀
+		$vocabularies = taxonomy_get_vocabularies(t('weibo'));
+		$vid ='';
+		foreach($vocabularies as $key=>$vocabulary){
+			if($vocabulary->name == t('微博频道')) {
+				$vid = $key;
+			}
+		}
+		$Buyer_tid = taxonomy_get_term_by_name(t('Buyer'));
+		$parent = $Buyer_tid['0']->tid; //23
+		$Buyer_taxonomy_tree=taxonomy_get_tree($vid, $parent, $depth = -1, $max_depth = NULL);
+		foreach($Buyer_taxonomy_tree as $term){dpm($term,$term->tid);
+		$items['UCenter/'.$term->tid]['access arguments'] = array('add new Buyer info');
+		}
+		//隐藏卖家的     我的关注(0)    我关注的买家(1)只显示 关注 我的粉丝  ????css
+		//include_once(drupal_get_path('module', 'user_relationships_api') .'/user_relationships_api.module');
+		//foreach (user_relationships_types_load() as $rtid => $relationship) {
+		//	$items["relationships/{$rtid}"]['access callback'] = 'user_access';
+		//	$items["relationships/{$rtid}"]['access arguments'] = array('add new Buyer info');
+		//	$items["relationships/{$rtid}"]['hidden']=1;
+	  // }
+	}
+	//if($user->id==0)$items['UCenter']['access callback'] = FALSE;
+		// Example - disable the page at node/add
   $items['node/add']['access callback'] = FALSE;
   $items['node/add/weibo']['access callback'] = FALSE;
 	$items['vp/add/Transfer']['access callback'] = FALSE;
 	$items['vp/add/Show']['access callback'] = FALSE;
-	global $user;
-	if(in_array('Seller',$user->roles)){
-		$items['UCenter/Transfer']['hidden'] = 1;
-		$items['UCenter/Show']['hidden'] = 1;
-	}
-
+	$items['messages']['hidden'] = 1;
+	$items['relationships']['title'] = t('关系中心');
+	$items['relationships'] = $items['relationships/follows'];
+	//unset($items['relationships/list']);//ALL去掉，我的粉丝提前
+	$items['relationships/list'] = $items['relationships/follows'];
+	$items['relationships/list']['type'] = MENU_DEFAULT_LOCAL_TASK;
+	$items['relationships/follows']['hidden'] = 1;
+	include_once(drupal_get_path('module', 'user_relationships_api') .'/user_relationships_api.module');
+	foreach (user_relationships_types_load() as $rtid => $relationship) {
+    $items["relationships/{$rtid}"]['title callback'] = 'relationships_follows_title_callback';
+		$items["relationships/{$rtid}"]['title arguments'] = array("$rtid");
+  }
+	/*
+  $items['User/relationships'] = $items['relationships'];
+	$items['User/relationships/list'] = $items['relationships/list'];
+	module_load_include('inc', 'user_relationships_api','user_relationships_api');
+	foreach (user_relationships_types_load() as $rtid => $relationship) {
+	  $items["User/relationships/{$rtid}"] = $items["relationships/{$rtid}"];
+		$items["User/relationships/{$rtid}"]['page arguments'] = array(NULL, 2);
+	}*/
+	//$items['user/my/relationships'] = $items['relationships'];
+	//$items['user/my/messages'] = $items['messages'];
 	//dpm(user_relationships_load(array("user" => $user->uid),array("count" => TRUE)),'关注总数');
 	//dpm(user_relationships_load(array("user" => $user->uid,"rtid" => '2'),array("count" => TRUE)),'关注的卖家');
 	//dpm(user_relationships_load(array("user" => $user->uid,"rtid" => '1'),array("count" => TRUE)),'关注的买家');
 	//dpm(user_relationships_load(array("requestee_id" => $user->uid),array("count" => TRUE)),'关注我的');
-	
+
 }
 /**
  * Menu item title callback - use the user name if it's not the current user.
@@ -547,12 +520,12 @@ function sina_vp_type_preprocess($sina_vp_type){
  * 	新浪微博返回的json data.
  * @param $node
  *   节点或评论
- * @param $sina_vp_type
- *   string weibo频道
+ * @param $tid
+ *   int weibo频道
  * @param $zid
- *   被转发节点id
+ *   被转发/评论/秀/转让的节点nid
  */
-function _sina_vp_db_write($data,$node,$sina_vp_type=NUll,$zid=NULL){
+function _sina_vp_db_write($data,$node,$tid=NUll,$zid=NULL){
 		if(isset($node->type)){//if $node is a node 拥有type属性
 			$nid = $node->nid;
 			$cid = 0;
@@ -568,15 +541,11 @@ function _sina_vp_db_write($data,$node,$sina_vp_type=NUll,$zid=NULL){
 			$datas = $data;
 		}  
 		$wid   = $wdata?$wdata->id:0;
-		$created_at = $wdata?strtotime($wdata->created_at):time();
-		//
-		if(is_string($sina_vp_type)){
-			$sina_vp_type=sina_vp_get_type_by_string($sina_vp_type);
-		}
+		$created_at = $wdata->created_at?strtotime($wdata->created_at):time();
 		db_query("INSERT INTO {sina_vp_weibo2node}
 							(`nid` ,`uid` ,`cid`,`wid` ,`data`,`created_at`,`sina_vp_type`,`zid`)
 							VALUES ('%d','%d','%d','%d','%s','%d','%d','%d')"
-							,$nid,$user->uid,$cid,$wid,$datas,$created_at,$sina_vp_type,$zid);
+							,$nid,$user->uid,$cid,$wid,$datas,$created_at,$tid,$zid);
 							//more... 是否需要分2个表 nid zid
 }
 /**
@@ -652,108 +621,40 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		$form['preview']['#type']['#access']=FALSE;
 		//drupal_add_js(drupal_get_path('module', 'sina_vp') .'/sina_vp_comment.js');
 	}
-	//
-	if(($form_id == 'weibo_node_form' && arg(0)=='vp')
-			||($form_id == 'weibo_node_form' && arg(0)=='vp'&& arg(1)=='forward')	){
-		//hook_taxonomy
-		//taxonomy_overview_vocabularies()
-	  $vocabularies = taxonomy_get_vocabularies();
+
+	if(($form_id == 'weibo_node_form' && arg(0)=='new')	||
+		($form_id == 'weibo_node_form' && arg(0)=='forward') ){
+		//new/$tid & forward/$tid/$nid分享转发表单默认处理
+		$vocabularies = taxonomy_get_vocabularies(t('weibo'));
 	  //$form = array('#tree' => TRUE);
 	  foreach ($vocabularies as $vocabulary) {
-	    if(check_plain($vocabulary->name)==t('微薄频道')){
+	    if(check_plain($vocabulary->name)==t('微博频道')){
 	    	$vid=$vocabulary->vid;
 				break;
 	    }
 	  }
-		if(!$vid){			
-			drupal_set_message('没有设置微博频道哎！^_^','error');
-			return t('E11090732:没有设置微博频道哎^_^');
-		}
-		//define('PRODUCT', 0); need more
-		$sina_vp_type=arg(2);
-		switch (arg(2)) {
-			case 'Product':
-				// 2 可以进一步处理
-				$form['taxonomy'][$vid]['#default_value'] = 1;
-				$form['taxonomy'][$vid]['#description'] = 'Product新品';
-				//博文类型
-				$form['sina_vp_type'] = array(
-					'#type' => 'value',
-					'#default_value' =>1,
-					'#access' => FALSE,
-					'#description' => 'Product新品',
-				);
-				break;
-			case 'Activity':
-				$form['taxonomy'][$vid]['#default_value'] = 2;
-				$form['taxonomy'][$vid]['#description'] = 'Activity活动';
-				//博文类型
-				$form['sina_vp_type'] = array(
-					'#type' => 'value',
-					'#default_value' =>2,
-					'#access' => FALSE,
-					'#description' => 'Activity活动',
-				);
-				break;
-			case 'Special':
-				$form['taxonomy'][$vid]['#default_value'] = 3;
-				$form['taxonomy'][$vid]['#description'] = 'Special爆款';
-				//博文类型
-				$form['sina_vp_type'] = array(
-					'#type' => 'value',
-					'#default_value' =>3,
-					'#access' => FALSE,
-					'#description' => 'Special爆款',
-				);
-				break;
-			case 'Sale':
-				$form['taxonomy'][$vid]['#default_value'] = 4;
-				$form['taxonomy'][$vid]['#description'] = 'Sale特卖';
-				//博文类型
-				$form['sina_vp_type'] = array(
-					'#type' => 'value',
-					'#default_value' =>4,
-					'#access' => FALSE,
-					'#description' => 'Sale特卖',
-				);
-				break;
-			case 'Transfer':
-				$form['taxonomy'][$vid]['#default_value'] = 5;
-				$form['taxonomy'][$vid]['#description'] = 'Transfer转让';
-				//博文类型
-				$form['sina_vp_type'] = array(
-					'#type' => 'value',
-					'#default_value' =>5,
-					'#access' => FALSE,
-					'#description' => 'Transfer转让',
-				);
-				break;
-			case 'Show':
-				$form['taxonomy'][$vid]['#default_value'] = 6;
-				$form['taxonomy'][$vid]['#description'] = 'Show真人秀';
-				//博文类型
-				$form['sina_vp_type'] = array(
-					'#type' => 'value',
-					'#default_value' =>6,
-					'#access' => FALSE,
-					'#description' => 'Show真人秀',
-				);
-				break;
-			default:
-				drupal_set_message('链接请求错误，请到指定页面发布微博^_^','error');
-				break;
+		$tid=arg(1);
+		if($term = taxonomy_get_term($tid)){			
+			$form['taxonomy'][$vid]['#default_value'] = $tid;
+			$form['taxonomy'][$vid]['#description'] = $term->name;
+			//博文类型
+			$form['sina_vp_type'] = array(
+				'#type' => 'value',
+				'#default_value' =>$tid,
+				'#access' => FALSE,
+				'#description' => $term->name,
+			);
 		}
 	}
-//
-		$weibo_type_array=array('Product','Activity','Special','Sale','Transfer','Show');
-	  if(arg(0)=='vp' && arg(1)=='forward' && $form_id == 'weibo_node_form'){ 
-	  	//转发api /vp/forward/Product/139 不可以带图片
-			$form['field_weibo_image']['#access']=FALSE;
-		}
-		if(FALSE){ 
-	  	//转让可不可以带图片呢？？？ more...
-			$form['field_weibo_image']['#access']=FALSE;
-		}
+		
+	if(arg(0)=='forward' && $form_id == 'weibo_node_form'){ 
+  	//转发api forward/$tid/139 不可以带图片
+		$form['field_weibo_image']['#access']=FALSE;
+	}
+	if(FALSE){ 
+  	//转让 可不可以带图片呢？？？ more...
+		$form['field_weibo_image']['#access']=FALSE;
+	}
 	$dispalyNone_forms = array(
 		'weibo_page_default',
 		'devel_execute_block_form',
@@ -798,7 +699,7 @@ function sina_vp_get_type_by_int($sina_vp_type){
 				$sina_vp_type = 'Show';
 				break;
 			default:
-				drupal_set_message('no get_sina_vp_type','error');
+				drupal_set_message('2011:no get_sina_vp_type.','error');
 				break;
 		}
 	}
@@ -855,36 +756,52 @@ function sina_vp_get_type_by_node($nid){
 function sina_vp_link_alter(&$links, $node, $comment=NULL){
 	global $user;
 	if($node->uid!=$user->uid && $node->type == 'weibo'){
-		$sina_vp_type = sina_vp_get_type_by_node($node->nid);
-		if(user_access('add new forward')){			
+		foreach($node->taxonomy as $key=>$value){
+			$tid = $key;
+		};
+		if(user_access('add new forward')){		//转发分享  	forward/%/%
 			$links['forward_link'] = array(
 		    'title' => t('分享'), 
-		    'href' => 'vp/forward/'.$sina_vp_type.'/'.$node->nid, 
+		    'href' => 'forward/'.$tid.'/'.$node->nid, 
 		    //'query' => 'redirect=node', 
 		    //'fragment' => 'anchorname', 
 		    'attributes' => array('title' => t('分享给新浪和你的朋友')),
 	  	);
 		}
-		if(user_access('add new show') && $sina_vp_type!='Show' && $sina_vp_type!='Transfer'){
-				//vp/add/Show/%		 转让和分享不能再秀了！～
-			$links['show_link'] = array(
-		    'title' => t('秀一下'), 
-		    'href' => 'vp/add/Show/'.$node->nid, 
-		    //'query' => 'redirect=node', 
-		    //'fragment' => 'anchorname', 
-		    'attributes' => array('title' => t('发布真人秀')),
-	  	);
+		
+		$parents_taxonomy = taxonomy_get_parents($tid);
+		foreach($parents_taxonomy as $key=>$value){
+			$p_tid = $key;
+			$Buyer_tid = taxonomy_get_term_by_name(t('Buyer'));
+			if($p_tid!=$Buyer_tid['0']->tid){
+				$donext=TRUE;// 转让和分享不能再秀了！～
+			}
+		};
+
+			$vocabularies = taxonomy_get_vocabularies(t('weibo'));
+			$vid ='';
+			foreach($vocabularies as $key=>$vocabulary){
+				if($vocabulary->name == t('微博频道')) {
+					$vid = $key;
+				}
+			}
+			$Buyer_tid = taxonomy_get_term_by_name(t('Buyer'));
+			$parent = $Buyer_tid['0']->tid; //23
+			$Buyer_taxonomy_tree=taxonomy_get_tree($vid, $parent, $depth = -1, $max_depth = NULL);	
+	
+		if(user_access('add new Buyer info') && $donext){//&& $sina_vp_type!='Show' && $sina_vp_type!='Transfer'
+				// 转让和分享不能再秀了！～
+			foreach($Buyer_taxonomy_tree as $term){
+				$links['link_'.$term->name] = array(
+			    'title' => t($term->name), 
+			    'href' => "new/$term->tid/$node->nid", 
+			    //'query' => 'redirect=node', 
+			    //'fragment' => 'anchorname', 
+			    'attributes' => array('title' => t('发布'.$term->name)),
+	  		);
+			}
 		}
-		if(user_access('add new transfer') && $sina_vp_type!='Show' && $sina_vp_type!='Transfer'){				
-			$links['transfer_link'] = array(
-		    'title' => t('转让'), 
-		    'href' => 'vp/add/Transfer/'.$node->nid, 
-		    //'query' => 'redirect=node', 
-		    //'fragment' => 'anchorname', 
-		    'attributes' => array('title' => t('发布转让该产品')),
-	  	);
-		}
-	}
+	}//
 	return $links;
 }
 /**
@@ -906,7 +823,8 @@ function sina_vp_weibo_length_validate($element, &$form_state) {
  *  节点
  */
 function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NUll
-	$zid=arg(3);dpm($zid,'$zid');
+  $tid = arg(1);
+	$nid = arg(2); //new/$term_id/$nid
   if (isset($url)) {
     $len = drupal_strlen($url);
   } else {
@@ -924,11 +842,11 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 	}elseif(isset($node[cid])){//if is $comment is_array &&cid属性
 		$request_url='http://api.t.sina.com.cn/statuses/comment.json'; 
 		$wid= sina_vp_get_wid($node[nid]);
+		//watchdog('$params22','<pre>'.print_r($result,true));
 		$params['id'] = $wid;
 		$params['comment'] = urlencode($text. $url);
 		$params['without_mention'] = 0;
 		$params['comment_ori'] = 1;
-		watchdog('$zid-pl',print_r($zid,true));
 		/* some API
 			id 	true 	int64 	要评论的微博消息ID
 			comment 	true 	string 	评论内容。必须做URLEncode,信息内容不超过140个汉字。
@@ -937,9 +855,12 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 			comment_ori 	false 	int 	当评论一条转发微博时，是否评论给原微博。0:不评论给原微博。1：评论给原微博。默认0. 
 		*/
 		$result = sina_open_t_set_request($request_url,$params);
-		//watchdog('$params22','<pre>'.print_r($result,true));
-		$sina_vp_type=sina_vp_get_type_by_node($node[nid]);
-		_sina_vp_db_write($result->data,$node,$sina_vp_type);//dale $node or $comment  
+		
+		$node_root = node_load($node[nid]);//$node[nid]=$comment[nid]  
+		foreach($node_root->taxonomy as $key=>$value){
+			$tid = $key;
+		};
+		_sina_vp_db_write($result->data,$node,$tid,$node[nid]);
 		if ($result->code == 200) {
 			//watchdog('success','已成功发送到新浪微博2026'); 			
 			if(function_exists(dpm)) dpm(json_decode($result->data));//没效果，注销了 
@@ -949,24 +870,16 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 			watchdog('warning','评论转发失败 code:201109262026');
 		}	
 	}
-	if($donext){//发布节点，同步新浪微博	
-	  $weibo_type_array=array('Product','Activity','Special','Sale','Transfer','Show'); 	
-	  if(arg(0)=='vp' && arg(1)=='forward'){ //转发api /vp/forward/Product/139
-			if(!in_array($sina_vp_type=arg(2), $weibo_type_array)){
-				drupal_set_message('转发失败 ,指定频道不对！');
-				return t('转发失败 ,指定频道不对！');
-			}
-			if(!(node_load($zid=arg(3)))){
-				drupal_set_message('转发失败 ,找到不您要转发的微博（已删除）！');
-				return t('转发失败 ,找到不您要转发的微博（已删除）！');
-			}
-			$params['id'] = sina_vp_get_wid($zid);
+	if($donext){//发布节点，同步新浪微博	new/$tid  new/$tid/$nid
+	  if(arg(0)=='forward'){
+	  	//分享 转发api forward/$tid/$nid
+			$params['id'] = sina_vp_get_wid($nid);
 			$params['status'] = urlencode($text. $url);
 			//是否在转发的同时发表评论。0表示不发表评论，1表示发表评论给当前微博，2表示发表评论给原微博，3是1、2都发表。默认为0。 
 			$params['is_comment'] = 0;
 			$request_url = 'http://api.t.sina.com.cn/statuses/repost.json';
 			$result = sina_open_t_set_request($request_url,$params);
-		  _sina_vp_db_write($result->data,$node,$sina_vp_type,$zid);
+		  _sina_vp_db_write($result->data,$node,$tid,$nid);
 		  if(function_exists(dpm)) dpm(json_decode($result->data),'微博返回信息');		
 		  if ($result->code == 200) {	    					  			
 				drupal_set_message('已成功发送到新浪微博');
@@ -975,12 +888,12 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 		  }
 			return;
 		}
-	  if(is_null($node->field_weibo_image[0])){
+	  if(is_null($node->field_weibo_image[0])){//new/$tid
 	  	$result = sina_open_t_set_request(
 		    'http://api.t.sina.com.cn/statuses/update.json',
 		    array('status' => urlencode($text. $url))
 		  );
-		  _sina_vp_db_write($result->data,$node,$sina_vp_type=arg(2),$zid=arg(3));
+		  _sina_vp_db_write($result->data,$node,$tid,$nid);
 		  if(function_exists(dpm)) dpm(json_decode($result->data),'微博返回信息');		
 		  if ($result->code == 200) {	    					  			
 				drupal_set_message('已成功发送到新浪微博');
@@ -1008,7 +921,7 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 			if(function_exists(dpm)) dpm($result,'图片微博返回数据');
 			//$result['id']=$result['mid'];
 			$result['id']=number_format($result['id'], 0, '', '');
-			_sina_vp_db_write(json_encode($result),$node,$sina_vp_type=arg(2),$zid=arg(3));
+			_sina_vp_db_write(json_encode($result),$node,$tid,$nid);
 			if (is_array($result)) {
 				drupal_set_message('已成功发送到新浪微博ok with pic');
 				//if(function_exists(dpm)) dpm(json_decode($result->data));				
@@ -1123,17 +1036,17 @@ function sina_vp_context_preprocess(&$node){
 	//转发了 发布了 分享了 秀了 转让了	
 	if((is_null(arg(1)) && (arg(0)=='VpCenter' || arg(0)=='UCenter'))){
 		$output .= '【'.t($sina_vp_type).'】';
-		if($node->uid==$user->uid){//我发布的内容不添加标签，但是在大厅里要添加，频道里不添加							
+		if($node->uid==0 || $node->uid==$user->uid){//我发布的内容不添加标签，但是在大厅里要添加，频道里不添加							
 		}else{			
 			$output .= t('<a href="@user">@'.user_load($node->uid)->name.' </a>',array('@user' => url('user/').$node->uid));
 		}
 	}elseif(is_null(arg(1)) && (arg(0)=='Show' || arg(0)=='Transfer')){
-		if($node->uid==$user->uid){//我发布的内容不添加标签，但是在大厅里要添加，频道里不添加							
+		if($node->uid==0 || $node->uid==$user->uid){//我发布的内容不添加标签，但是在大厅里要添加，频道里不添加							
 		}else{			
 			$output .= t('<a href="@user">@'.user_load($node->uid)->name.' </a>',array('@user' => url('user/').$node->uid));
 		}
 	}else{
-		if($node->uid==$user->uid){//我发布的内容不添加标签，但是在大厅里要添加，频道里不添加							
+		if($node->uid==0 || $node->uid==$user->uid){//我发布的内容不添加标签，但是在大厅里要添加，频道里不添加							
 		}else{			
 			$output .= t('<a href="@user">@'.user_load($node->uid)->name.' </a>',array('@user' => url('user/').$node->uid));
 		}	
@@ -1156,6 +1069,160 @@ function get_follows($uid=NULL)
 		$follows_uid[] =$key; //取得粉丝用户uid
 	}
 	return $follows_uid;
+}
+/**
+ * @Implement of hook_user()
+ */
+function sina_vp_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'login': //第一次登陆会比较慢～！抓取头像上传本站。load？
+			global $user;//like $user->picture=='http://tp2.sinaimg.cn/1801497981/50/1297470438/1'
+			$pattern = "/^http\:\/\//";
+			$subject = $user->picture;
+			if(preg_match($pattern, $subject)){
+				$pattern="/\/50\//";
+				$user->picture = preg_replace($pattern, "/180/", $user->picture);	
+				$string = file_get_contents($user->picture);
+				$user_picture_path = variable_get('user_picture_path', '');
+				$user->picture = "sites/default/files/$user_picture_path/picture-$user->uid.jpg";
+				$handle = fopen($user->picture, "w+");
+				fwrite ( $handle , $string );
+				//
+				//$user->picture = "sites/default/files/imagecache/photo_50/$user_picture_path/picture-$user->uid.jpg";
+				drupal_write_record('users', $user, 'uid');
+			}
+    break;
+ 		case 'delete':
+		break;
+  }
+}
+
+/**
+ * 添加一个imageCache 微博头像 50X 150X 180X
+ * HOOK_imagecache_default_presets()
+ */
+function sina_vp_imagecache_default_presets() {
+  $presets = array();
+  $presets['photo_50'] = array (
+    'presetname' => 'photo_50',
+    'actions' => array (
+      0 => array (
+        'weight' => '0',
+        'module' => 'imagecache',
+        'action' => 'imagecache_scale_and_crop',
+        'data' => array (
+          'width' => '50',
+          'height' => '50',
+        ),
+      ), 
+      1 => array (//radius: 0.5, sigma: 0.5, amount: 100, threshold: 0.05
+        'weight' => '1',
+        'module' => 'imagecache',
+        'action' => 'imagecache_sharpen',
+        'data' => array (
+          'radius' => '0.5',
+          'sigma' => '0.5',
+          'amount' => '100',
+          'threshold' => '00.5',
+        ),
+      ),
+    ),
+  );
+	$presets['photo_150'] = array (
+    'presetname' => 'photo_150',
+    'actions' => array (
+      0 => array (
+        'weight' => '0',
+        'module' => 'imagecache',
+        'action' => 'imagecache_scale_and_crop',
+        'data' => array (
+          'width' => '150',
+          'height' => '150',
+        ),
+      ), 
+      1 => array (//radius: 0.5, sigma: 0.5, amount: 100, threshold: 0.05
+        'weight' => '1',
+        'module' => 'imagecache',
+        'action' => 'imagecache_sharpen',
+        'data' => array (
+          'radius' => '0.5',
+          'sigma' => '0.5',
+          'amount' => '100',
+          'threshold' => '00.5',
+        ),
+      ),
+    ),
+  );
+	$presets['vp'] = array ( //微博图片
+    'presetname' => 'vp',
+    'actions' => array (
+      0 => array (
+        'weight' => '0',
+        'module' => 'imagecache',
+        'action' => 'imagecache_scale',
+        'data' => array (
+          'width' => '120',
+          'height' => '100%',
+        ),
+      ), 
+      1 => array (//radius: 0.5, sigma: 0.5, amount: 100, threshold: 0.05
+        'weight' => '1',
+        'module' => 'imagecache',
+        'action' => 'imagecache_sharpen',
+        'data' => array (
+          'radius' => '0.5',
+          'sigma' => '0.5',
+          'amount' => '100',
+          'threshold' => '00.5',
+        ),
+      ),
+    ),
+  );
+  return $presets;
+}
+/*
+ * - MODULE_preprocess_HOOK(&$variables)
+ *   This is for modules that want to alter or provide extra variables for
+ *   theming hooks not registered to itself. For example, if a module named
+ *   "foo" wanted to alter the $submitted variable for the hook "node" a
+ *   preprocess function of foo_preprocess_node() can be created to intercept
+ *   and alter the variable.
+ *
+ */
+function sina_vp_preprocess_user_picture(&$variables) {
+	if(arg(0)=='user'){return $variables;}//个人中心显示大图，其他则处理
+  $variables['picture'] = '';
+  if (variable_get('user_pictures', 0)) {
+    $account = $variables['account'];
+    if (!empty($account->picture) && file_exists($account->picture)) { //把180大图片缓存50小头像
+    	$user_picture_path = variable_get('user_picture_path', '');
+			$filepath="sites/default/files/imagecache/photo_50/$user_picture_path/picture-$account->uid.jpg";
+      //file_get_contents($filepath);//访问imagecache路径生成小图片
+      if(!(file_exists($filepath))){				
+					// create a new cURL resource
+				$ch = curl_init();				
+				// set URL and other appropriate options
+				curl_setopt($ch, CURLOPT_URL, "http://dev.weipujie.com/?q=zh-hans/$filepath");
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+				// grab URL and pass it to the browser
+				curl_exec($ch);				
+				// close cURL resource, and free up system resources
+				curl_close($ch);	
+			}
+      $picture = file_create_url($filepath);			
+    }elseif (variable_get('user_picture_default', '')) {
+      $picture = variable_get('user_picture_default', '');
+    }
+
+    if (isset($picture)) {
+      $alt = t("@user's picture", array('@user' => $account->name ? $account->name : variable_get('anonymous', t('Anonymous'))));
+      $variables['picture'] = theme('image', $picture, $alt, $alt, '', FALSE);
+      if (!empty($account->uid) && user_access('access user profiles')) {
+        $attributes = array('attributes' => array('title' => t('View user profile.')), 'html' => TRUE);
+        $variables['picture'] = l($variables['picture'], "user/$account->uid", $attributes);
+      }
+    }
+  }
 }
 /**
  * @} End of "sina.module".

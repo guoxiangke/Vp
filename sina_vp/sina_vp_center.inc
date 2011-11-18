@@ -4,15 +4,14 @@
  * copy form node_page_default() in node.module
  */
 //module_load_include('inc', 'sina_vp', 'sina_vp.pages');
-function sina_vp_center_page_default($sina_vp_type = NULL) {
+function sina_vp_center_page_default($tid = NULL) {
 	$sql='SELECT n.nid, n.sticky, n.created FROM {node} n WHERE n.type in ("weibo") AND n.promote = 1 AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC';
-	$sina_vp_type_tid =sina_vp_get_type_by_string($sina_vp_type);
-  if($sina_vp_type){
+	if($tid){
   	//SELECT n.nid, n.sticky, n.created FROM {node} n WHERE n.type in ("weibo") AND n.promote = 1 AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC	
   	$sql='SELECT n.nid, n.sticky, n.created
 				 FROM {node} n 
 				 INNER JOIN term_node term_node ON n.vid = term_node.vid
-				 WHERE (n.type in ("weibo") AND n.promote = 1 AND n.status = 1) AND (term_node.tid = '.$sina_vp_type_tid.')';
+				 WHERE (n.type in ("weibo") AND n.promote = 1 AND n.status = 1) AND (term_node.tid = '.$tid.')';
   }
   $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
 
@@ -41,8 +40,8 @@ function sina_vp_center_page_default($sina_vp_type = NULL) {
 
     $output = '<div id="first-time">'. $default_message .'</div>';
   }
-  drupal_set_title(t($sina_vp_type));
-	if($sina_vp_type=='Transfer' || $sina_vp_type=='Show' ||is_null($sina_vp_type)){
+  if(isset($sina_vp_type)) drupal_set_title(t($sina_vp_type));
+	if($tid=='Transfer' || $tid=='Show' ||is_null($tid)){
 		 return $output;		  		
 	}
 	if(user_access("add new ".strtolower($sina_vp_type))){
@@ -65,10 +64,6 @@ function sina_vp_center_page_default($sina_vp_type = NULL) {
  */
 function sina_vp_UCenter_page($sina_vp_type = NULL) {
 	global $user;
-	dpm(user_relationships_load(array("user" => $user->uid),array("count" => TRUE)),'关注');
-	dpm(user_relationships_load(array("user" => $user->uid,"rtid" => '2'),array("count" => TRUE)),'关注的卖家');
-	dpm(user_relationships_load(array("user" => $user->uid,"rtid" => '1'),array("count" => TRUE)),'关注的买家');
-	dpm(user_relationships_load(array("requestee_id" => $user->uid),array("count" => TRUE)),'关注我的');
 	$array=user_relationships_load(array("user" => $user->uid),array("sort" => 'requestee_id'));
 	//$follows_uid ="'1'"; 
 	foreach($array as $key=>$value){
@@ -146,4 +141,61 @@ function sina_vp_UCenter_page($sina_vp_type = NULL) {
 		$output ="<h3><a href='?q=vp/add/$sina_vp_type'>点击发".$sina_vp_type."博文</a></h3>".$output;
 	}
   return $output;
+}
+
+//del.....
+function user_timeline_page_form_sina($delete=true){
+	drupal_set_title('user_timeline');
+	global $user;
+	$path = drupal_get_path('module', 'sina');
+	$http_url="http://api.t.sina.com.cn/statuses/user_timeline.json";
+	$w_user_id=sina_open_t_get_info($user)->id;
+	$values=array(
+								'user_id' => $w_user_id,
+								'count'=>3,
+								'base_app'=>1
+	);
+	$result  = sina_open_t_set_request($http_url, $values, $headers = array(), $method = 'POST');
+	 if ($result->code == 200) {
+    //drupal_set_message('信息获取成功');
+		if(function_exists(dpm)) dpm(__FILE__.__LINE__,'信息获取成功!');
+		//_sina_weibo2node($result->data);
+  } else {
+    drupal_set_message('信息获取失败', 'error');
+    return false;
+  }
+	$ms  = json_decode($result->data);
+	if(function_exists(dpm)) dpm($ms,"ms");
+	 //Final output string
+  return output_weibo($ms);
+	
+}
+/**
+ * 不要了，最后2行有用。
+ */
+function vp_center_page($delete=true){
+	/*global $user;
+	$path = drupal_get_path('module', 'sina');
+
+	$http_url="http://api.t.sina.com.cn/statuses/public_timeline.json";//3360192113599959
+	$w_user_id=sina_open_t_get_info($user)->id;
+	$values=array(
+								'count'=>200,
+								'base_app'=>1
+	);
+	$result  = sina_open_t_set_request($http_url, $values, $headers = array(), $method = 'POST');
+	 if ($result->code == 200) {
+    //drupal_set_message('信息获取成功');
+		if(function_exists(dpm)) dpm(__FILE__.__LINE__,'信息获取成功vp_center_page!');
+		//_sina_weibo2node($result->data);
+  } else {
+    drupal_set_message('信息获取失败', 'error');
+    return false;
+  }
+	$ms  = json_decode($result->data);
+	if(function_exists(dpm)) dpm($ms,"ms");*/
+	 //Final output string
+	//drupal_get_form(weibo_page_default);
+	 //return  page_weibo_add().public_page();
+	 
 }

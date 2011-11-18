@@ -446,14 +446,38 @@ function sina_vp_new_content($type=NULL,$nid=NULL){
 	return $output;
 }
 /**
+ * sina_vp_new_content page.
+ */
+function sina_vp_new($tid=NULL,$nid=NULL){
+	$output =sina_vp_linked_info();
+	if(!$term = taxonomy_get_term($tid)){
+			drupal_set_message('链接请求错误，请到指定页面发布微博^_^','error');
+			return t('链接请求错误，请到指定页面发布微博^_^！');
+		}
+	if(!isset($output)){
+		$output.= page_weibo_add();		
+	}
+	if(taxonomy_get_term($tid))drupal_set_title('发布#'.$term->name.'#信息');
+	//当Buyer 发布信息时，需要基于节点的
+	$term_parent = taxonomy_get_parents($tid);
+	foreach($term_parent as $key=>$term){
+		if($term->name == 'Buyer'){
+			if(!node_load($nid)){
+				return t('E11081810:链接请求错误，请到指选定一个微博来发布信息^_^');
+			}
+		}
+	}
+	return $output;
+}
+/**
  * sina_vp_new_forward page.转发
  */
-function sina_vp_new_forward($type=NULL,$nid=NULL){
+function sina_vp_new_forward($tid=NULL,$nid=NULL){
 	if(!$node=node_load($nid)){
 		return t('E11090955:链接请求错误(请选择一条微博)，请到指定页面转发微博^_^');
 	}
-	foreach($node->taxonomy as $key=>$value){
-		if(sina_vp_get_type_by_int($key)!=$type){
+	foreach($node->taxonomy as $node_tid=>$value){
+		if($node_tid!=$tid){
 			return t('E11090956:链接请求错误（转发的微博类型不对），请到指定页面转发微博^_^');
 		}
 	};
@@ -464,59 +488,179 @@ function sina_vp_new_forward($type=NULL,$nid=NULL){
 	drupal_set_title('转发分享#'.$type.'#【'.$node->title.'】');
 	return $output;
 }
-//del.....
-function user_timeline_page_form_sina($delete=true){
-	drupal_set_title('user_timeline');
-	global $user;
-	$path = drupal_get_path('module', 'sina');
-	$http_url="http://api.t.sina.com.cn/statuses/user_timeline.json";
-	$w_user_id=sina_open_t_get_info($user)->id;
-	$values=array(
-								'user_id' => $w_user_id,
-								'count'=>3,
-								'base_app'=>1
-	);
-	$result  = sina_open_t_set_request($http_url, $values, $headers = array(), $method = 'POST');
-	 if ($result->code == 200) {
-    //drupal_set_message('信息获取成功');
-		if(function_exists(dpm)) dpm(__FILE__.__LINE__,'信息获取成功!');
-		//_sina_weibo2node($result->data);
-  } else {
-    drupal_set_message('信息获取失败', 'error');
-    return false;
+/**
+ * Menu callback; Generate a listing of promoted nodes.
+ * copy form node_page_default() in node.module
+ */
+function sina_VpCenter_page($tid = NULL) {
+	$sql='SELECT n.nid, n.sticky, n.created FROM {node} n WHERE n.type in ("weibo") AND n.promote = 1 AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC';
+	if($tid){
+		$sql='SELECT n.nid, n.sticky, n.created FROM {node} n 
+				 INNER JOIN term_node term_node ON n.vid = term_node.vid
+				 WHERE (n.type in ("weibo") AND n.promote = 1 AND n.status = 1) AND (term_node.tid = '.$tid.') ORDER BY n.sticky DESC, n.created DESC';
   }
-	$ms  = json_decode($result->data);
-	if(function_exists(dpm)) dpm($ms,"ms");
-	 //Final output string
-  return output_weibo($ms);
-	
+  $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
+  while ($node = db_fetch_object($result)) {
+  	$node = node_load($node->nid);
+  	if($pre_node && $pre_node->uid == $node->uid){
+			$hidden_array[]=$node->nid;			
+			if(in_array($node->nid, $hidden_array)){							
+					$show_more_nid[$pre_node->nid] = $pre_node->nid;
+			}
+  		$hidden[$pre_node->nid][] = array('nid'=>$node->nid);//该节点隐藏下的节点个数
+  	}else{
+  		$pre_node = $node;
+  	}
+  }
+	dpm($show_more_nid,'显示的节点');
+	dpm($hidden,'hidden的节点');  
+	$result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
+  $output = '';
+  $num_rows = FALSE;
+	while ($node = db_fetch_object($result)) {
+    $node = node_load($node->nid);
+  	if($pre_node && $pre_node->uid == $node->uid){			 
+			$output .= '<div class="hidden" id="node-'.$node->nid.'"></div>';	
+  	}else{
+	    $output .= node_view($node,  $teaser = TRUE, $page = FALSE, $links = TRUE);
+  		if(in_array($node->nid, $show_more_nid)){							
+					$output .= '('.count($hidden[$node->nid]).')more...';
+			}
+  	}	
+    $num_rows = TRUE;	 
+		$pre_node = $node;	
+  }
+  if ($num_rows) {
+    $feed_url = url('rss.xml', array('absolute' => TRUE));
+    drupal_add_feed($feed_url, variable_get('site_name', 'Drupal') .' '. t('RSS'));
+    $output .= theme('pager', NULL, variable_get('default_nodes_main', 10));
+  }else{
+		global $user;
+  	if(in_array('Seller',$user->roles)){		
+	    $default_message = t('<h1 class="title">作为一个有身份的卖家是不会偷懒的！</h1><p>Please follow these steps to set up and start using your website:</p>');
+	    $weibo_type_array=array('Product','Activity','Special','Sale');//,'Transfer','Show'
+			$default_message .= '<ol>';	
+			foreach($weibo_type_array as $type){
+		    $default_message .= '<li>'. t('<strong>发布<a href="@VpCenter">'.t($type).'</a>信息</strong>', array('@VpCenter' => url($type))) .'</li>';
+		    }
+			$default_message .= '</ol>';  			
+		}elseif(in_array('Buyer',$user->roles)){			
+	    $default_message = t('<h1 class="title">您订阅的用户信息少的可怜，我们推荐您关注更多街友！</h1><p>Please follow these steps to set up and start using your website:</p>');
+	    $default_message .= '<ol>';	
+	    $default_message .= '<li>'. t('<strong>关注更多卖家</strong>请移步<a href="@VpCenter">微铺大厅</a>查看更多卖家。', array('@VpCenter' => url('VpCenter'))) .'</li>';
+	    $default_message .= '<li>'. t('<strong>添加更多粉丝</strong> 请移步<a href="@Show">真人秀</a>或<a href="@Transfer">转让潮</a>关注更多街友。', array('@Show' => url('Show'),'@Transfer' => url('Transfer'))) .'</li>';
+	    $default_message .= '</ol>';
+		}else{
+			drupal_set_message('Access deny1!请申请买家或卖家后才能访问！','error');
+			return t('Access deny1!请申请买家或卖家后才能访问！');
+		}
+    $output = '<div id="first-time">'. $default_message .'</div>';
+  }
+  if(isset($tid)){
+  	$term_name = taxonomy_get_term($tid)->name;
+		drupal_set_title(t($term_name));
+		if(user_access("add new Seller info") && $_GET['q']!='Show' && $_GET['q']!='Transfer'){
+			$output ="<p>点击<a href='?q=new/$tid'>这里</a>发布#".t($term_name)."#信息</p>".$output;
+		}
+  }
+	if(is_null($tid)|| $tid=='Show' ||$tid=='Transfer' ){
+		 return $output;		  		
+	}
+	/*
+	 * 	if(user_access("add new ".strtolower($sina_vp_type))){
+		popups_add_popups();
+		$output_add = '<ol id="test-list">';
+	  $output_add .= '<li>点击'. l("这里", "vp/add/$sina_vp_type",
+   									array( 'attributes' => array('class' => 'popups-form'))).'发#'.t($sina_vp_type).'#信息';
+		$output .= "</li></ol>";
+		$output=$output_add .$output;		
+	 * */
+  return $output;
 }
 /**
- * 不要了，最后2行有用。
+ * 买家或卖家中心，根据角色Seller Buyer而定.
+ * copy form sina_vp_center_page_default()
  */
-function vp_center_page($delete=true){
-	/*global $user;
-	$path = drupal_get_path('module', 'sina');
-
-	$http_url="http://api.t.sina.com.cn/statuses/public_timeline.json";//3360192113599959
-	$w_user_id=sina_open_t_get_info($user)->id;
-	$values=array(
-								'count'=>200,
-								'base_app'=>1
-	);
-	$result  = sina_open_t_set_request($http_url, $values, $headers = array(), $method = 'POST');
-	 if ($result->code == 200) {
-    //drupal_set_message('信息获取成功');
-		if(function_exists(dpm)) dpm(__FILE__.__LINE__,'信息获取成功vp_center_page!');
-		//_sina_weibo2node($result->data);
-  } else {
-    drupal_set_message('信息获取失败', 'error');
-    return false;
+function sina_UCenter_page($tid = NULL) {
+	global $user;
+	$array=user_relationships_load(array("user" => $user->uid),array("sort" => 'requestee_id'));
+	//$follows_uid ="'1'"; 
+	foreach($array as $key=>$value){
+		$follows_uid[] =$key; //取得粉丝用户uid
+	}
+	if(empty($array)){
+		$follows_uid[] ='1';//没有任何订阅时，默认推送管理员的信息 more....
+	}
+	$follows_uid = implode(",",$follows_uid);
+	if(in_array('Buyer',$user->roles)){ //对于买家显示其粉丝和他自己的信息
+		$sql = 'SELECT n.nid, n.sticky, n.created FROM {node} n ';
+		$sql_where = 'WHERE n.type in ("weibo") AND n.promote = 1 AND n.status = 1 ';
+		$sql_where_add = 'AND n.uid in('.$follows_uid.','.$user->uid.') ';
+		$sql_order = 'ORDER BY n.sticky DESC, n.created DESC ';
+		$sql =$sql.$sql_where.$sql_where_add .$sql_order;
+	}elseif(in_array('Seller',$user->roles)){	//对于卖家只显示他自己的
+		$sql = 'SELECT n.nid, n.sticky, n.created FROM {node} n ';
+		$sql_where = 'WHERE n.type in ("weibo") AND n.promote = 1 AND n.status = 1 ';
+		$sql_where_add = 'AND n.uid in('.$user->uid.') ';
+		$sql_order = 'ORDER BY n.sticky DESC, n.created DESC ';
+		$sql =$sql.$sql_where.$sql_where_add .$sql_order;
+	}else{
+			drupal_set_message('Access deny!请申请买家或卖家后才能访问！','error');
+			drupal_goto('user/'.$user->uid.'/apply_for_role');//.'&amp;destination='.urlencode($_GET['q'])
+		}
+  if($tid){
+  	//SELECT n.nid, n.sticky, n.created FROM {node} n WHERE n.type in ("weibo") AND n.promote = 1 AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC	
+  	$sql='SELECT n.nid, n.sticky, n.created
+				 FROM {node} n 
+				 INNER JOIN term_node term_node ON n.vid = term_node.vid
+				 WHERE (n.type in ("weibo") AND n.promote = 1 AND n.status = 1) AND (term_node.tid = '.$tid.')';
+		$sql =$sql.$sql_where_add.$sql_order;;
   }
-	$ms  = json_decode($result->data);
-	if(function_exists(dpm)) dpm($ms,"ms");*/
-	 //Final output string
-	//drupal_get_form(weibo_page_default);
-	 //return  page_weibo_add().public_page();
-	 
+  $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
+
+  $output = '';
+  $num_rows = FALSE;
+  while ($node = db_fetch_object($result)) {
+    $output .= node_view(node_load($node->nid), 1);
+    $num_rows = TRUE;
+  }
+
+  if ($num_rows) {
+    $feed_url = url('rss.xml', array('absolute' => TRUE));
+    drupal_add_feed($feed_url, variable_get('site_name', 'Drupal') .' '. t('RSS'));
+    $output .= theme('pager', NULL, variable_get('default_nodes_main', 10));
+  }
+  else {
+  	if(in_array('Seller',$user->roles)){		
+	    $default_message = t('<h1 class="title">作为一个有身份的卖家是不会偷懒的！</h1><p>Please follow these steps to set up and start using your website:</p>');
+	    $weibo_type_array=array('Product','Activity','Special','Sale');//,'Transfer','Show'
+			$default_message .= '<ol>';	
+			foreach($weibo_type_array as $type){
+		    $default_message .= '<li>'. t('<strong>发布<a href="@VpCenter">'.t($type).'</a>信息</strong>', array('@VpCenter' => url($type))) .'</li>';
+		    }
+			$default_message .= '</ol>';  			
+		}elseif(in_array('Buyer',$user->roles)){			
+	    $default_message = t('<h1 class="title">您订阅的用户信息少的可怜，我们推荐您关注更多街友！</h1><p>Please follow these steps to set up and start using your website:</p>');
+	    $default_message .= '<ol>';	
+	    $default_message .= '<li>'. t('<strong>关注更多卖家</strong>请移步<a href="@VpCenter">微铺大厅</a>查看更多卖家。', array('@VpCenter' => url('VpCenter'))) .'</li>';
+	    $default_message .= '<li>'. t('<strong>添加更多粉丝</strong> 请移步<a href="@Show">真人秀</a>或<a href="@Transfer">转让潮</a>关注更多街友。', array('@Show' => url('Show'),'@Transfer' => url('Transfer'))) .'</li>';
+	    $default_message .= '</ol>';
+		}else{
+			drupal_set_message('Access deny!请申请买家或卖家后才能访问本页！','error');
+			drupal_goto('user/'.$user->uid.'/apply_for_role');
+			//return t('Access deny!请申请买家或卖家后才能访问本页！');
+		}
+    $output = '<div id="first-time">'. $default_message .'</div>';
+  }
+  if(isset($tid)){
+  	$term_name = taxonomy_get_term($tid)->name;
+		drupal_set_title(t($term_name));
+		if(user_access("add new Seller info")){
+			$output ="<p>点击<a href='?q=new/$tid'>这里</a>发布#".t($term_name)."#信息</p>".$output;
+		}
+  }
+	if(is_null($tid)|| $tid=='Show' ||$tid=='Transfer' ){
+		 return $output;		  		
+	}
+  return $output;
 }
