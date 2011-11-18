@@ -179,6 +179,9 @@ function sina_vp_init(){
   drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/sina.user.page.css');
 	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/jquery.lazyload.mini.js');
 	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/lazyload.js');
+	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/highslide.js');
+	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/highslide-extra.js');	
+	drupal_add_css(drupal_get_path('module', 'sina_vp') .'/js/highslide.css');
 }
 /**
  * Implementation of hook_menu().
