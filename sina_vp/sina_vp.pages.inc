@@ -512,8 +512,8 @@ function sina_VpCenter_page($tid = NULL) {
   		$pre_node = $node;
   	}
   }
-	dpm($show_more_nid,'显示的节点');
-	dpm($hidden,'hidden的节点');  
+	//dpm($show_more_nid,'显示的节点');
+	//dpm($hidden,'hidden的节点');  
 	$result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
   $output = '';
   $num_rows = FALSE;
