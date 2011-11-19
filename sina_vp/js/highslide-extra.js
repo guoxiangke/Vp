@@ -2,8 +2,8 @@
 
 Drupal.behaviors.sina = function (context) {
 	//hs.graphicsDir = 'graphics/';
-	var calss = $("a.imagecache-vp_imagelink").attr("class")+" highslide";
-	alert(calss);
-	$("a.imagecache-vp_imagelink").attr("class",calss);	
+	var classes = $("a.imagecache-vp_imagelink").attr("class")+" highslide";
+	alert(classes);
+	$("a.imagecache-vp_imagelink").attr("class",classes);	
 	$("a.imagecache-vp_imagelink").attr("onclick","return hs.expand(this)");
 }

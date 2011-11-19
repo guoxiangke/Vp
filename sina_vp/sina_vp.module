@@ -242,6 +242,13 @@ function sina_vp_menu() {
     'file' => 'sina_comment_ahah.inc',
     'type' => MENU_CALLBACK,
   );
+	
+	$items['ahah_callback/show_hidden_node'] = array(//隐藏节点显示
+    'page callback' => 'show_hidden_node_view',
+    'access callback' => TRUE,
+    'file' => 'sina_vp.pages.inc',
+    'type' => MENU_CALLBACK,
+  );
 	//根据term 动态生成不同的频道。
 	//获取$vocabulary = 微博频道  下 $parent = Seller|Buyer 的所有term
 	$vocabularies = taxonomy_get_vocabularies(t('weibo'));
@@ -362,7 +369,7 @@ function sina_vp_menu() {
 	
 	$items['Transfer'] = array(
     'title' => t('转让潮'),
-    'page callback' => 'sina_VpCenter_page',
+    'page callback' => 'sina_vp_BuyCenter',
     'page arguments' => array('5'),
     'access callback' => TRUE,
     'description' => '转让潮',
@@ -372,7 +379,7 @@ function sina_vp_menu() {
   );
 	$items['Show'] = array(
     'title' => t('真人秀'),
-    'page callback' => 'sina_VpCenter_page',
+    'page callback' => 'sina_vp_BuyCenter',
     'page arguments' => array('6'),
     'access callback' => TRUE,
     'description' => '真人秀',
@@ -669,7 +676,7 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 	if(in_array($form_id, $dispalyNone_forms)){
 		//donothing...
 	}else{
-		if(function_exists(dpm)) dpm($form,$form_id);
+		//if(function_exists(dpm)) dpm($form,$form_id);
 	}
   return $form;
 }

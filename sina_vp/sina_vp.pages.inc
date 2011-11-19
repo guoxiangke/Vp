@@ -489,6 +489,49 @@ function sina_vp_new_forward($tid=NULL,$nid=NULL){
 	return $output;
 }
 /**
+ * 隐藏ajax加载的节点form
+ */
+function hidden_node_form(&$form_state, $hidden_array,$parent_nid){ 
+	$form['show_node_checkbox']= array(
+	  '#type' => 'checkbox',
+	  '#title' => '<a onclick="">展开/折叠('.count($hidden_array).')条</a>',
+		'#description' => '更多...[title余下的博文概览]去掉折叠js+css点击后隐藏',
+	  '#ahah' => array(
+	    'path' => 'ahah_callback/show_hidden_node', //./$parent_nid[0]含参数的调用。%node_load
+	    'wrapper' => 'hidden-node-'.$parent_nid[0],
+	    'effect' => 'fade',
+		)
+	);
+	if($hidden_array){
+		foreach($hidden_array as $array){
+			$hidden_array_nid[] = $array['nid'];
+		}		
+	}//dpm(implode(',', $hidden_array_nid),'$hidden_array_nid');
+	$form['send_ahah_array']=array(
+          '#value' => implode(',', $hidden_array_nid),
+          '#type'=>'hidden',
+          );
+	$form['show_node_area']= array(
+          '#prefix' => '<div class="hidden_node" id="hidden-node-'.$parent_nid[0].'">',
+          '#type'=>'item',
+          '#suffix' => '</div>',
+          );
+	return $form;
+}
+/**
+ * ahah 显示隐藏的节点
+ */
+function show_hidden_node_view(){
+	$output = '';
+	if($_POST['show_node_checkbox'] && !empty($_POST['send_ahah_array'])){
+		$hidden_array_nid=explode($delimiter=',', $string=$_POST['send_ahah_array']);	
+		foreach($hidden_array_nid as $key=>$nid){
+			$output .= node_view(node_load($nid),1);
+		}
+	}
+	drupal_json(array('status' => TRUE, 'data' =>theme('status_messages').$output));
+}
+/**
  * Menu callback; Generate a listing of promoted nodes.
  * copy form node_page_default() in node.module
  */
@@ -520,11 +563,12 @@ function sina_VpCenter_page($tid = NULL) {
 	while ($node = db_fetch_object($result)) {
     $node = node_load($node->nid);
   	if($pre_node && $pre_node->uid == $node->uid){			 
-			$output .= '<div class="hidden" id="node-'.$node->nid.'"></div>';	
+			//$output .= '<div class="hidden_node" id="node-'.$node->nid.'"><a>Display</a></div>';
   	}else{
 	    $output .= node_view($node,  $teaser = TRUE, $page = FALSE, $links = TRUE);
-  		if(in_array($node->nid, $show_more_nid)){							
-					$output .= '('.count($hidden[$node->nid]).')more...';
+  		if(in_array($node->nid, $show_more_nid)){									
+					$output .= drupal_get_form('hidden_node_form',$hidden[$node->nid],$parent_nid=array($node->nid));
+					//$output .= '<div class="hidden_node" id="hidden-node-'.$node->nid.'"><a>Display</a></div>';
 			}
   	}	
     $num_rows = TRUE;	 
@@ -551,8 +595,8 @@ function sina_VpCenter_page($tid = NULL) {
 	    $default_message .= '<li>'. t('<strong>添加更多粉丝</strong> 请移步<a href="@Show">真人秀</a>或<a href="@Transfer">转让潮</a>关注更多街友。', array('@Show' => url('Show'),'@Transfer' => url('Transfer'))) .'</li>';
 	    $default_message .= '</ol>';
 		}else{
-			drupal_set_message('Access deny1!请申请买家或卖家后才能访问！','error');
-			return t('Access deny1!请申请买家或卖家后才能访问！');
+			drupal_set_message('权限不够!请申请买家或卖家角色！','error');
+			drupal_goto('user/'.$user->uid.'/apply_for_role');
 		}
     $output = '<div id="first-time">'. $default_message .'</div>';
   }
@@ -602,14 +646,13 @@ function sina_UCenter_page($tid = NULL) {
 		$sql = 'SELECT n.nid, n.sticky, n.created FROM {node} n ';
 		$sql_where = 'WHERE n.type in ("weibo") AND n.promote = 1 AND n.status = 1 ';
 		$sql_where_add = 'AND n.uid in('.$user->uid.') ';
-		$sql_order = 'ORDER BY n.sticky DESC, n.created DESC ';
+		$sql_order = ' ORDER BY n.sticky DESC, n.created DESC ';
 		$sql =$sql.$sql_where.$sql_where_add .$sql_order;
 	}else{
 			drupal_set_message('Access deny!请申请买家或卖家后才能访问！','error');
 			drupal_goto('user/'.$user->uid.'/apply_for_role');//.'&amp;destination='.urlencode($_GET['q'])
 		}
   if($tid){
-  	//SELECT n.nid, n.sticky, n.created FROM {node} n WHERE n.type in ("weibo") AND n.promote = 1 AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC	
   	$sql='SELECT n.nid, n.sticky, n.created
 				 FROM {node} n 
 				 INNER JOIN term_node term_node ON n.vid = term_node.vid
@@ -646,9 +689,8 @@ function sina_UCenter_page($tid = NULL) {
 	    $default_message .= '<li>'. t('<strong>添加更多粉丝</strong> 请移步<a href="@Show">真人秀</a>或<a href="@Transfer">转让潮</a>关注更多街友。', array('@Show' => url('Show'),'@Transfer' => url('Transfer'))) .'</li>';
 	    $default_message .= '</ol>';
 		}else{
-			drupal_set_message('Access deny!请申请买家或卖家后才能访问本页！','error');
+			drupal_set_message('权限不够!请申请买家或卖家角色！','error');
 			drupal_goto('user/'.$user->uid.'/apply_for_role');
-			//return t('Access deny!请申请买家或卖家后才能访问本页！');
 		}
     $output = '<div id="first-time">'. $default_message .'</div>';
   }
@@ -661,6 +703,52 @@ function sina_UCenter_page($tid = NULL) {
   }
 	if(is_null($tid)|| $tid=='Show' ||$tid=='Transfer' ){
 		 return $output;		  		
+	}
+  return $output;
+}
+/**
+ * 真人秀5
+ * 转让潮6
+ */
+function sina_vp_BuyCenter($tid = NULL) {
+	$sql='SELECT n.nid, n.sticky, n.created
+				 FROM {node} n 
+				 INNER JOIN term_node term_node ON n.vid = term_node.vid
+				 WHERE (n.type in ("weibo") AND n.promote = 1 AND n.status = 1) AND (term_node.tid = '.$tid.') ORDER BY n.sticky DESC, n.created DESC';
+  
+  $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
+
+  $output = '';
+  $num_rows = FALSE;
+  while ($node = db_fetch_object($result)) {
+    $output .= node_view(node_load($node->nid), 1);
+    $num_rows = TRUE;
+  }
+
+  if ($num_rows) {
+    $feed_url = url('rss.xml', array('absolute' => TRUE));
+    drupal_add_feed($feed_url, variable_get('site_name', 'Drupal') .' '. t('RSS'));
+    $output .= theme('pager', NULL, variable_get('default_nodes_main', 10));
+  }
+  else {
+    $default_message = t('<h1 class="title">Welcome to your new Drupal website!</h1><p>Please follow these steps to set up and start using your website:</p>');
+    $default_message .= '<ol>';
+
+    $default_message .= '<li>'. t('<strong>Configure your website</strong> Once logged in, visit the <a href="@admin">administration section</a>, where you can <a href="@config">customize and configure</a> all aspects of your website.', array('@admin' => url('admin'), '@config' => url('admin/settings'))) .'</li>';
+    $default_message .= '<li>'. t('<strong>Enable additional functionality</strong> Next, visit the <a href="@modules">module list</a> and enable features which suit your specific needs. You can find additional modules in the <a href="@download_modules">Drupal modules download section</a>.', array('@modules' => url('admin/build/modules'), '@download_modules' => 'http://drupal.org/project/modules')) .'</li>';
+    $default_message .= '<li>'. t('<strong>Customize your website design</strong> To change the "look and feel" of your website, visit the <a href="@themes">themes section</a>. You may choose from one of the included themes or download additional themes from the <a href="@download_themes">Drupal themes download section</a>.', array('@themes' => url('admin/build/themes'), '@download_themes' => 'http://drupal.org/project/themes')) .'</li>';
+    $default_message .= '<li>'. t('<strong>Start posting content</strong> Finally, you can <a href="@content">create content</a> for your website. This message will disappear once you have promoted a post to the front page.', array('@content' => url('node/add'))) .'</li>';
+    $default_message .= '</ol>';
+    $default_message .= '<p>'. t('For more information, please refer to the <a href="@help">help section</a>, or the <a href="@handbook">online Drupal handbooks</a>. You may also post at the <a href="@forum">Drupal forum</a>, or view the wide range of <a href="@support">other support options</a> available.', array('@help' => url('admin/help'), '@handbook' => 'http://drupal.org/handbooks', '@forum' => 'http://drupal.org/forum', '@support' => 'http://drupal.org/support')) .'</p>';
+
+    $output = '<div id="first-time">'. $default_message .'</div>';
+  }
+  if(isset($sina_vp_type)) drupal_set_title(t($sina_vp_type));
+	if($sina_vp_type=='Transfer' || $sina_vp_type=='Show' ||is_null($sina_vp_type)){
+		 return $output;		  		
+	}
+	if(user_access("add new ".strtolower($sina_vp_type))){
+		$output ="<p>点击<a href='?q=vp/add/$sina_vp_type'>这里</a>发布".t($sina_vp_type)."博文</p>".$output;
 	}
   return $output;
 }
