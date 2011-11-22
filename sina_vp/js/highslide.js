@@ -29,7 +29,7 @@ Your fair use and other rights are in no way affected by the above.
 var hs = {
 
 // Apply your own settings here, or override them in the html file.  
-graphicsDir : 'graphics/',
+graphicsDir : '../images/highslide/graphics/',
 restoreCursor : 'zoomout.cur', // necessary for preload
 expandSteps : 10, // number of steps in zoom. Each step lasts for duration/step milliseconds.
 expandDuration : 250, // milliseconds

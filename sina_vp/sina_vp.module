@@ -176,12 +176,16 @@ function sina_vp_access($op, $node, $account) {
   }
 } */
 function sina_vp_init(){
-  drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/sina.user.page.css');
-	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/jquery.lazyload.mini.js');
-	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/lazyload.js');
+  //drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/sina.user.page.css');
+	
+	drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/highslide.css');
 	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/highslide.js');
-	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/highslide-extra.js');	
-	drupal_add_css(drupal_get_path('module', 'sina_vp') .'/js/highslide.css');
+	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/highslide-extra.js');
+	
+	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/jquery.lazyload.mini.js');
+	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/jquery.lazyload-extra.js');	
+	//twitter 样式表
+	//drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/bootstrap.min.css');
 }
 /**
  * Implementation of hook_menu().
@@ -242,13 +246,7 @@ function sina_vp_menu() {
     'file' => 'sina_comment_ahah.inc',
     'type' => MENU_CALLBACK,
   );
-	
-	$items['ahah_callback/show_hidden_node'] = array(//隐藏节点显示
-    'page callback' => 'show_hidden_node_view',
-    'access callback' => TRUE,
-    'file' => 'sina_vp.pages.inc',
-    'type' => MENU_CALLBACK,
-  );
+
 	//根据term 动态生成不同的频道。
 	//获取$vocabulary = 微博频道  下 $parent = Seller|Buyer 的所有term
 	$vocabularies = taxonomy_get_vocabularies(t('weibo'));
@@ -406,11 +404,103 @@ function sina_vp_menu() {
     //'file'              => 'user_relationships_ui.pages.inc',
   );
 	//
+		
+	$items['ahah_callback/collapse_node_view'] = array(//隐藏节点显示
+    'page callback' => 'collapse_node_view',
+    'access callback' => TRUE,
+    'file' => 'sina_vp.pages.inc',
+    'type' => MENU_CALLBACK,
+  );
+		
+	$items['ahah_callback/show_more'] = array(//隐藏节点显示
+    'page callback' => 'show_more_node_view',
+    'access callback' => TRUE,
+    'file' => 'sina_vp.pages.inc',
+    'type' => MENU_CALLBACK,
+  );
 	return $items;
 }
-function user_relationships_page0(){ //暂时用这个
+function user_relationships_page00(){ //暂时用这个
 	global $user;
 	return t('我的粉丝数量').user_relationships_load(array("requestee_id" => $user->uid),array("count" => TRUE));
+}
+function user_relationships_page0($account = NULL){ //暂时用这个
+
+	if (!$account) {
+    global $user;
+    $account = $user;
+   }
+
+	$relationships = get_follows();
+	//if(template_preprocess_user_relationships0(&$variables))
+	{
+	 foreach ($relationships as $relationship) {
+	 dpm($relationship);
+     $edit_access = ($user->uid == $account->uid && user_access('maintain own relationships')) || user_access('administer users');
+	 //$this_user_str  = $account->uid == $relationship->requestee_id ? 'requester' : 'requestee';
+	 $this_user      = $relationship->requestee_id;
+	 $row = array(
+	      theme('username', $this_user),
+	      ur_tt("user_relationships:rtid:$relationship->rtid:name", $relationship->name) . t(' (You to Them)'),
+	      $relationship->extra_for_display,
+	      $edit_access ? theme('user_relationships_remove_link', $account->uid, $relationship->rid) : '&nbsp;',
+	    );
+		
+		$rows[] = $row;
+	 }
+	    $output = theme('table', array(), $rows, array('class' => 'user-relationships-listing-table'));
+	    //theme('pager', NULL, $relationships_per_page);
+		return t('我的粉丝数量').user_relationships_load(array("requestee_id" => $user->uid),array("count" => TRUE)).$output;
+	}
+   
+	
+	// if(empty($array)){
+		// $follows_uid[] ='1';//没有粉丝....
+	// }
+	
+	// $Id: user_relationships.tpl.php,v 1.1.2.10 2009/10/15 15:23:26 aufumy Exp $
+	//$relationships array is loaded in template_preprocess_user_relationships()
+	 
+	  // foreach ($relationships as $relationship) {
+	    // $edit_access = ($user->uid == $account->uid && user_access('maintain own relationships')) || user_access('administer users');
+// 	
+	    // $this_user_str  = $account->uid == $relationship->requestee_id ? 'requester' : 'requestee';
+	    // $this_user      = $relationship->{$this_user_str};
+// 	
+	    // $row = array(
+	      // // theme('username', $this_user),
+	      // // ur_tt("user_relationships:rtid:$relationship->rtid:name", $relationship->name) . ($relationship->is_oneway ? ($this_user_str == 'requestee' ? t(' (You to Them)') : t(' (Them to You)')) : NULL),
+	      // // $relationship->extra_for_display,
+	      // // $edit_access ? theme('user_relationships_remove_link', $account->uid, $relationship->rid) : '&nbsp;',
+	    // );
+	    // if (variable_get('user_relationships_show_user_pictures', 0)) {
+	      // array_unshift($row, theme('user_picture', $this_user)); 
+	    // }
+	    // $rows[] = $row;
+	  // }
+// 	
+	  // print
+	    // theme('table', array(), $rows, array('class' => 'user-relationships-listing-table')) .
+	    // theme('pager', NULL, $relationships_per_page);
+	
+	
+}
+function template_preprocess_user_relationships0(&$variables) {
+ 
+  global $user;
+  // readability
+  $account  = $variables['account'];
+ 
+  $results=user_relationships_load(array("requestee_id" => $uid),array("sort" => 'requester_id',"include_user_info" => TRUE));
+  $variables['relationships']=array();
+  foreach ($results as $relationship) {
+  	drupal_set_message($relationship);
+    user_relationships_api_translate_user_info($relationship);
+    $variables['relationships'][$relationship->rid] = $relationship;
+  }
+
+
+	return $relationships;
 }
 function relationships_follows_title_callback($rtid = NULL) {
   global $user;
@@ -594,6 +684,7 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		$form['flag']['#access']=FALSE;
 		$form['body_field']['#access']=FALSE;				
 		//$form['taxonomy']['#access']=FALSE;
+		$form['taxonomy']['2']['#disabled']=TRUE;
 	}
 	if($form['sina_open'] && $form_id == 'weibo_node_form'){
 		$form['add_option']=array(
@@ -671,7 +762,7 @@ function sina_vp_form_alter(&$form, $form_state, $form_id) {
 		'search_theme_form',
 		'search_block_form',
 		'devel_switch_user_form',
-		'user_login_block'
+		'user_login_block','profile_field_form','hidden_node_form'
 	);
 	if(in_array($form_id, $dispalyNone_forms)){
 		//donothing...
@@ -810,6 +901,8 @@ function sina_vp_link_alter(&$links, $node, $comment=NULL){
 			    'attributes' => array('title' => t('发布'.$term->name)),
 	  		);
 			}
+			$links['link_真人秀']['title'] = '秀一下';
+			if($links['comment_add']){$links['comment_add']['title'] = '评论';}			 
 		}
 	}//
 	return $links;
@@ -1044,7 +1137,7 @@ function sina_vp_context_preprocess(&$node){
 	global $user;
 	$output ='';
 	//转发了 发布了 分享了 秀了 转让了	
-	if((is_null(arg(1)) && (arg(0)=='VpCenter' || arg(0)=='UCenter'))){
+	/*if((is_null(arg(1)) && (arg(0)=='VpCenter' || arg(0)=='UCenter'))){
 		$output .= '【'.t($sina_vp_type).'】';
 		if($node->uid==0 || $node->uid==$user->uid){//我发布的内容不添加标签，但是在大厅里要添加，频道里不添加							
 		}else{			
@@ -1060,7 +1153,9 @@ function sina_vp_context_preprocess(&$node){
 		}else{			
 			$output .= t('<a href="@user">@'.user_load($node->uid)->name.' </a>',array('@user' => url('user/').$node->uid));
 		}	
-	}
+	}*/
+	$output .= '【'.t($sina_vp_type).'】';
+	$output .= t('<a href="@user">@'.user_load($node->uid)->name.' </a>',array('@user' => url('user/').$node->uid));
 	return $output;
 } 
 /**
@@ -1081,11 +1176,27 @@ function get_follows($uid=NULL)
 	return $follows_uid;
 }
 /**
+ * 通过节点/评论/uid/微博昵称 获取用户微博uid
+ */
+function sina_vp_get_sina_uid($params){ //暂时实现 节点/评论/uid/
+	$uid = is_object($params)?$params->uid:$params;
+	$data = db_fetch_object(db_query('SELECT sina_uid FROM {sina_open_user} WHERE uid = %d', $uid));
+  
+  if (isset($data->sina_uid)) { 
+    return $data->sina_uid;
+  } else {
+    drupal_set_message('获取用户sina_uid失败！', 'error');
+  }
+} 
+/**
  * @Implement of hook_user()
  */
 function sina_vp_user($op, &$edit, &$account, $category = NULL) {
   switch ($op) {
-    case 'login': //第一次登陆会比较慢～！抓取头像上传本站。load？
+    case 'load':
+					
+			break;
+		case 'login': //第一次登陆会比较慢～！抓取头像上传本站。load？			
 			global $user;//like $user->picture=='http://tp2.sinaimg.cn/1801497981/50/1297470438/1'
 			$pattern = "/^http\:\/\//";
 			$subject = $user->picture;
@@ -1097,13 +1208,104 @@ function sina_vp_user($op, &$edit, &$account, $category = NULL) {
 				$user->picture = "sites/default/files/$user_picture_path/picture-$user->uid.jpg";
 				$handle = fopen($user->picture, "w+");
 				fwrite ( $handle , $string );
-				//
-				//$user->picture = "sites/default/files/imagecache/photo_50/$user_picture_path/picture-$user->uid.jpg";
-				drupal_write_record('users', $user, 'uid');
 			}
+			if(!$user->signature){
+				$params['user_id'] = sina_vp_get_sina_uid($account->uid);
+				//按用户ID或昵称返回用户资料以及用户的最新发布的一条微博消息。
+				$request_url = 'http://api.t.sina.com.cn/users/show.json';
+				$result = sina_open_t_set_request($request_url,$params);
+				
+				if ($result->code == 200) {					        
+	        $user->signature = json_decode($result->data)->description;
+	      } else {
+	        drupal_set_message('个性签名获取失败', 'error');
+	      }
+			}
+			drupal_write_record('users', $user, 'uid');
+			
+			$category = 'Personal information';
+			$params['user_id'] = sina_vp_get_sina_uid($account->uid);
+			profile_load_profile(&$user);
+			if(!$user->profile_sex)$donext=TRUE;
+			//按用户ID或昵称返回用户资料以及用户的最新发布的一条微博消息。
+			$request_url = 'http://api.t.sina.com.cn/users/show.json';
+			$result = sina_open_t_set_request($request_url,$params);				
+			if($donext && $result->code == 200) {
+				if(!$user->profile_sex){
+					switch (json_decode($result->data)->gender) {
+						case 'm':
+							$edit['profile_sex'] = t('男');
+							break;
+						case 'f':
+							$edit['profile_sex'] = t('女');
+							break;
+						default:
+							$edit['profile_sex'] = t('保密');
+							break;
+					}
+				}
+				if(!$user->profile_url){$edit['profile_url'] = json_decode($result->data)->url;}
+				if(!$user->profile_location){$edit['profile_location'] = json_decode($result->data)->location;}
+				if(!$user->profile_province){$edit['profile_province'] = json_decode($result->data)->province;}
+				if(!$user->profile_city){$edit['profile_city'] = json_decode($result->data)->city;}
+				if($edit['profile_province'] && $edit['profile_city']){//is_numeric($edit['profile_province']) || is_numeric($edit['profile_city'])
+					$request_url = 'http://api.t.sina.com.cn/provinces.json';
+					$result = sina_open_t_set_request($request_url);
+					$data = json_decode($result->data)->provinces;
+					dpm($data,'$data');
+					foreach($data as $key=>$value){
+						if($value->id==$edit['profile_province']){$province_name=$value->name;$city_array=$value->citys;}
+					}					
+					foreach($city_array as $key=>$value){
+						foreach($value as $key2=>$city){						
+							if($key2==$edit['profile_city']){$city_name=$city;}
+						}
+					}
+					$edit['profile_province'] = $province_name;
+					$edit['profile_city'] = $city_name;
+				}
+				profile_save_profile(&$edit, &$user, $category, $register = FALSE);
+      }
     break;
  		case 'delete':
 		break;
+			// User is registering.
+		case 'register':
+		// Add a fieldset containing radio buttons to the
+		// user registration form.
+			$fields['legal_agreement'] = array(
+			'#type' => 'fieldset',
+			'#title' => t('注册条款')//Legal Agreement
+			);
+			$fields['legal_agreement']['decision'] = array(
+			'#type' => 'radios',
+			'#description' => t('By registering at %site-name, you agree that
+				at any time, we (or our surly, brutish henchmen) may enter your place of
+				residence and smash your belongings with a ball-peen hammer.',
+				array('%site-name' => variable_get('site_name', 'drupal'))),
+				'#default_value' => 0,
+				'#options' => array('不同意','同意')//t('I disagree'), t('I agree')
+			);
+			return $fields;
+		 
+		// Field values for registration are being checked.
+		// (Also called when user edits his/her 'my account' page, but
+		// $edit['decision'] is not set in that case.)
+		case 'validate':
+		// Make sure the user selected radio button 1 ('I agree').
+		// the validate op is reused when a user updates information on
+		// The 'my account' page, so we use isset() to test whether we are
+		// on the registration page where the decision field is present.
+			if (isset($edit['decision']) && $edit['decision'] != '1') {
+				form_set_error('decision', t('You must agree to the Legal Agreement before registration can be completed.'));
+			}
+			return;
+		 
+		// New user has just been inserted into the database.
+		case 'insert':
+		// Record information for future lawsuit.
+			watchdog('user', t('User %user agreed to legal terms', array('%user' => $user->name)));
+			return;					
   }
 }
 
@@ -1204,11 +1406,11 @@ function sina_vp_preprocess_user_picture(&$variables) {
   $variables['picture'] = '';
   if (variable_get('user_pictures', 0)) {
     $account = $variables['account'];
-    if (!empty($account->picture) && file_exists($account->picture)) { //把180大图片缓存50小头像
+    /*if (!empty($account->picture) && file_exists($account->picture)) { //把180大图片缓存50小头像
     	$user_picture_path = variable_get('user_picture_path', '');
 			$filepath="sites/default/files/imagecache/photo_50/$user_picture_path/picture-$account->uid.jpg";
       //file_get_contents($filepath);//访问imagecache路径生成小图片
-      if(!(file_exists($filepath))){				
+      if(!(file_exists($filepath))){
 					// create a new cURL resource
 				$ch = curl_init();				
 				// set URL and other appropriate options
@@ -1222,11 +1424,17 @@ function sina_vp_preprocess_user_picture(&$variables) {
       $picture = file_create_url($filepath);			
     }elseif (variable_get('user_picture_default', '')) {
       $picture = variable_get('user_picture_default', '');
+    }*/
+    if (!empty($account->picture) && file_exists($account->picture)) {
+      $picture = file_create_url($account->picture);
     }
-
+    else if (variable_get('user_picture_default', '')) {
+      $picture = variable_get('user_picture_default', '');
+    }
     if (isset($picture)) {
       $alt = t("@user's picture", array('@user' => $account->name ? $account->name : variable_get('anonymous', t('Anonymous'))));
-      $variables['picture'] = theme('image', $picture, $alt, $alt, '', FALSE);
+      $attributes = array('width' => '80px','height' => '80px');
+      $variables['picture'] = theme('image', $picture, $alt, $alt, $attributes, FALSE);
       if (!empty($account->uid) && user_access('access user profiles')) {
         $attributes = array('attributes' => array('title' => t('View user profile.')), 'html' => TRUE);
         $variables['picture'] = l($variables['picture'], "user/$account->uid", $attributes);

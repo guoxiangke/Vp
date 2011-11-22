@@ -1,0 +1,71 @@
+<?php 
+/**
+ * 扩展用户登录区块
+ *
+ * @author ryanlau<showqonline#gmail.com>
+ * @version $Id$
+ * @copyright 2011 unicom-china
+ * @package UNICOM CHINA EXTRA
+ */
+
+/**
+ * Implementation of hook_block().
+ * Declare a block or set of blocks.
+ */
+function user_login_extra_block($op = 'list', $delta = 0, $edit = array()) {
+  global $user;
+
+  switch ($op) {
+    case 'list':
+      $blocks[0]['info'] = t('User Login Extra');
+      // Not worth caching.
+      $blocks[0]['cache'] = BLOCK_NO_CACHE;
+      return $blocks;
+      break;
+    case 'configure':
+      $form['user_login_extra_url'] = array(
+        '#title' => '链接地址',
+        '#type' => 'textfield',
+        '#size' => 30,
+        '#default_value' => variable_get('user_login_extra_url', 'user')
+      );
+      return $form;
+      break;
+    case 'save':
+      variable_set('user_login_extra_url', $edit['user_login_extra_url']);
+      break;
+    case 'view':
+      $block = array();
+      $block['subject'] = t('会员账户');
+      switch( $delta )
+      {
+        case 0:
+          if (!$user->uid) {
+            $block['content'] = drupal_get_form('user_login_block');
+          }else{
+            //need content complete
+            $profile = content_profile_load('profile', $user->uid);
+            $username = !empty($profile->title) ? $profile->title : $user->name;
+            $user_str = l($username, variable_get('user_login_extra_url', 'user'));
+            if( !empty( $profile->field_title[0]['value'] ) )
+            {
+              $user_str .= ' '.$profile->field_title[0]['value'];
+            }
+            $output = t('<div class="gtc">你好，尊敬的 <span class="red fb">!user</span>, <br/> 欢迎您来到君德财富投资网站！</div>', array('!user' => $user_str));
+            
+            $complete = content_complete_get_data($profile);
+            $output .= '<div class="">'.theme('content_complete_profile_percent_complete', $complete).'</div>';
+            
+            $list = array();
+            $list[] = l('修改密码', 'user/'.$user->uid.'/edit');
+            $list[] = l('退出登录', 'logout');
+            $list[] = array( 'data' => l('<span>我的账户</span>', 'user', array('html' => TRUE)), 'class' => 'my-account' );
+            $output .= theme('item_list', $list);
+            $block['content'] = '<div class="login-list">'.$output.'</div>';
+          }
+          break;
+      }
+     return $block;
+      break;
+  }
+}

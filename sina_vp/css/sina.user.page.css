@@ -1,4 +1,20 @@
-.feed_lists {
+body {
+    background-color: #FFFFFF;
+    color: #404040;
+    font-family: "微软雅黑","微软雅黑","Helvetica Neue",Arial,Helvetica,sans-serif; 
+    font-size: 13px;
+    font-weight: normal;
+    line-height: 18px;
+    margin: 0;
+}
+/**
+ * 	//蘑菇街 12px/1.6 tahoma,arial,sans-serif
+ * font-family: '微软雅黑','黑体',Arial,'宋体';
+ * diandian
+ * font-family: "Microsoft Yahei","微软雅黑",Tahoma,Arial,Helvetica,STHeiti;
+    font-size: 12px;
+ */
+ 	*/.feed_lists {
     margin-top: 15px;
 }
 

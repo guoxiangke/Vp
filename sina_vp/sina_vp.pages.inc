@@ -489,15 +489,15 @@ function sina_vp_new_forward($tid=NULL,$nid=NULL){
 	return $output;
 }
 /**
- * 隐藏ajax加载的节点form
+ * 折叠/隐藏ahah加载节点form
  */
-function hidden_node_form(&$form_state, $hidden_array,$parent_nid){ 
+function collapse_node_form(&$form_state, $hidden_array,$parent_nid){ 
 	$form['show_node_checkbox']= array(
 	  '#type' => 'checkbox',
 	  '#title' => '<a onclick="">展开/折叠('.count($hidden_array).')条</a>',
 		'#description' => '更多...[title余下的博文概览]去掉折叠js+css点击后隐藏',
 	  '#ahah' => array(
-	    'path' => 'ahah_callback/show_hidden_node', //./$parent_nid[0]含参数的调用。%node_load
+	    'path' => 'ahah_callback/collapse_node_view', //./$parent_nid[0]含参数的调用。%node_load
 	    'wrapper' => 'hidden-node-'.$parent_nid[0],
 	    'effect' => 'fade',
 		)
@@ -519,11 +519,54 @@ function hidden_node_form(&$form_state, $hidden_array,$parent_nid){
 	return $form;
 }
 /**
- * ahah 显示隐藏的节点
+ * ahah 显示折叠/隐藏的节点 collapsible
  */
-function show_hidden_node_view(){
+function  collapse_node_view(){
 	$output = '';
 	if($_POST['show_node_checkbox'] && !empty($_POST['send_ahah_array'])){
+		$hidden_array_nid=explode($delimiter=',', $string=$_POST['send_ahah_array']);	
+		foreach($hidden_array_nid as $key=>$nid){
+			$output .= node_view(node_load($nid),1);
+		}
+	}
+	drupal_json(array('status' => TRUE, 'data' =>theme('status_messages').$output));
+}
+/**
+ * ahah页底加载更多微博form
+ */
+function show_more_form(&$form_state, $unoutputed){ 
+	$form['show_more_checkbox']= array(
+	  '#type' => 'checkbox',
+	  '#title' => '<a onclick="">更多...余下('.count($unoutputed).')条</a>',
+		'#description' => '更多...',
+	  '#ahah' => array(
+	    'path' => 'ahah_callback/show_more', //./$parent_nid[0]含参数的调用。%node_load
+	    'wrapper' => 'show-more',
+	    'effect' => 'fade',
+		)
+	);
+	if($unoutputed){
+		foreach($unoutputed as $nid){
+			$show_more_nid[] = $nid;
+		}		
+	}//dpm(implode(',', $hidden_array_nid),'$hidden_array_nid');
+	$form['send_ahah_array']=array(
+          '#value' => implode(',', $show_more_nid),
+          '#type'=>'hidden',
+          );
+	$form['show_node_area']= array(
+          '#prefix' => '<div class="show-more" id="show-more">',
+          '#type'=>'item',
+          '#suffix' => '</div>',
+          );
+	return $form;
+}
+/**
+ * ahah 显示show_more 页底加载更多的节点
+ */
+function show_more_node_view(){
+	$output = '';
+	if($_POST['show_more_checkbox'] && !empty($_POST['send_ahah_array'])){
 		$hidden_array_nid=explode($delimiter=',', $string=$_POST['send_ahah_array']);	
 		foreach($hidden_array_nid as $key=>$nid){
 			$output .= node_view(node_load($nid),1);
@@ -543,6 +586,20 @@ function sina_VpCenter_page($tid = NULL) {
 				 WHERE (n.type in ("weibo") AND n.promote = 1 AND n.status = 1) AND (term_node.tid = '.$tid.') ORDER BY n.sticky DESC, n.created DESC';
   }
   $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
+    $output = '';
+	$first_show_num = 2-1;
+ /* while ($node = db_fetch_object($result)) {    
+		if($num_rows>$first_show_num){
+			$unoutputed[]=$node->nid;
+			continue;
+		}
+    $output .= node_view(node_load($node->nid), 1);
+    $num_rows ++;		
+  }
+  if(is_array($unoutputed)){
+  	dpm($unoutputed,'$unoutputed');
+		$output .= drupal_get_form('show_more_form',$unoutputed);
+  } */
   while ($node = db_fetch_object($result)) {
   	$node = node_load($node->nid);
   	if($pre_node && $pre_node->uid == $node->uid){
@@ -559,21 +616,32 @@ function sina_VpCenter_page($tid = NULL) {
 	//dpm($hidden,'hidden的节点');  
 	$result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
   $output = '';
-  $num_rows = FALSE;
-	while ($node = db_fetch_object($result)) {
-    $node = node_load($node->nid);
+  //$num_rows = FALSE;
+  $num_rows = 0;
+	while ($node = db_fetch_object($result)) {    
+		if($num_rows>$first_show_num){
+			$unoutputed[]=$node->nid;
+			continue;
+		}
+		$node = node_load($node->nid);
   	if($pre_node && $pre_node->uid == $node->uid){			 
 			//$output .= '<div class="hidden_node" id="node-'.$node->nid.'"><a>Display</a></div>';
   	}else{
 	    $output .= node_view($node,  $teaser = TRUE, $page = FALSE, $links = TRUE);
+			$num_rows ++;
   		if(in_array($node->nid, $show_more_nid)){									
-					$output .= drupal_get_form('hidden_node_form',$hidden[$node->nid],$parent_nid=array($node->nid));
+					$output .= drupal_get_form('collapse_node_form',$hidden[$node->nid],$parent_nid=array($node->nid));
 					//$output .= '<div class="hidden_node" id="hidden-node-'.$node->nid.'"><a>Display</a></div>';
 			}
   	}	
-    $num_rows = TRUE;	 
+    //$num_rows = TRUE;    
 		$pre_node = $node;	
   }
+  if(is_array($unoutputed)){
+  	dpm($unoutputed,'$unoutputed');
+		$output .= drupal_get_form('show_more_form',$unoutputed);
+  } 
+	
   if ($num_rows) {
     $feed_url = url('rss.xml', array('absolute' => TRUE));
     drupal_add_feed($feed_url, variable_get('site_name', 'Drupal') .' '. t('RSS'));
