@@ -1,0 +1,123 @@
+<?php
+/**
+ * @author dale
+ * @version $Id$
+ * @copyright dale
+ * @package sina
+ */
+function sina_vp_imagetool_init(){
+	drupal_add_css(drupal_get_path('module', 'sina_vp_imagetool') .'/css/sina_vp_imagetool.css');
+	drupal_add_js(drupal_get_path('module', 'sina_vp_imagetool') .'/js/sina_vp_imagetool.js');
+	
+	drupal_add_js(drupal_get_path('module', 'sina_vp_imagetool') .'/js/jquery.lazyload.js');
+	drupal_add_js(drupal_get_path('module', 'sina_vp_imagetool') .'/js/jquery.lazyload-extra.js');	
+}
+
+/**
+ * 添加一个imageCache 微博头像 50X 150X 180X
+ * HOOK_imagecache_default_presets()
+ */
+function sina_vp_imagetool_imagecache_default_presets() {
+  $presets = array();
+	$presets['thumbnail_width'] = array ( //微博小图片
+    'presetname' => 'thumbnail_width',
+    'actions' => array (
+      0 => array (
+        'weight' => '0',
+        'module' => 'imagecache',
+        'action' => 'imagecache_scale',
+        'data' => array (
+          'width' => '120',
+          'height' => '100%',
+        ),
+      ), 
+      1 => array (//radius: 0.5, sigma: 0.5, amount: 100, threshold: 0.05
+        'weight' => '1',
+        'module' => 'imagecache',
+        'action' => 'imagecache_sharpen',
+        'data' => array (
+          'radius' => '0.5',
+          'sigma' => '0.5',
+          'amount' => '100',
+          'threshold' => '00.5',
+        ),
+      ),
+    ),
+  );
+	$presets['thumbnail_height'] = array ( //微博中图片
+    'presetname' => 'thumbnail_height',
+    'actions' => array (
+      0 => array (
+        'weight' => '0',
+        'module' => 'imagecache',
+        'action' => 'imagecache_scale',
+        'data' => array (
+          'width' => '100%',
+          'height' => '120',
+        ),
+      ), 
+      1 => array (//radius: 0.5, sigma: 0.5, amount: 100, threshold: 0.05
+        'weight' => '1',
+        'module' => 'imagecache',
+        'action' => 'imagecache_sharpen',
+        'data' => array (
+          'radius' => '0.5',
+          'sigma' => '0.5',
+          'amount' => '120',
+          'threshold' => '00.5',
+        ),
+      ),
+    ),
+  );
+	$presets['image_bmiddle_width'] = array ( //微博中图片
+    'presetname' => 'image_bmiddle_width',
+    'actions' => array (
+      0 => array (
+        'weight' => '0',
+        'module' => 'imagecache',
+        'action' => 'imagecache_scale',
+        'data' => array (
+          'width' => '440',
+          'height' => '100%',
+        ),
+      ), 
+      1 => array (//radius: 0.5, sigma: 0.5, amount: 100, threshold: 0.05
+        'weight' => '1',
+        'module' => 'imagecache',
+        'action' => 'imagecache_sharpen',
+        'data' => array (
+          'radius' => '0.5',
+          'sigma' => '0.5',
+          'amount' => '100',
+          'threshold' => '00.5',
+        ),
+      ),
+    ),
+  );
+	$presets['image_bmiddle_height'] = array ( //微博图片
+    'presetname' => 'image_bmiddle_height',
+    'actions' => array (
+      0 => array (
+        'weight' => '0',
+        'module' => 'imagecache',
+        'action' => 'imagecache_scale',
+        'data' => array (
+          'width' => '100%',
+          'height' => '440',
+        ),
+      ), 
+      1 => array (//radius: 0.5, sigma: 0.5, amount: 100, threshold: 0.05
+        'weight' => '1',
+        'module' => 'imagecache',
+        'action' => 'imagecache_sharpen',
+        'data' => array (
+          'radius' => '0.5',
+          'sigma' => '0.5',
+          'amount' => '100',
+          'threshold' => '00.5',
+        ),
+      ),
+    ),
+  );
+  return $presets;
+}

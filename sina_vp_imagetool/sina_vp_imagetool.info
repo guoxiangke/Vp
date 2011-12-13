@@ -1,0 +1,5 @@
+name = sina_vp_imagetool
+description = 新浪图片展现方式.
+core = 6.x
+package = A-DEV
+dependencies[] = sina_vp

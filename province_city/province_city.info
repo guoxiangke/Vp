@@ -1,9 +1,0 @@
-; $Id$
-; @author ryanlau<showqonline#gmail.com>
-name = '省市级联字段'
-description = '为CCK提供省市级联下拉菜单'.
-core = 6.x
-package = "A-Dev"
-version = "6.x-1.0"
-
-dependencies[] = content

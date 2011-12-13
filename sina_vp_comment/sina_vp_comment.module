@@ -1,0 +1,96 @@
+<?php
+/**
+ * @author dale
+ * @version $Id$
+ * @copyright dale
+ * @package sina
+ */
+
+
+/**
+ * Implementation of hook_form_alter(). 
+ * @Where sina_vp_open_set_tweet_form in sina_open.module
+ * @Do before set_tweet ,insert into our Additional db_table sina_weibo2node info.
+ */
+function sina_vp_comment_form_alter(&$form, $form_state, $form_id) {
+	/**
+	 * hidden  comment-form for weibo node
+	 */
+	$node = $node = node_load(arg(2));//node_load($form[nid]['#value']);
+	if(($form_id == 'comment_form')&&($node->type=='weibo')&&0){
+		$form['sina_vp_open'] = array(
+      '#type' => 'checkbox',
+      '#title' => '同步到新浪',
+      '#required' => true,
+      '#default_value' => 1,
+    );
+		unset($form['sina_open']);
+		$form['comment_filter']['comment']['#type'] = 'textarea';
+		$form['comment_filter']['comment']['#rows'] = '3';
+		//$form['comment_filter']['comment']['#resizable'] = FALSE;
+		$form['comment_filter']['comment']['#maxlength'] = '140';
+		$form['_author']['#type']['#access']=FALSE;
+		$form['comment_filter']['format']['#access']=FALSE;
+		$form['comment_filter']['comment']['#description'] = '最多140个字符，中英文均算一个字符。还可以输入<strong id="sina_open_tweet_text_count"></strong>个字符。';
+		$form['preview']['#type']['#access']=FALSE;
+	}
+	
+	if(arg(0)=='forward' && $form_id == 'weibo_node_form'){ 
+  	//转发api forward/$tid/139 不可以带图片
+		$form['field_weibo_image']['#access']=FALSE;
+		$form['forward_comment_option']=array(
+      '#type' => 'checkbox',
+      '#title' => '转发并评论',
+      '#required' => true,
+      '#default_value' => 1,
+    );
+		$form['#submit'][]= 'comment_form_submit2';	
+		//
+	}
+	
+	 	$dispalyNone_forms = array(
+		'weibo_page_default',
+		'devel_execute_block_form',
+		'search_theme_form',
+		'search_block_form',
+		'devel_switch_user_form',
+		'user_login_block','profile_field_form'
+		,'system_modules'
+		//,'hidden_node_form'
+		//,'collapse_node_form'
+		//,'show_more_form'
+	);
+	if(in_array($form_id, $dispalyNone_forms)){
+		//donothing...
+	}else{
+		if(function_exists(dpm)) dpm($form,$form_id);
+		//watchdog('$type', '<pre>'.print_r($form_state,TRUE));
+	}
+}
+/**
+ * Process comment form submissions; prepare the comment, store it, and set a redirection target.
+ */
+function comment_form_submit2($form, &$form_state) {
+	global $user;
+	if($form_state['submitted'] && $form_state['clicked_button']['#post']['forward_comment_option']){	///?q=zh-hans/forward/1/195
+		$uid = $form_state['values']['uid'];
+		$nid = arg(2);
+		$edit=array('pid' => $pid, 'nid' => $nid, 'uid' =>$uid);
+		$edit['subject']=$form_state['values']['title'];
+		comment_save($edit);
+		//获取cid
+		$result=db_query("SELECT * FROM {comments} WHERE `nid`=%d and `uid`=%d order by `timestamp` desc limit 0,1",$nid,$uid);
+		$comments = db_fetch_object($result);
+		$comment['subject'] = $comments->subject;
+		$comment['nid'] = $comments->nid;
+		$comment['cid'] = $comments->cid;
+		{//转发到新浪
+      sina_open_t_set_tweet2(
+        $comment['subject'],
+        url('node/'.$comment['nid'], array('absolute' => true, 'fragment' => 'comment-'. $comment['cid']))
+				,$comment //dale 新添comment
+      );
+    }
+	}
+    return;
+}

@@ -156,4 +156,10 @@ Drupal.behaviors.sina = function (context) {
 	$("#faceWrap a").click(function() {insertFace('edit-title', $(this).attr('title'));
 		return false;
 	});
+	
+	    $('.filefield-upload input.form-submit').css("visibility", "hidden");
+	    //$('.filefield-upload input.form-file').css("visibility", "hidden");
+	    $('.filefield-upload input.form-file').change(function() {  
+	        $(this).parent().find('input.form-submit').mousedown();
+	    });
 }

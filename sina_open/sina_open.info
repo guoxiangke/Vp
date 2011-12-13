@@ -8,4 +8,4 @@ version = "6.x-1.0-beta5"
 core = "6.x"
 project = "sina_open"
 datestamp = "1297396612"
-
+package = A-DEV

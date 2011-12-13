@@ -1,0 +1,34 @@
+#img,#topic,#face,#atta{ padding: 0 0 0 18px;}
+#edit-title-wrapper .publish-weibo{ 
+    font-family: Tahoma,"宋体";
+    font-size: 14px;
+    height: 55px;
+    line-height: 18px;
+    margin: 0 0 0 5px;
+    overflow: hidden;
+    width: 530px;
+}
+#edit-title-wrapper #sina_open_tweet_text_count{
+	  font-family: Constantia,Georgia;
+    font-size: 22px;
+    font-weight: 700;
+}
+#edit-title-wrapper .description{
+    font: 12px/1.125 Arial,Helvetica,sans-serif;
+    width: 440px;
+    float:right;
+}
+#face a {
+    background: url("http://www.wbto.cn/images/face.gif") no-repeat scroll 0 0 transparent;
+    padding: 2px 0 0 18px;
+}
+#topic a {
+    background: url("http://www.wbto.cn/images/d_28.gif") no-repeat scroll 0 0 transparent;
+    padding: 1px 0 0 18px;
+}
+#img a {
+    background: url("http://www.wbto.cn/images/d_25.gif") no-repeat scroll 0 0 transparent;
+    padding: 0 0 0 18px;
+}
+#faceWrap{clear:both;background:#FEFEFE;border:1px solid #DDDDDD;padding:5px;width:313px;display:none;position:absolute;z-index:10000;text-align:center;color:#999999;}
+#faceWrap a{padding:2px;}

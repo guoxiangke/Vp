@@ -7,7 +7,9 @@
  * @copyright 2011 unicom-china
  * @package UNICOM CHINA EXTRA
  */
-
+function user_login_extra_init(){
+	drupal_add_css(drupal_get_path('module', 'user_login_extra') .'/user_login_extra.css');
+}
 /**
  * Implementation of hook_block().
  * Declare a block or set of blocks.
@@ -51,7 +53,7 @@ function user_login_extra_block($op = 'list', $delta = 0, $edit = array()) {
             {
               $user_str .= ' '.$profile->field_title[0]['value'];
             }
-            $output = t('<div class="gtc">你好，尊敬的 <span class="red fb">!user</span>, <br/> 欢迎您来到君德财富投资网站！</div>', array('!user' => $user_str));
+            $output = t('<div class="gtc">你好，尊敬的 <span class="red fb">!user</span>, <br/> 欢迎您来到微铺街！</div>', array('!user' => $user_str));
             
             $complete = content_complete_get_data($profile);
             $output .= '<div class="">'.theme('content_complete_profile_percent_complete', $complete).'</div>';

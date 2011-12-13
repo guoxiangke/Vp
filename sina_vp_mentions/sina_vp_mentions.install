@@ -1,0 +1,66 @@
+<?php 
+/*
+ * Implementation of hook_install().
+ * Install the current version of the database schema, and any other setup tasks. 
+ */
+function sina_vp_mentions_install() 
+{
+    drupal_install_schema('sina_vp_mentions');
+}
+
+/*
+ * Implementation of hook_uninstall().
+ * Remove any tables or variables that the module sets.
+ */
+function sina_vp_mentions_uninstall() 
+{
+    drupal_uninstall_schema('sina_vp_mentions');
+}
+
+/*
+ * Implementation of hook_schema().
+ * Define the current version of the database schema. 
+ * when user post a weibo<=>node ,record it .
+ */
+function sina_vp_mentions_schema() 
+{
+    $schema['sina_vp_mentions'] = array(
+      'description' => t('TODO: 记录@功能!'),
+      'fields' => array(
+        'id' => array(
+          'description' => t('id'),
+          'type' => 'serial',
+          'not null' => TRUE,
+        ),         
+        'uid' => array(
+          'description' => t('@uid'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+        'nid' => array(
+          'description' => t('nid'),
+          'type' => 'int',
+          'default' => '0',
+          'not null' => TRUE,
+        ),
+        'cid' => array(
+          'description' => t('cid'),
+          'type' => 'int',
+          'default' => '0',
+          'not null' => TRUE,
+        ),
+        'is_new' => array(
+          'description' => t('readed'),
+          'type' => 'int',
+          'default' => '1',
+          'not null' => TRUE,
+        ),
+				
+      ),
+      'primary key' => array('id'),
+      'indexes' => array(
+        'uid' => array('uid'),
+      ),
+    );
+    return $schema;
+}

@@ -1,0 +1,168 @@
+<?php
+/**
+ * @author dale
+ * @version $Id$
+ * @copyright dale
+ * @package sina
+ */
+
+/**
+ * Add fasttoggle abilities to a link
+ *
+ * @param $title
+ *   The caption of the link
+ * @param $callback
+ *   The callback URL that will be the queried when the user clicks on that link.
+ *   If queried via JS, it should perform the action because $_POST['confirm']
+ *   is set to true. Return a JSON structure that has the key 'text' that contains
+ *   the updatd link text.
+ *   If the action is not confirmed, return a rendered confirmation form.
+ *   If you return JSON in your callback function, set the content type of the
+ *   header to text/javascript and the encoding to utf-8. Currently, only one
+ *   JSON parameter is used: text.
+ * @param $html
+ *   (optional; defaults to true) Set whether this function should return a the
+ *   HTML code for the fast toggle link or a link structure for use in hook_link
+ *   hooks.
+ * @param $token
+ *   (optional; defaults to an empty string) Provide a salt for the token
+ *   authentification added to each toggle link. If the string is empty, the
+ *   generic token for the user on this site is used.
+ * @param $class
+ *   (optional; defaults to an empty string) Add a class name to the link so
+ *   that it can be styled with CSS.
+ *
+ * @return
+ *   Either a complete HTML link or a link array structure for use in hook_link.
+ */
+function fasttoggle2($title, $callback, $html = TRUE, $token = '', $class = '') {
+  static $sent = FALSE;
+
+  // Only include the support files once.
+  if (!$sent) {
+    $sent = TRUE;
+    drupal_add_js(drupal_get_path('module', 'sina_vp_follow_toggle') .'/fasttoggle.js');
+    drupal_add_css(drupal_get_path('module', 'sina_vp_follow_toggle') .'/fasttoggle.css', 'module', 'all', FALSE);
+  }
+  $attributes = array('class' => 'fasttoggle'. (!empty($class) ? ' '. $class : ''), 'title' => t('toggle this'));
+  $query = drupal_get_destination() .'&token='. drupal_get_token($token);
+
+  if ($html) {
+    return l($title, $callback, array('attributes' => $attributes, 'query' => $query));
+  }
+  else {
+    return array('title' => $title, 'href' => $callback, 'query' => $query, 'attributes' => $attributes);
+  }
+}
+ 
+/**
+ * Implementation of hook_link().
+ * 添加+粉丝 链接。
+ */
+function sina_vp_follow_toggle_link($type, $obj = NULL, $teaser = FALSE) {
+
+  $links = array();	
+	global $user;
+	if($user->uid==$obj->uid){return;}//自己不加自己粉丝
+	if(in_array('Buyer',$user->roles)){//关系只有买家才有
+		
+		if(in_array('Buyer',user_load($obj->uid)->roles)){
+			$option = 'follow';
+		}elseif(in_array('Seller',user_load($obj->uid)->roles)){
+			$option = 'focus';
+		}else{
+			drupal_set_message('有用户没有正确分配角色','error');
+		}
+		//-粉丝 else +粉丝			
+	  $options = sina_vp_follow_toggle_options($option);
+		$my_follows =	user_relationships_load(array("requester_id" => $user->uid),array("sort" => 'requestee_id',"include_user_info" => TRUE));//所有的
+		$follow_status=0;
+		foreach(array_keys($my_follows) as $key){
+			if($obj->uid==$key){
+				$follow_status=1; //已关注					
+				//$rid = $my_follows[$key][0]->rid;// 关系id		
+			}
+		}
+		switch ($type) {
+      case 'node':
+        foreach (array_keys($options) as $key) {
+			    $links['focus_toggle_'. $key] = fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $obj->uid .'/'. $options[$key][$follow_status] , FALSE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status);
+			  }
+        break;
+      case 'comment':
+        //fasttoggle_load_comment($obj);
+        foreach (array_keys($options) as $key) {
+			    $links['focus_toggle_'. $key] = fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $obj->uid .'/'. $options[$key][$follow_status] , FALSE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status);
+			  }
+        break;
+      // User is not one of the standard types for hook_link(). This
+      // use enables adding of user links to a user profile.
+      case 'user':
+        foreach (array_keys($options) as $key) {
+			    $links['focus_toggle_'. $key] = fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $obj->uid .'/'. $key .'/'. $follow_status.($rid?'/'.$rid:''), FALSE, $key .'_'. $obj->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status);
+			  }
+        break;
+    }
+		
+	}//dpm($links);follow_toggle/18/focus
+  return $links;
+}
+
+/**
+ * Implementation of hook_fasttoggle_options().no!手动写的。
+ */
+function sina_vp_follow_toggle_options($type='follow') { //粉丝||关注
+  switch ($type) {
+	  case 'follow':	    
+			$return =array(
+				'follow'=>array(
+					'0'=>'follow',
+					'1'=>'unfollow',
+				)
+			);
+	    break;
+	  case 'focus':	
+		  $return =array(
+				'focus'=>array(
+					'0'=>'focus',
+					'1'=>'unfocus',
+				)
+			);
+	    break;
+  }
+  return $return;
+}
+/**
+ * Implementation of hook_menu().
+ */
+function sina_vp_follow_toggle_menu() {
+  $items = array();
+//follow_toggle/18/focus 谁follow谁 谁unfollow谁 谁focus谁 谁unfocus谁
+  $items['follow_toggle/%/focus'] = array(
+    'title' => 'Toggle',
+    'page callback' => 'fasttoggle_user_option',
+    'page arguments' => array(1, 2),
+    'access callback' => TRUE, // Access checking is handled in hook_fasttoggle_options().
+    'type' => MENU_CALLBACK,
+    'file' => 'fasttoggle.toggle.inc',
+  );
+  $items['follow_toggle/%/follow'] = array(
+    'title' => 'Toggle',
+    'page callback' => 'fasttoggle_user_option',
+    'page arguments' => array(1, 2),
+    'access callback' => TRUE, // Access checking is handled in hook_fasttoggle_options().
+    'type' => MENU_CALLBACK,
+    'file' => 'fasttoggle.toggle.inc',
+  ); 
+  // Note: _comment is required so that it maps to _comment_load
+  $items['comment/follow_toggle/%_comment/%'] = array(
+    'title' => 'Toggle',
+    'page callback' => 'fasttoggle_comment_option',
+    'page arguments' => array(2, 3),
+    'access callback' => TRUE, // Access checking is handled in hook_fasttoggle_options().
+    'type' => MENU_CALLBACK,
+    'file' => 'fasttoggle.toggle.inc',
+  );
+
+  return $items;
+}

@@ -1,0 +1,98 @@
+<?php
+/**
+ * @author dale
+ * @version $Id$
+ * @copyright dale
+ * @package sina
+ */
+/*
+ * Implementation of hook_nodeapi().
+ * Act on nodes defined by other modules.
+ */
+function get_uid_by_name($name) {
+   $uid = db_fetch_object(db_query("SELECT uid FROM {users} WHERE name = LOWER('%s')", $name))->uid;
+	 return $uid;
+}
+
+function sina_vp_mentions_nodeapi(&$node, $op){
+	 global $user;
+    if($node->type =='weibo'){
+      switch ($op) {
+        case 'insert':			  	
+					 $pattern_at = '/@([^\\@|\s{1}]+)/';
+					 $subject = $node->title;
+					 preg_match_all($pattern_at, $subject,$match);
+					 $match_users = array_unique($match['1']);
+					 foreach($match_users as $name){
+					 		if($mention_uid = get_uid_by_name($name)){
+					 				db_query("INSERT INTO {sina_vp_mentions}(`uid` ,`nid` )VALUES ('%d','%d')",$mention_uid,$node->nid);
+					 		}
+					 }
+          break;
+        case 'update':
+          
+          break;
+        case 'delete':
+					db_query("DELETE FROM {sina_vp_mentions} WHERE `nid`='%d'",$node->nid);
+					break;
+        case 'prepare':
+          //
+          break;
+        case 'load':
+          break;
+        case 'view':
+          break;
+				case 'alter':
+					//sina_vp_context_preprocess(&$node);
+          break;
+      }
+  }
+}
+/**
+ * @Implement of hook_comment()
+ * copy form sina_open_comment()
+ */
+function sina_vp_mentions_comment(&$comment, $op) {
+
+	
+   if ($op == 'insert' && isset($comment['sina_vp_open'])){	  	
+					 $pattern_at = '/@([^\\@|\s{1}]+)/';
+					 $subject = $comment['comment'];
+					 $count = preg_match_all($pattern_at, $subject,$match);
+					 $match_users = array_unique($match['1']);
+					 dpm($match_users,$counts);
+					 foreach($match_users as $name){
+					 		if($mention_uid = get_uid_by_name($name)){
+					 				db_query("INSERT INTO {sina_vp_mentions}(`uid`,`nid` ,`cid` )VALUES ('%d','%d','%d')",$mention_uid,$comment['nid'],$comment['cid']);
+					 		}
+					 }	
+					 dpm(&$comment,$op);
+		}
+		if ($op == 'delete'){// && isset($comment->sina_vp_open)
+			db_query("DELETE FROM {sina_vp_mentions} WHERE `cid`='%d'",$comment->cid);
+		}
+}
+
+function sina_vp_mentions_menu() {
+	global $user;
+  $items['user/%user/mentions'] = array(
+    'title' => '提到我的@Me',
+    'page callback' => 'sina_vp_mentions_page',
+    'page arguments' => array(1),
+    'access callback' => 'user_edit_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+  );
+	return $items;
+}
+
+function sina_vp_mentions_page($ac) {
+  $output = '';
+
+  $data = db_query('SELECT * FROM {sina_vp_mentions} WHERE uid = %d', $ac->uid);
+  
+	 while ($row = db_fetch_object($data)) {
+	    $output .= node_view(node_load($row->nid),  $teaser = TRUE, $page = FALSE, $links = TRUE);
+	  }
+  return $output;
+}

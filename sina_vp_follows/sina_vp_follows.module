@@ -1,0 +1,144 @@
+<?php
+/**
+ * @author dale
+ * @version $Id$
+ * @copyright dale
+ * @package sina
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function sina_vp_follows_menu() {
+	//include_once(drupal_get_path('module', 'user_relationships_api') .'/user_relationships_api.module');
+
+	//个人中心 菜单项
+	//用户关系user_relationships
+	//module_load_include('inc', 'relationships', 'user_relationships_ui.pages');//调用节点发布相关
+	//drupal_get_path('module', 'relationships').
+  $items['relationships/follows'] = array(
+    'title'             => '我的粉丝',
+    'title callback'  => 'relationships_follows_title_callback',
+    'title arguments'  => array('300'),//$rtid=
+    'access callback' => 'user_access',
+    'access arguments' => array('view my follows'),
+    // 'access callback'   => 'user_relationships_ui_check_access',
+    // 'access arguments'  => array('edit'),
+    'type'              => MENU_NORMAL_ITEM,
+    'weight'            => -9,
+    'page callback'     => 'user_relationships_page_follows',
+    'page arguments'    => array(NULL),
+    'file'              => 'user_relationships_ui.pages.inc',
+  );
+	/*$items['relationships/focus'] = array(
+    'title'             => '关注',
+    'title callback'  => 'relationships_follows_title_callback',
+    'title arguments'  => array('400'),//$rtid=
+    'access callback' => 'user_access',
+    'access arguments' => array('view my follows'),
+    // 'access callback'   => 'user_relationships_ui_check_access',
+    // 'access arguments'  => array('edit'),
+    'type'              => MENU_NORMAL_ITEM|MENU_LOCAL_TASK,
+    'weight'            => -9,
+    'page callback'     => 'user_relationships_page_focus',
+    'page arguments'    => array(NULL),
+    'file'              => 'user_relationships_ui.pages.inc',
+  );
+  // more ...dale 修改第三方模块 template_preprocess_user_relationships()了。
+  $items["relationships/1/my"] = array(
+    'title'             => 'my关注',
+    'title callback'  => 'relationships_follows_title_callback',
+    'title arguments'  => array('400'),//$rtid=
+    'access callback' => 'user_access',
+    'access arguments' => array('view my follows'),
+    
+    'page callback'     => 'user_relationships_page',
+    'page arguments'    => array(NULL, 1),
+    'file'              => 'user_relationships_ui.pages.inc',
+  );
+	*/
+	return $items;
+}
+function relationships_follows_title_callback($rtid = NULL) {
+  global $user;
+	if($rtid)$count = user_relationships_load(array("requester_id" => $user->uid,"rtid" => $rtid),array("count" => TRUE));
+	if($rtid==300)$count = user_relationships_load(array("requestee_id" => $user->uid),array("count" => TRUE));
+	if($rtid==400)$count = count(_get_my_focus());
+	//dpm(user_relationships_load(array("user" => $user->uid),array("count" => TRUE)),'关注');
+	//dpm(user_relationships_load(array("user" => $user->uid,"rtid" => '2'),array("count" => TRUE)),'关注的卖家');
+	//dpm(user_relationships_load(array("user" => $user->uid,"rtid" => '1'),array("count" => TRUE)),'关注的买家');
+	//dpm(user_relationships_load(array("requestee_id" => $user->uid),array("count" => TRUE)),'关注我的');	
+  if ($count > 0) {
+    //return format_plural($count, 'Messages (1 new)', '我的粉丝 (@count new)');
+  }
+	switch ($rtid) {
+		case '300':
+			  return t('粉丝(').$count.')';
+			break;
+		case '400':
+		  return t('关注(').$count.')';
+		break;
+		case '1':
+			  return t('我的关注(').$count.')';
+			break;
+		case '2':
+		  return t('订阅(').$count.')';
+		break;
+		default:
+			return t('有错误吧！');
+			break;
+	}
+
+}
+function sina_vp_follows_menu_alter(&$items) {
+	
+	$items['relationships']['title'] = t('关系中心');
+	$items['relationships'] = $items['relationships/follows'];
+	//unset($items['relationships/list']);//ALL去掉，我的粉丝提前
+	$items['relationships/list'] = $items['relationships/follows'];
+	$items['relationships/list']['type'] = MENU_DEFAULT_LOCAL_TASK;
+	include_once(drupal_get_path('module', 'user_relationships_api') .'/user_relationships_api.module');
+	//$items["relationships/1"]['access callback'] = FALSE; //隐藏所有粉丝 a2b b2a
+	foreach (user_relationships_types_load() as $rtid => $relationship) {
+    $items["relationships/{$rtid}"]['title callback'] = 'relationships_follows_title_callback';
+		$items["relationships/{$rtid}"]['title arguments'] = array("$rtid");
+  }
+}
+/**
+ * 默认获取当前用户的粉丝uid数组.
+ * @param $uid=null 
+ * @return array() $follows_uid[]
+ */
+function _get_my_follows($uid=NULL)
+{
+	if(is_null($uid)){
+		global $user;
+		$uid = $user->uid;
+	}	
+	$array=user_relationships_load(array("requestee_id" => $uid),array("sort" => 'requester_id',"include_user_info" => TRUE));
+	//return $follows_uid;
+	return $array;
+}
+/**
+ * 默认我的关注.
+ * @param $uid=null 
+ * @return array() $follows_uid[]
+ */
+function _get_my_focus($uid=NULL)
+{
+	if(is_null($uid)){
+		global $user;
+		$uid = $user->uid;
+	}
+	$array1=user_relationships_load(array("requestee_id" => $uid),array("sort" => 'requester_id',"include_user_info" => TRUE));//所有的
+	$array2=user_relationships_load(array("user" =>$uid),array("sort" => 'requester_id'));//关注我的
+	foreach($array2 as $rid=>$focus){//减法 = 我关注的
+		foreach($array1 as $key=>$del){
+			if($rid<>$key){
+				$my_focus[$rid]=$focus;
+			}
+		}
+	}
+	//dpm($array2,'$array2');//dpm($array1,'$array1');dpm($my_focus,'$my_focus');
+	return $my_focus;
+}

@@ -177,7 +177,7 @@ function weibo_page_default(&$form_state, $type = NULL) {
 		}
 	}
   $num_rows = FALSE;	
-	$result = pager_query(db_rewrite_sql($sql),1, $element = 0, $count_query);
+	$result = pager_query(db_rewrite_sql($sql),20, $element = 0, $count_query);
 	while ($record = db_fetch_object($result)) {
 			$weibo_obj=json_decode($record->data);
 			dpm($weibo_obj,'$weibo_obj');
@@ -241,7 +241,7 @@ function weibo_page_default(&$form_state, $type = NULL) {
 				    'effect' => 'fade',
 						)
 				);
-				
+		
 			}$form['comments'][$nid]['textfields'] = array(//$form['textfields'][$nid]['textfields']
 			    '#title' => t('评论'),
 			    '#prefix' => '<div id="textfield-wrapper-'.$nid.'">',
@@ -273,6 +273,7 @@ function weibo_page_default(&$form_state, $type = NULL) {
 	}
  	$form['pager'] = array('#value' => theme('pager', NULL, 1, 0));
 	$form['#theme'] = 'weibo_page_default';
+			theme();
   return $form;
 }
 /**
@@ -587,7 +588,7 @@ function sina_VpCenter_page($tid = NULL) {
   }
   $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
     $output = '';
-	$first_show_num = 2-1;
+	$first_show_num = 15-1;
  /* while ($node = db_fetch_object($result)) {    
 		if($num_rows>$first_show_num){
 			$unoutputed[]=$node->nid;
@@ -599,7 +600,15 @@ function sina_VpCenter_page($tid = NULL) {
   if(is_array($unoutputed)){
   	dpm($unoutputed,'$unoutputed');
 		$output .= drupal_get_form('show_more_form',$unoutputed);
-  } */
+  } 
+ $pattern = '/#([^\\#|.]+)#/';
+ $pattern_at = '/@([^\\@|\s{1}]+)/';
+ $subject = '#请在这##里输##入自定##义话题# @admin';
+ $counts = preg_match_all($pattern_at, $subject,$match);
+ dpm($match,$counts);
+ $subject = str_replace(' ', '', $subject);
+ $counts = preg_match_all($pattern, $subject,$match);
+ dpm($match,$counts);*/
   while ($node = db_fetch_object($result)) {
   	$node = node_load($node->nid);
   	if($pre_node && $pre_node->uid == $node->uid){
@@ -612,8 +621,9 @@ function sina_VpCenter_page($tid = NULL) {
   		$pre_node = $node;
   	}
   }
+  $counts = db_result(db_query(db_rewrite_sql($sql), $args));
 	//dpm($show_more_nid,'显示的节点');
-	//dpm($hidden,'hidden的节点');  
+	//dpm($hidden,'hidden的节点');  pager_query_for_vp($query, $limit = 10, $element = 0, $count_query = NULL,$count)
 	$result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
   $output = '';
   //$num_rows = FALSE;
@@ -629,7 +639,7 @@ function sina_VpCenter_page($tid = NULL) {
   	}else{
 	    $output .= node_view($node,  $teaser = TRUE, $page = FALSE, $links = TRUE);
 			$num_rows ++;
-  		if(in_array($node->nid, $show_more_nid)){									
+  		if($show_more_nid && in_array($node->nid, $show_more_nid)){									
 					$output .= drupal_get_form('collapse_node_form',$hidden[$node->nid],$parent_nid=array($node->nid));
 					//$output .= '<div class="hidden_node" id="hidden-node-'.$node->nid.'"><a>Display</a></div>';
 			}
@@ -638,13 +648,18 @@ function sina_VpCenter_page($tid = NULL) {
 		$pre_node = $node;	
   }
   if(is_array($unoutputed)){
-  	dpm($unoutputed,'$unoutputed');
+  	//dpm($unoutputed,'$unoutputed');
 		$output .= drupal_get_form('show_more_form',$unoutputed);
   } 
 	
   if ($num_rows) {
     $feed_url = url('rss.xml', array('absolute' => TRUE));
     drupal_add_feed($feed_url, variable_get('site_name', 'Drupal') .' '. t('RSS'));
+		drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/scroll.css');
+		drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/scroll.js');//.$_REQUEST["REQUEST_URI"].
+		//$output .= '<div class="hidden" id="showmore_node" >显示更多</div>';
+		//dpm($_SERVER,$_REQUEST );//$_SERVER['HTTP_HOST']
+		$output .= '<div class="showmore" id="showmore" onclick="insertcode();"><a class="handle" href="javascript:show()">显示更多结果</a></div>';
     $output .= theme('pager', NULL, variable_get('default_nodes_main', 10));
   }else{
 		global $user;
@@ -819,4 +834,74 @@ function sina_vp_BuyCenter($tid = NULL) {
 		$output ="<p>点击<a href='?q=vp/add/$sina_vp_type'>这里</a>发布".t($sina_vp_type)."博文</p>".$output;
 	}
   return $output;
+}
+
+
+/**
+ * Perform a paged database query.
+ *
+ * Use this function when doing select queries you wish to be able to page. The
+ * pager uses LIMIT-based queries to fetch only the records required to render a
+ * certain page. However, it has to learn the total number of records returned
+ * by the query to compute the number of pages (the number of records / records
+ * per page). This is done by inserting "COUNT(*)" in the original query. For
+ * example, the query "SELECT nid, type FROM node WHERE status = '1' ORDER BY
+ * sticky DESC, created DESC" would be rewritten to read "SELECT COUNT(*) FROM
+ * node WHERE status = '1' ORDER BY sticky DESC, created DESC". Rewriting the
+ * query is accomplished using a regular expression.
+ *
+ * Unfortunately, the rewrite rule does not always work as intended for queries
+ * that already have a "COUNT(*)" or a "GROUP BY" clause, and possibly for
+ * other complex queries. In those cases, you can optionally pass a query that
+ * will be used to count the records.
+ *
+ * For example, if you want to page the query "SELECT COUNT(*), TYPE FROM node
+ * GROUP BY TYPE", pager_query() would invoke the incorrect query "SELECT
+ * COUNT(*) FROM node GROUP BY TYPE". So instead, you should pass "SELECT
+ * COUNT(DISTINCT(TYPE)) FROM node" as the optional $count_query parameter.
+ *
+ * @param $query
+ *   The SQL query that needs paging.
+ * @param $limit
+ *   The number of query results to display per page.
+ * @param $element
+ *   An optional integer to distinguish between multiple pagers on one page.
+ * @param $count_query
+ *   An SQL query used to count matching records.
+ * @param ...
+ *   A variable number of arguments which are substituted into the query (and
+ *   the count query) using printf() syntax. Instead of a variable number of
+ *   query arguments, you may also pass a single array containing the query
+ *   arguments.
+ * @return
+ *   A database query result resource, or FALSE if the query was not executed
+ *   correctly.
+ * $count 重新分页。
+ * @ingroup database
+ */
+function pager_query_for_vp($query, $limit = 10, $element = 0, $count_query = NULL,$count) {
+  global $pager_page_array, $pager_total, $pager_total_items;
+  $page = isset($_GET['page']) ? $_GET['page'] : '';
+
+  // Substitute in query arguments.
+  $args = func_get_args();
+  $args = array_slice($args, 4);
+  // Alternative syntax for '...'
+  if (isset($args[0]) && is_array($args[0])) {
+    $args = $args[0];
+  }
+
+  // Construct a count query if none was given.
+  if (!isset($count_query)) {
+    $count_query = preg_replace(array('/SELECT.*?FROM /As', '/ORDER BY .*/'), array('SELECT COUNT(*) FROM ', ''), $query);
+  }
+
+  // Convert comma-separated $page to an array, used by other functions.
+  $pager_page_array = explode(',', $page);
+
+  // We calculate the total of pages as ceil(items / limit).
+  $pager_total_items[$element] = $count;//db_result(db_query($count_query, $args))
+  $pager_total[$element] = ceil($pager_total_items[$element] / $limit);
+  $pager_page_array[$element] = max(0, min((int)$pager_page_array[$element], ((int)$pager_total[$element]) - 1));
+  return db_query_range($query, $args, $pager_page_array[$element] * $limit, $limit);
 }

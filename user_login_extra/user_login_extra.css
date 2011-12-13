@@ -1,0 +1,94 @@
+.block-user_login_extra {
+    background: url("../images/block-user-login-bg.png") no-repeat scroll 0 0 transparent;
+    height: 188px;
+    padding: 12px;
+    position: relative;
+}
+.block-user_login_extra .content {
+}
+.block-user_login_extra .title {
+    font-size: 18px;
+    font-weight: normal;
+    height: 40px;
+    line-height: 40px;
+    margin: 0;
+    padding-left: 26px;
+}
+.block-user_login_extra .form-item {
+    margin: 0;
+    text-align: left;
+}
+.block-user_login_extra .form-item label {
+    display: inline;
+    font-size: 12px;
+    font-weight: normal;
+}
+.block-user_login_extra .form-text {
+    border: 1px solid #D3D1D1;
+    color: #A7A7A7;
+    width: 124px;
+}
+.block-user_login_extra .form-submit {
+    background: url("../images/block-user-login-btn.png") no-repeat scroll 0 0 transparent;
+    border: 0 none;
+    cursor: pointer;
+    display: block;
+    font-size: 0;
+    height: 40px;
+    line-height: 1px;
+    position: absolute;
+    right: 12px;
+    top: 52px;
+    width: 54px;
+    z-index: 100;
+}
+.block-user_login_extra .item-list {
+    padding-top: 15px;
+}
+.block-user_login_extra .item-list ul {
+    margin: 0;
+    padding: 0;
+}
+.block-user_login_extra .item-list li {
+    background: url("../images/dot.gif") no-repeat scroll 5px center transparent;
+    display: block;
+    float: left;
+    padding-left: 16px;
+    width: 82px;
+}
+.block-user_login_extra .item-list a {
+    color: #7C7C7C;
+    font-size: 12px;
+    text-decoration: none;
+}
+.block-user_login_extra .item-list a:hover {
+    text-decoration: underline;
+}
+.block-user_login_extra .login-list {
+    font-size: 12px;
+    line-height: 26px;
+    text-align: center;
+}
+.block-user_login_extra .login-list li {
+    background: url("../images/dot.gif") no-repeat scroll 22px center transparent;
+}
+.block-user_login_extra .login-list .item-list {
+    padding: 0;
+}
+.block-user_login_extra li.my-account {
+    background: none repeat scroll 0 0 transparent;
+    list-style-type: none;
+    padding: 5px 0 0;
+    width: 196px;
+}
+.block-user_login_extra li.my-account a {
+    background: url("../images/btn-my-account.png") no-repeat scroll 0 0 transparent;
+    cursor: pointer;
+    display: block;
+    height: 26px;
+    margin: 0 auto;
+    width: 73px;
+}
+.block-user_login_extra li.my-account a span {
+    display: none;
+}

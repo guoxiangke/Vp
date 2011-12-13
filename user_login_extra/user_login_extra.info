@@ -2,7 +2,7 @@
 ; @author ryanlau<showqonline#gmail.com>
 name = "扩展用户登录区块"
 description = "登录后用户登录区块显示登录信息"
-package = "Unicom China Drupal Extra"
+package = A-DEV
 version = "6.x-1.0"
 core = "6.x"
 dependencies[] = user
