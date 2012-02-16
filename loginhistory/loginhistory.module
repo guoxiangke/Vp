@@ -1,0 +1,41 @@
+<?php
+// $Id$
+/**
+ * @file
+ * Keeps track of user logins.
+ */
+/**
+ * Implementation of hook_user().
+ * 上次登出时间---》本次的登录时间
+ */
+function loginhistory_user($op, &$edit, &$account, $category = NULL) {
+	switch($op) {
+		// Successful login.
+		case 'logout':
+			$last_access_time = db_fetch_object(db_query('SELECT `access` access FROM {users} WHERE `uid` =%d',$account -> uid))->access;
+			db_query("update {users} set access = %d where uid=%d ", time(), $account -> uid);
+			db_query("update {login_history} set timestamp = %d where last_access_time=%d and  uid=%d ", time(), $last_access_time, $account -> uid);
+			break;
+		case 'login' :
+		// Record timestamp in database.
+			$last_access_time = db_fetch_object(db_query('SELECT `access` access FROM {users} WHERE `uid` =%d',$account -> uid))->access;
+			db_query("INSERT INTO {login_history} (uid,last_access_time, timestamp) VALUES (%d,%d, %d)", $account -> uid, $last_access_time, $account -> login);
+			break;
+
+		// $user object has been created and is given to us as $account parameter.
+		case 'load' :
+		// Add the number of times user has logged in.
+		$account -> loginhistory_count = db_result(db_query("SELECT COUNT(timestamp) AS
+count FROM {login_history} WHERE uid = %d", $account -> uid));
+			break;
+
+		// 'My account' page is being created.
+		case 'view' :
+		// Add a field displaying number of logins.
+			$account->content['summary']['login_history'] = array(
+	      '#type' => 'user_profile_item',
+	      '#title' => t('Number of Logins'),
+	      '#value' => $account -> loginhistory_count,
+	    );
+	}
+}

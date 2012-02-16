@@ -89,7 +89,7 @@ function comment_reply($node, $pid = NULL) {
       }
       // This is the case where the comment is in response to a node. Display the node.
       else if (user_access('access content')) {
-        //$output .= node_view($node);
+        $output .= node_view($node);
       }
 
       // Should we show the reply box?
@@ -110,8 +110,6 @@ function comment_reply($node, $pid = NULL) {
     drupal_set_message(t('You are not authorized to view comments.'), 'error');
     drupal_goto("node/$node->nid");
   }
-  if (function_exists('comment_render') && $node->comment) {
-    return comment_render($node, $cid).$output;
-  }
+
   return $output;
 }

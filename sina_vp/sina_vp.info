@@ -6,3 +6,4 @@ dependencies[] = sina
 dependencies[] = sina_open
 dependencies[] = user_relationships_ui
 dependencies[] = imagecache
+dependencies[] = jquery_ui

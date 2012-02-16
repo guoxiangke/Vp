@@ -2,5 +2,5 @@ name = sina_vp_comment
 description = 评论并转发，需要vp修改评论表单后进一步修改.
 core = 6.x
 package = A-DEV
-//dependencies[] = sina_vp
+dependencies[] = sina_vp
 //dependencies[] = sina_open

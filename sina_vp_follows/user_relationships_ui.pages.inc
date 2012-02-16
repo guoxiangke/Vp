@@ -89,33 +89,29 @@ function user_relationships_page00($account = NULL, $rtid = NULL) {
 /**
  * Main list of relationships for a specified user
  */
-function user_relationships_page($account = NULL, $rtid = NULL) {
+function user_relationships_page($account = NULL, $rtid = NULL) {  //他的关注 1 他的订阅2
   if (!$account) {
     global $user;
     $account = $user;
   }
+//echo user_relationships_load(array("requester_id" => $account->uid,"rtid" => $rtid=2),array("count" => TRUE)); 他的订阅2
+//echo user_relationships_load(array("requester_id" => $account->uid,"rtid" => $rtid=1),array("count" => TRUE)); 他的关注1 
+//_get_my_follows =>  $array=user_relationships_load(array("requestee_id" => $uid),array("sort" => 'requester_id',"include_user_info" => TRUE));
+	//$relationships = _get_my_follows($account->uid); //粉丝
+	$relationships = user_relationships_load(array("requester_id" => $account->uid,"rtid" => $rtid),array("sort" => 'updated_at',"include_user_info" => TRUE));
 
-  return theme('user_relationships', $account, $rtid);
-}
-
-function user_relationships_page_follows($account = NULL){ //暂时用这个 $account = NULL
-
-	if (!$account) {
-    global $user;
-    $account = $user;
-   }
-
-	$relationships = _get_my_follows(); //粉丝
 	$table['data'] = array();
   $table['rows'] = array();
 	foreach ($relationships as $relationship) {
      $edit_access = ($user->uid == $account->uid && user_access('maintain own relationships')) || user_access('administer users');
-	 	 $this_user      = $relationship->requestee_id;
+	 	 $this_user      = $relationship->requester_id;
 	 //er_relationships_api_translate_user_info($relationship[0]);
 	 $follow=$relationship[0]->requester;
 	 $table['data'][] = $relationship;
+	 $temp_user = user_load($relationship[0]->requestee_id);
 	 $table['rows'][] = array(
-       theme('username',user_load($relationship[0]->requester_id)),
+       //theme('username',user_load($relationship[0]->requester_id)),       
+       l($temp_user->name,"UCenter/$temp_user->uid"),
        //$relationship[0]->extra_for_display,
        $edit_access ? theme('user_relationships_remove_link', $account->uid, $relationship[0]->rid) : '&nbsp;',
       );
@@ -126,9 +122,50 @@ function user_relationships_page_follows($account = NULL){ //暂时用这个 $ac
     }
 	$page['relationships'] = array(
     '#type'   => 'fieldset',
-    '#title'  => t('我的粉丝'),
+    //'#title'  => drupal_get_title(),//t('我的粉丝')
     '#weight' => 0
   );
+    $page['relationships']['list'] = array(
+      '#value' => theme('table', $table['headers'], $table['rows'])
+    );
+
+  return drupal_render($page);
+
+  //return theme('user_relationships', $account, $rtid);
+}
+
+function user_relationships_page_follows($account = NULL){ //暂时用这个 $account = NULL
+	if (!$account) {
+    global $user;
+    $account = $user;
+   }
+
+	$relationships = _get_my_follows($account->uid); //粉丝
+	$table['data'] = array();
+  $table['rows'] = array();
+	foreach ($relationships as $relationship) {
+     $edit_access = ($user->uid == $account->uid && user_access('maintain own relationships')) || user_access('administer users');
+	 	 $this_user      = $relationship->requestee_id;
+	 //er_relationships_api_translate_user_info($relationship[0]);
+	 $follow=$relationship[0]->requester;
+	 $table['data'][] = $relationship;
+	 $temp_user = user_load($relationship[0]->requester_id);
+	 $table['rows'][] = array(
+       //theme('username',user_load($relationship[0]->requester_id)),       
+       l($temp_user->name,"UCenter/$temp_user->uid"),
+       //$relationship[0]->extra_for_display,
+       $edit_access ? theme('user_relationships_remove_link', $account->uid, $relationship[0]->rid) : '&nbsp;',
+      );
+	 }
+	foreach (module_implements('user_relationships_page_alter') as $module) {
+    $function = "{$module}_user_relationships_page_alter";
+    $function('types list', $page, $table);
+    }
+	/*$page['relationships'] = array(
+    '#type'   => 'fieldset',
+    '#title'  => drupal_get_title(),//t('我的粉丝')
+    '#weight' => 0
+  );*/
     $page['relationships']['list'] = array(
       '#value' => theme('table', $table['headers'], $table['rows'])
     );

@@ -1,0 +1,155 @@
+<?php 
+/*
+ * Implementation of hook_install().
+ * Install the current version of the database schema, and any other setup tasks. 
+ */
+function sina_vp_mobile_install() 
+{
+    drupal_install_schema('sina_vp_mobile');
+}
+
+/*
+ * Implementation of hook_uninstall().
+ * Remove any tables or variables that the module sets.
+ */
+function sina_vp_mobile_uninstall() 
+{
+    drupal_uninstall_schema('sina_vp_mobile');
+}
+
+/*
+ * Implementation of hook_schema().
+ * Define the current version of the database schema. 
+ * when user post a weibo<=>node ,record it .
+ */
+function sina_vp_mobile_schema() 
+{
+    $schema['sina_vp_mobile'] = array(
+      'description' => t('TODO: 记录设备!'),
+      'fields' => array(
+        'mobile_id' => array(
+          'description' => '唯一id，每一个终端访问，给其一条id，用户的手机号和IMEI决定一条记录',
+          'type' => 'serial',
+          'not null' => TRUE,
+        ),         
+        'phonenum' => array(
+          'description' => '手机号码',
+          'type' => 'varchar',
+          'length' => '15',
+          'not null' => TRUE,
+        ),
+        'imei' => array(
+          'description' => 'IMEI',
+          'type' => 'varchar',
+          'length' => '128',
+          'not null' => TRUE,
+        ),      
+        'client_version' => array(
+          'description' => 'client_version',
+         	'type' => 'varchar',
+          'length' => '12',
+          'not null' => TRUE,
+        ),
+        'uid' => array(
+          'description' => '卖家客户端',
+         	'type' => 'int',
+          'length' => '11',
+          'not null' => TRUE,
+        ),
+        'user_client' => array(
+          'description' => 'user_client',
+         	'type' => 'varchar',
+          'length' => '12',
+          'not null' => TRUE,
+        ),
+        'model' => array(
+          'description' => 'model',
+         	'type' => 'varchar',
+          'length' => '128',
+          'not null' => TRUE,
+        ),  
+				'os_version' => array(
+          'description' => 'os_version',
+         	'type' => 'varchar',
+          'length' => '12',
+          'not null' => TRUE,
+        ),    
+      ),
+      'primary key' => array('mobile_id'),
+      'indexes' => array(
+        'mobile_id' => array('mobile_id'),
+      ),
+    );
+		$schema['sina_vp_mobile_log'] = array(
+      'fields' => array(
+        'id' => array(
+          'description' => '唯一id',
+          'type' => 'serial',
+          'not null' => TRUE,
+        ),         
+        'mobile_id' => array(
+          'description' => '设备id',
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+        'timestamp' => array(
+          'description' => '时间戳 远程',
+         	'type' => 'int',
+          'length' => '11',
+          'not null' => TRUE,
+        ),
+        'action' => array(
+          'description' => 'action',
+         	'type' => 'varchar',
+          'length' => '128',
+          'not null' => TRUE,
+        ),
+        'error_code' => array(
+          'description' => '错误代码 1开头 0开头',
+         	'type' => 'varchar',
+          'length' => '12',
+          'not null' => TRUE,
+        ),
+      ),
+      'primary key' => array('id'),
+      'indexes' => array(
+        'mobile_id' => array('mobile_id'),
+      ),
+    );
+		$schema['sina_vp_mobile_feedback'] = array(
+     'description' => '记录用户反馈',
+     'fields' => array(       
+	     'id' => array(
+          'description' => '唯一id',
+          'type' => 'serial',
+          'not null' => TRUE,
+        ),   
+       'mobile_id' => array(
+          'description' => '设备id',
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+		    'content' => array(
+		      'description' => '反馈内容',
+		     	'type' => 'varchar',
+		      'length' => '128',
+		      'not null' => TRUE,
+		    ),
+	    	'passport'=> array(
+	        'description' => '邮箱',
+	        'type' => 'int',
+	        'not null' => TRUE,
+	        'default' => 0),
+	      'timestamp' => array(
+          'description' => '时间戳',
+         	'type' => 'int',
+          'length' => '11',
+          'not null' => TRUE,
+        ),
+      ),
+      'indexes' => array(
+        'id' => array('id'),
+      ),
+    );
+    return $schema;
+}

@@ -1,0 +1,266 @@
+<?php
+/**
+ * @author dale
+ * @version $Id$
+ * @copyright dale
+ * @package sina
+ */
+
+
+/**
+ * Implementation of hook_form_alter(). 
+ * @Where sina_vp_open_set_tweet_form in sina_open.module
+ * @Do before set_tweet ,insert into our Additional db_table sina_weibo2node info.
+ */
+function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
+	variable_del("cron_semaphore");
+	variable_del("cron_last");
+		//user_login_block alter
+	if($form_id=='user_login_block'){
+		//$form['name']['#title']=FALSE;
+		//$form['pass']['#title']=FALSE;
+		//$form['name']['#default_value']='登录邮箱';
+		//$form['pass']['#default_value']='密码';
+	}
+	if($form_id == 'user_login'){
+		$form['name']['#description']=FALSE;
+		$form['pass']['#description']=FALSE;
+	}
+	if($form_id == 'user_register'){
+		$form['Personal information']['#access']=FALSE;
+		$form['account']['name']['#description']=FALSE;
+		$form['account']['mail']['#description']=FALSE;
+		$form['account']['pass']['#description']=FALSE;		
+	}
+	if($form_id == 'user_profile_form'){
+		//$form['Personal information']['#access']=FALSE;
+		$form['account']['name']['#description']=FALSE;
+		$form['account']['mail']['#description']=FALSE;
+		$form['account']['pass']['#description']=FALSE;	
+		$form['locale']['#access']=FALSE;
+		$form['signature_settings']['signature_format']['#access']=FALSE;
+		$form['signature_settings']['signature']['#description']='您在本站的个性签名，不影响您的新浪微博签名。';
+		$form['signature_settings']['signature']['#cols']=20;	 
+		$form['signature_settings']['signature']['#rows']=4;
+		global $user;
+		$mail=$form['account']['mail']['#default_value'];
+		if($mail==$user->init||preg_match('/@weipujie.com/', $mail)){
+			$form['account']['mail']['#default_value']='请在这里输入您的邮箱';
+		}
+	}
+	//登录表单 主题修饰
+	if (variable_get('sina_open_is_login', 1) && ($form_id == 'user_login_block')) {
+    
+    $form['sina_open_links'] = array(
+      '#value' => theme('item_list', array(array(
+        'data' => '<a href="'.url('sina_open/t_login').'"><img src="'.drupal_get_path('theme','vp').'/images/log_btn1.jpg"/></a>',//l('', 'sina_open/t_login'),
+        'class' => 'sina_open_login_links'
+      ))),
+      '#weight' => 1,
+    );
+     //$form['name']['#default_value'] ='邮箱/用户名';		 
+		 $form['name']['#prefix'] = '<div id="email_click">'; 
+	   $form['name']['#suffix'] = '</div>';
+		 
+		 //$form['pass']['#default_value'] ='密码';
+		 $form['pass']['#prefix'] = '<div id="pass_click">'; 
+     $form['pass']['#suffix'] = '</div>';
+  }
+	//对私信的主题处理 发私信	
+	if($form_id == 'privatemsg_new'){
+		if(arg(1)=='new'){
+		$form['privatemsg']['recipient']['#description']= '';
+		$form['privatemsg']['body']['#access']=FALSE;
+		$form['privatemsg']['subject']['#title']='消息';
+		$form['privatemsg']['subject']['#type']='textarea';		
+		$form['privatemsg']['preview']['#access']=FALSE;
+		$form['privatemsg']['format']['#access']=FALSE;
+		$form['privatemsg']['cancel']['#access']=FALSE;	
+		$form['privatemsg']['submit']['#value']='发送';	
+		//title = body
+		//array_unshift($form['privatemsg']['submit']['#submit'],'pm_send_submit_4vp');
+		}elseif(arg(1)=='view_vp'){ //messages/view_vp/1
+			$form['privatemsg']['recipient']['#description']= '';
+			$form['privatemsg']['preview']['#access']=FALSE;
+			$form['privatemsg']['format']['#access']=FALSE;
+			$form['privatemsg']['cancel']['#access']=FALSE;		
+			$form['privatemsg']['recipient_display']['#access']=FALSE;
+			$form['privatemsg']['body']['#title']='发私信';
+			$form['privatemsg']['submit']['#value']='发送';
+		}
+	}
+	//输入注册邀请码 表单跳转
+	if($form_id == 'regcode_voucher'){
+		$form['regcode_submit']['#submit'] = array('regcode_voucher_submit2');		
+		$form['regcode_submit']['#value']= '确定';		
+				
+	}
+	//user_profile_form 如果已经输入邀请了，修改资料里不显示该项。
+	if($form_id == 'user_profile_form'&&regcode_user_load()){
+		$form['regcode'] ['#access']=FALSE;
+	}
+  //return $form;
+  //修改 评论：*隐藏  
+  if($form_id == 'comment_form'){
+		$form['comment_filter']['comment']['#prefix'] = '<div class="comment_hidden_title">'; 
+		$form['comment_filter']['comment']['#suffix'] = '</div>';
+	}
+	
+	//修改 ?q=user/password
+  if($form_id == 'user_pass'){
+		$form['submit']['#value']='确定';
+		$form['name']['#title']='邮箱/用户名';
+	} 
+	//修改 ?q=user/loin
+  if($form_id == 'user_login'){
+		$form['submit']['#value']='登录';
+		$form['name']['#title']='邮箱/用户名';
+		unset($form['sina_open_links']);
+	}
+	//修改 ?q=user/register
+  if($form_id == 'user_register'){
+		$form['account']['mail']['#title']='邮箱';
+		$form['submit']['#value']='确定';
+	}
+	// 删除头像 /?q=user/1/edit
+	if($form_id == 'user_profile_form'){
+		$form['picture']['picture_delete']['#access']=FALSE;
+	}
+	 	$dispalyNone_forms = array(
+		'weibo_page_default',
+		'devel_execute_block_form',
+		'search_theme_form',
+		'search_block_form',
+		'devel_switch_user_form',
+		'user_login_block','profile_field_form'
+		,'system_modules'
+		,'weibo_node_form'
+		,'collapse_node_form'
+		//,'hidden_node_form'
+		//,'collapse_node_form'
+		//,'show_more_form'
+		,'weibo_ajax_forward'
+		//,'sina_vp_recommend'
+		,'regcode_voucher'
+		,'comment_form'
+		,'user_profile_form'
+		,'user_pass'
+		,'user_register'
+		,'user_login'
+	);
+	if(in_array($form_id, $dispalyNone_forms)){
+		//donothing...
+	}else{
+		if(function_exists(dpm)) dpm($form,$form_id);
+		//
+		if($form_id=='weibo_ajax_forward'){
+			//watchdog('$type', '<pre>'.print_r($form,TRUE));
+		}
+	}
+}
+function regcode_voucher_submit2($form, $form_state) {
+	  $edit    = $form_state['values'];
+  $account = $GLOBALS['user'];
+
+  // We cannot simply call user_save here because any module that expects
+  // the $edit variable to contain their form data will be disappointed.
+  // This includes the simplenews, profile, and especially the role_expire
+  // module which cause a notice error, a blank profile, and wiped out
+  // user roles respectively.
+  $code = regcode_use_helper($edit, $account);
+  if (is_object($code)) {
+    drupal_set_message(variable_get('regcode_voucher_message', t('Voucher code used successfully.')));
+  }
+  
+  // Make use of $edit which has been changed by the hooks to see what roles need to be saved
+  // Again, we can't call user_save($account, array('roles' => $edit['roles'])) because the
+  // role_expire module deletes all of the roles because it's stupid.
+  if (!empty($edit['roles'])) {
+    foreach ($edit['roles'] as $rid => $role_name) {
+      if ($rid > DRUPAL_AUTHENTICATED_RID) {
+        $res = db_query('SELECT uid FROM {users_roles} WHERE uid=%d AND rid=%d', $account->uid, $rid);
+        if (!$row = db_fetch_object($res)) {
+          db_query('INSERT INTO {users_roles} (uid, rid) VALUES (%d, %d)', $account->uid, $rid);
+        }
+      }
+    }
+  }
+  drupal_goto("user/$account->uid/edit"); //dale edit。。。输入注册邀请码 表单跳转  
+}
+function sina_vp_theme_init(){
+	
+		//如果没有输入注册码，跳出输入表单
+		drupal_add_css(drupal_get_path('theme', 'vp').'/dialog.css');		 
+		drupal_add_js(drupal_get_path('theme', 'vp').'/dialog.js');
+	if(!regcode_user_load()){}
+	//滚动
+	//drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/scroll.css');
+	//drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/scroll.js');
+	//gotop
+	drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/gotop.css');
+	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/gotop.js');
+}
+/**
+ * Implementation of hook_link().
+ * 添加删除微博功能 link
+ */
+function sina_vp_theme_link($type, $node = NULL, $teaser = FALSE) {
+   $links = array();
+	 global $user;
+  if ($type == 'node' && $node->type == 'weibo') {
+		if(user_access('delete any weibo content')|| $node->uid==$user->uid){
+			if(arg(0)=='node'){$destination = 'destination=UCenter';}else{
+				$destination =drupal_get_destination();
+			}
+			$links['delete_weibo_link'] = array(
+		    'title' => t('删除'), 
+		    'href' => 'node/'.$node->nid.'/delete', 
+		    'query' => $destination,
+		    'weight' => '-69',
+		    'attributes' => array('title' => t('删除该条微博')),
+	  	);
+		}
+	
+			//喜欢（flag-bookmark）点评（）分享
+	
+		$links['comment_ajax'] = array(//comment_add
+		    'title' => " · 点评($node->comment_count)", 
+		    'href' => 'node/'.$node->nid, 
+		    //'disable' => 'true', 
+		    'fragment' => 'comments', 
+		    'weight' => '-11',
+		    'attributes' => array('title' => t('评论')),
+	  	);
+		if(user_access('add new forward')){		//转发分享  	forward/%/% 用ahah
+			$share_sql = "SELECT count(*) FROM  {sina_vp_weibo2node} WHERE  `zid` =$node->nid AND  `cid` =0";
+			$share_counts = db_result(db_query($share_sql));
+			$taxonomys = $node->taxonomy;
+			foreach($taxonomys as $key=>$obj){
+				if($obj->vid==2){
+					$taxonomy_name=$obj->name;
+					$taxonomy_id = 		$obj->tid;	
+				}
+			}
+			$links['forward_link'] = array(
+		    'title' => " · 分享($share_counts)", 
+		    'href' => "forward/$taxonomy_id/$node->nid", 
+		    'weight' => '-10',
+		    'attributes' => array('title' => t('分享')),
+	  	);
+		}
+	}	
+  return $links;
+}
+function sina_vp_theme_link_alter(&$links, $node, $comment=NULL){
+	//dpm($links);
+	unset($links['comment_new_comments']); 
+	if($links['flag-bookmarks']){
+		$links['flag-bookmarks']['weight']='-12'; //喜欢(book) -10
+	}	
+	$weight = array();	
+	foreach ($links as $key => $link) {   
+		$weight[$key] = $links[$key]['weight'];
+	}
+        // this will sort the $links based on weight
+	array_multisort($weight, SORT_ASC, $links);
+}

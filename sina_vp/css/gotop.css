@@ -1,0 +1,55 @@
+a {
+    color: #26A2DA;
+    text-decoration: none;
+}
+#go-top {
+    background-color: rgba(255, 255, 255, 0.6);
+    border: 1px solid #FFFFFF;
+    border-radius: 3px 3px 3px 3px;
+    bottom: 30px;
+    display: block;
+    font-family: Arial;
+    left: 50%;
+    line-height: 14px;
+    margin-left: 481px;
+    padding: 5px 3px 0;
+    position: fixed;
+    text-align: center;
+    width: 20px;
+}
+a#go-top {
+    color: #26A2DA;
+    text-decoration: none;
+}
+a#go-top hover{
+    color: #26A2DA;
+    text-decoration: none;
+}
+#go-top span.top-btn {
+    display: block;
+    padding: 9px 0 12px;
+}
+#go-top span.sj {
+    display: block;
+    font-size: 28px;
+    height: 8px;
+    margin: 0 0 0 3px;
+    overflow: hidden;
+    text-align: left;
+}
+#go-top span.fk {
+    display: block;
+    font-size: 11px;
+    height: 5px;
+    margin: -1px 0 2px 4px;
+    overflow: hidden;
+    text-align: left;
+}
+
+
+
+.goTop {
+    background: url("http://simg.sinajs.cn/xblogstyle/images/common/ico_gotop.png") no-repeat scroll 0 0 transparent;
+    height: 36px;
+    width: 36px;
+}

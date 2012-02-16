@@ -1,0 +1,61 @@
+<?php
+// $Id$
+/**
+ * Implementation of hook_install().
+ */
+function loginhistory_install() {
+	drupal_install_schema('loginhistory');
+}
+/**
+ * Implementation of hook_uninstall().
+ */
+function loginhistory_uninstall() {
+	drupal_uninstall_schema('loginhistory');
+}
+
+function loginhistory_schema() {
+  $schema['login_history'] = array(
+     // 
+     'description' => 'counts of login and period of access2login time.',
+	    'fields' => array(
+		    'uid' => array(
+	        'type' => 'int',
+	        'unsigned' => TRUE,
+	        'not null' => TRUE,
+	        'description' => 'uID.',
+	      ),
+	      'last_access_time' => array(
+	        'description' => 'last_access_time or last logout time',
+	        'type' => 'int',
+	        'not null' => TRUE,
+	        'default' => 0),
+	      'timestamp'=> array(
+	        'description' => 'this login time:time()',
+	        'type' => 'int',
+	        'not null' => TRUE,
+	        'default' => 0),
+	      ),
+	      'indexes' => array(
+       		'uid' => array('uid'),
+      	)
+	  );
+  return $schema;
+}
+/**
+ * Enlarge the views_object_cache.data column to prevent truncation and JS
+ * errors.
+ */
+
+function loginhistory_update_6100() {
+  $ret = array();
+  $new_field = array(
+    'type' => 'int',
+    'not null' => TRUE,
+    'description' => 'last_access_time上次登录时间',
+    'serialize' => TRUE,
+    'default' => '0',
+  );
+  // db_change_field that causes this to fail when trying to cast the data.
+  db_add_field($ret, 'login_history', 'last_access_time', $new_field);
+  return $ret;
+}

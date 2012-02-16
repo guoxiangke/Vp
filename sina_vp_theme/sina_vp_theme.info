@@ -1,0 +1,6 @@
+name = sina_vp_theme
+description = 主题开发修改项.
+core = 6.x
+package = A-DEV
+dependencies[] = sina_vp
+dependencies[] = sina_open

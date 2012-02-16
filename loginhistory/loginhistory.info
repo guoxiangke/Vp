@@ -1,0 +1,7 @@
+; $Id$
+name = Login History
+description = Keeps track of user logins.
+version = "$Name$"
+package = A-DEV
+core = 6.x
+version = "6.x-1.5"

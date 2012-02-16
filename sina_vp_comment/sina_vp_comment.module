@@ -13,17 +13,24 @@
  * @Do before set_tweet ,insert into our Additional db_table sina_weibo2node info.
  */
 function sina_vp_comment_form_alter(&$form, $form_state, $form_id) {
-	/**
+		/**
 	 * hidden  comment-form for weibo node
 	 */
-	$node = $node = node_load(arg(2));//node_load($form[nid]['#value']);
-	if(($form_id == 'comment_form')&&($node->type=='weibo')&&0){
+	$node = node_load($form[nid]['#value']);
+	if(($form_id == 'comment_form')&&($node->type=='weibo')){
+		$sina_bind_array=sina_vp_t_get_info();
+		$checkbox_default_value=$sina_bind_array['sina'];//如果没有绑定微博，不可选
+		if(!db_result(db_query('SELECT wid FROM {sina_vp_weibo2node} WHERE nid = %d', $form['nid']['#value']))){
+			$checkbox_default_value=0;
+		}
 		$form['sina_vp_open'] = array(
       '#type' => 'checkbox',
       '#title' => '同步到新浪',
-      '#required' => true,
-      '#default_value' => 1,
-    );
+      '#default_value' => $checkbox_default_value,
+    );//，如果根节点不再新浪上，也是false。
+		if(!$checkbox_default_value){
+			 $form['sina_vp_open']['#disabled']=TRUE;
+		}
 		unset($form['sina_open']);
 		$form['comment_filter']['comment']['#type'] = 'textarea';
 		$form['comment_filter']['comment']['#rows'] = '3';
@@ -31,41 +38,35 @@ function sina_vp_comment_form_alter(&$form, $form_state, $form_id) {
 		$form['comment_filter']['comment']['#maxlength'] = '140';
 		$form['_author']['#type']['#access']=FALSE;
 		$form['comment_filter']['format']['#access']=FALSE;
-		$form['comment_filter']['comment']['#description'] = '最多140个字符，中英文均算一个字符。还可以输入<strong id="sina_open_tweet_text_count"></strong>个字符。';
+		if(arg(0)==node)
+		$form['comment_filter']['comment']['#description'] = '最多140个字符，还可以输入<strong id="sina_open_tweet_text_count"></strong>个字符。';
 		$form['preview']['#type']['#access']=FALSE;
+		$form['submit']['#value']='点评';
+		drupal_add_js(drupal_get_path('module', 'sina_vp') .'/sina_vp_comment.js');
 	}
-	
+
 	if(arg(0)=='forward' && $form_id == 'weibo_node_form'){ 
   	//转发api forward/$tid/139 不可以带图片
 		$form['field_weibo_image']['#access']=FALSE;
 		$form['forward_comment_option']=array(
       '#type' => 'checkbox',
-      '#title' => '转发并评论',
+      '#title' => '同时评论',
       '#required' => true,
       '#default_value' => 1,
     );
 		$form['#submit'][]= 'comment_form_submit2';	
 		//
 	}
+}
+/**
+ * hook_link_alter
+ */
+function sina_vp_comment_link_alter(&$links, $node, $comment = NULL) {
+ if ($node->type == 'weibo' && $node->comment) {
+ 	//删除 评论的 编辑链接。
+	unset($links['comment_edit']);
 	
-	 	$dispalyNone_forms = array(
-		'weibo_page_default',
-		'devel_execute_block_form',
-		'search_theme_form',
-		'search_block_form',
-		'devel_switch_user_form',
-		'user_login_block','profile_field_form'
-		,'system_modules'
-		//,'hidden_node_form'
-		//,'collapse_node_form'
-		//,'show_more_form'
-	);
-	if(in_array($form_id, $dispalyNone_forms)){
-		//donothing...
-	}else{
-		if(function_exists(dpm)) dpm($form,$form_id);
-		//watchdog('$type', '<pre>'.print_r($form_state,TRUE));
-	}
+ }
 }
 /**
  * Process comment form submissions; prepare the comment, store it, and set a redirection target.
@@ -93,4 +94,124 @@ function comment_form_submit2($form, &$form_state) {
     }
 	}
     return;
+}
+function sina_vp_comment_menu(){
+		// 我的点评(10000)
+	$items['Comments/Out'] = array(//user
+    'title'            => '我的点评',
+    'page callback'    => '_sina_vp_Comments_page',
+    'type'             => MENU_CALLBACK,
+    'access callback' => TRUE,
+  );
+	$items['Comments/Out/%'] = array(//user
+    'title'            => 'ta的点评',
+    'page callback'    => '_sina_vp_comments_page',
+    'page arguments'   => array(2),    
+    'type'             => MENU_CALLBACK,
+    'access callback' => TRUE,
+  );
+	$items['Comments/In'] = array(//user
+    'title'            => '我的点评',
+    'page callback'    => '_sina_vp_Comments_page_In',
+    'type'             => MENU_CALLBACK,
+    'access callback' => TRUE,
+  );
+	$items['Comments/In/%'] = array(//user
+    'title'            => '我的点评',
+    'page callback'    => '_sina_vp_comments_page_In',
+    'page arguments'   => array(2),    
+    'type'             => MENU_CALLBACK,
+    'access callback' => TRUE,
+  );
+	return $items;
+}
+/**
+ * 买家中心，根据角色Seller Buyer而定.
+ * copy form sina_UCenter_page() 
+ */
+function _sina_vp_Comments_page($uid=null) {
+	if(is_null($uid)){
+		global $user;//买家个人访问的自己的页面	
+		if($user->uid==0){
+			drupal_goto($_SERVER['HTTP_REFERER']);
+			return '请登录后访问！';
+		}
+		$account = $user;
+	}elseif(is_numeric($uid)){//其他人访问的买家 评论  
+		$bfw_user=user_load($uid);//被访问的user bfw
+		drupal_set_title($bfw_user->name.'的评论');
+		if($bfw_user->uid){$account = $bfw_user;}else{return '您访问的用户不存在';}
+	}
+	$sql='SELECT *
+				 FROM comments comments 
+				 WHERE (comments.uid) = '.$account->uid.' order by comments.timestamp desc';
+ $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 5));
+
+  $output = '';
+  $num_rows = FALSE;
+  while ($comments = db_fetch_object($result)) { //发出的评论
+  	$node=node_load($comments->nid);//comment_render_4vp($node, $comments->cid,$return='output') ;//(node_load($node->nid), 1)
+    $output .= '<div class="vp_comment_list clear">';
+    $output .= '<div class="vp_comment_face">'; 
+		$output .= l(theme('imagecache', 'small_picture', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link'))); 
+    $output .= '</div>';
+		$output .= '<div class="vp_comment_comment">'; 
+		$output .=  '<p class="detail">'.$comments->subject.l('<span class="W_textb">('.date('m月d日 H:i',$comments->timestamp).')</span>',"node/$comments->nid",array('html'=>'true','fragment'=>"comment-$comments->cid")).'</p>';//sina_vp_time_format($node->created)
+		$output .=  '<p class="detail W_textb">评论了'.l("@$node->name","node/$comments->nid").'的微博： '.l(truncate_utf8($node->title, 80,FALSE,TRUE),"node/$comments->nid").'</p>';
+    $output .=  '<p class="info W_textb"><span>来自微铺街</span><span class="hover vp_del_comment">'.l('删除',"comment/delete/$comments->cid").'</p>';
+    $output .= '</div>';
+    $output .= '</div>';
+    $num_rows = TRUE;
+  }
+  if ($num_rows) {    
+    $output .= theme('pager', NULL, variable_get('default_nodes_main', 10));
+  }else{
+  	 $output .= '暂无数据！';
+  }
+  return $output;
+}
+function _sina_vp_Comments_page_In($uid=null) {
+	if(is_null($uid)){
+		global $user;//买家个人访问的自己的页面	
+		if($user->uid==0){
+			drupal_goto($_SERVER['HTTP_REFERER']);
+			return '请登录后访问！';
+		}
+		$account = $user;
+	}elseif(is_numeric($uid)){//其他人访问的买家 评论  
+		$bfw_user=user_load($uid);//被访问的user bfw
+		drupal_set_title($bfw_user->name.'的评论');
+		if($bfw_user->uid){$account = $bfw_user;}else{return '您访问的用户不存在';}
+	}
+	$sql='SELECT comments.uid AS uid,comments.nid AS nid,comments.cid AS cid,comments.subject AS subject
+				 FROM comments comments 
+				INNER JOIN {node} node 
+					ON node.nid = comments.nid 
+					WHERE (node.uid) = '.$account->uid.' order by comments.timestamp desc';
+ $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 5));
+
+  $output = '';
+  $num_rows = FALSE;
+  while ($comments = db_fetch_object($result)) { //发出的评论
+  	$node=node_load($comments->nid);//comment_render_4vp($node, $comments->cid,$return='output') ;//(node_load($node->nid), 1)
+    $comment_user=user_load($comments->uid);
+    $output .= '<div class="vp_comment_list clear">';
+    $output .= '<div class="vp_comment_face">'; 
+		$output .= l(theme('imagecache', 'small_picture', $comment_user->picture, $comment_user->name, $comment_user->name, array('class'=>'vp-user-picture')),"UCenter/$comment_user->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link'))); 
+    $output .= '</div>';
+		$output .= '<div class="vp_comment_comment">'; 
+		$output .=  '<p class="detail">'.$comments->subject.l('<span class="W_textb">('.date('m月d日 H:i',$comments->timestamp).')</span>',"node/$comments->nid",array('html'=>'true','fragment'=>"comment-$comments->cid")).'</p>';//sina_vp_time_format($node->created)
+		$output .=  '<p class="detail W_textb">评论了'.l("@$node->name","node/$comments->nid").'的微博： '.l(truncate_utf8($node->title, 80,FALSE,TRUE),"node/$comments->nid").'</p>';
+    $output .=  '<p class="info W_textb"><span>来自微铺街</span><span class="hover vp_del_comment">'.l('删除',"comment/delete/$comments->cid").'</p>';
+    $output .= '</div>';
+    $output .= '</div>';
+    $num_rows = TRUE;
+  }
+  if ($num_rows) {
+    
+    $output .= theme('pager', NULL, variable_get('default_nodes_main', 10));
+  }else{
+  	 $output .= '暂无数据！';
+  }
+  return $output;
 }

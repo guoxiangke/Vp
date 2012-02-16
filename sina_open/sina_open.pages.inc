@@ -145,7 +145,8 @@ function _sina_open_t_login($tok = NULL) {
         if (isset($_REQUEST['redirect']) && $_REQUEST['redirect']) {
           drupal_goto($_REQUEST['redirect']);
         } else {
-          drupal_goto('user/'.$account->uid.'/sina_open/config');
+          //drupal_goto('user/'.$account->uid.'/sina_open/config');
+          drupal_goto('UCenter');
         }
       }
     }

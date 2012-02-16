@@ -126,8 +126,24 @@ function fasttoggle_user_option($requestee, $option, $rid=null) {
 					//Output the new option for the updated link text on AJAX changes
 		      if (isset($_POST['javascript']) && $_POST['javascript']) {
 		        drupal_set_header('Content-Type: text/javascript; charset=utf-8');
+							switch ($options[$option]['1']) {
+								case 'focus':
+									$title='订阅';
+								case 'unfocus':
+									$title='取消订阅';
+									break;
+								case 'unfollow':
+									$title='已关注';
+									break;
+								case 'follow':
+									$title='关注';
+									break;
+								default:
+									
+									break;
+							}
 		        echo drupal_to_js(array(
-		          'text' => $options[$option]['1'],
+		          'text' => $title,
 		          'className' => 'fasttoggle-status-user-'. $option .'-1',
 		        ));
 		        exit;
@@ -148,8 +164,24 @@ function fasttoggle_user_option($requestee, $option, $rid=null) {
 						//Output the new option for the updated link text on AJAX changes
 			      if (isset($_POST['javascript']) && $_POST['javascript']) {
 			        drupal_set_header('Content-Type: text/javascript; charset=utf-8');
-			        echo drupal_to_js(array(
-			          'text' => $options[$option]['0'],
+							switch ($options[$option]['0']) {
+								case 'focus':
+									$title='订阅';
+								case 'unfocus':
+									$title='订阅';
+									break;
+								case 'unfollow':
+									$title='已关注';
+									break;
+								case 'follow':
+									$title='关注';
+									break;
+								default:
+									
+									break;
+							}
+		        echo drupal_to_js(array(
+		          'text' => $title,
 		          	'className' => 'fasttoggle-status-user-'. $option .'-0',
 			        ));
 			        exit;

@@ -35,16 +35,43 @@
  * @return
  *   Either a complete HTML link or a link array structure for use in hook_link.
  */
-function fasttoggle2($title, $callback, $html = TRUE, $token = '', $class = '') {
+function fasttoggle2($title, $callback, $html = TRUE, $token = '', $class = '',$follow_uid) {
   static $sent = FALSE;
-
-  // Only include the support files once.
+	$follow_user = user_load($follow_uid);
+	if(in_array('Buyer',$follow_user->roles)){
+		 $rtid=2;
+	}if(in_array('Seller',$follow_user->roles)){
+		 $rtid=1;
+	}
+	$follow_counts = user_relationships_load(array("requester_id" => $follow_uid,"rtid" => $rtid=1),array("count" => TRUE));
+	//user_relationships_load(array("requester_id" => $follow_uid=4,"rtid" => $rtid=2),array("count" => TRUE));
+	switch ($title) {
+		case 'focus':
+			$title='订阅';
+			//$alt='订阅Ta的店铺';
+			break;
+		case 'unfocus':
+			$title='取消订阅';
+			//$alt='取消订阅';
+			break;
+		case 'unfollow':
+			$title='取消关注';
+			//$alt='取消关注';
+			break;
+		case 'follow':
+			$title='关注';
+			//$alt='加Ta粉丝';
+			break;
+		default:
+			
+			break;
+	}  // Only include the support files once.
   if (!$sent) {
     $sent = TRUE;
     drupal_add_js(drupal_get_path('module', 'sina_vp_follow_toggle') .'/fasttoggle.js');
     drupal_add_css(drupal_get_path('module', 'sina_vp_follow_toggle') .'/fasttoggle.css', 'module', 'all', FALSE);
   }
-  $attributes = array('class' => 'fasttoggle'. (!empty($class) ? ' '. $class : ''), 'title' => t('toggle this'));
+  $attributes = array('class' => 'fasttoggle'. (!empty($class) ? ' '. $class : ''), 'title' => $alt);//toggle this
   $query = drupal_get_destination() .'&token='. drupal_get_token($token);
 
   if ($html) {
@@ -71,7 +98,7 @@ function sina_vp_follow_toggle_link($type, $obj = NULL, $teaser = FALSE) {
 		}elseif(in_array('Seller',user_load($obj->uid)->roles)){
 			$option = 'focus';
 		}else{
-			drupal_set_message('有用户没有正确分配角色','error');
+			drupal_set_message('有用户没有正确分配角色','warning');
 		}
 		//-粉丝 else +粉丝			
 	  $options = sina_vp_follow_toggle_options($option);
@@ -86,20 +113,20 @@ function sina_vp_follow_toggle_link($type, $obj = NULL, $teaser = FALSE) {
 		switch ($type) {
       case 'node':
         foreach (array_keys($options) as $key) {
-			    $links['focus_toggle_'. $key] = fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $obj->uid .'/'. $options[$key][$follow_status] , FALSE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status);
+			    $links['focus_toggle_'. $key] = fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $obj->uid .'/'. $options[$key]['0'] , FALSE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status,$obj->uid);
 			  }
         break;
       case 'comment':
         //fasttoggle_load_comment($obj);
         foreach (array_keys($options) as $key) {
-			    $links['focus_toggle_'. $key] = fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $obj->uid .'/'. $options[$key][$follow_status] , FALSE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status);
+			  //  $links['focus_toggle_'. $key] = fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $obj->uid .'/'. $options[$key][0] , FALSE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status);
 			  }
         break;
       // User is not one of the standard types for hook_link(). This
       // use enables adding of user links to a user profile.
       case 'user':
         foreach (array_keys($options) as $key) {
-			    $links['focus_toggle_'. $key] = fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $obj->uid .'/'. $key .'/'. $follow_status.($rid?'/'.$rid:''), FALSE, $key .'_'. $obj->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status);
+			  //  $links['focus_toggle_'. $key] = fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $obj->uid .'/'. $key .'/'. $follow_status.($rid?'/'.$rid:''), FALSE, $key .'_'. $obj->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status);
 			  }
         break;
     }

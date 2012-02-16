@@ -1,19 +1,4 @@
 <?php 
-/**
- * @Implement of hook_update_x()
- */
-function sina_vp_update_1() {
-  $ret = array();
-  $new_field = array(
-    'type' => 'char',
-    'length' => 2,
-    'default' => '0',
-    'not null' => TRUE,
-    'description' => 'sina_vp_type新品1，活动2，爆款3，特卖4，转让5，真人秀6',
-  );
-  db_add_field($ret, 'sina_vp_weibo2node', 'sina_vp_type', $new_field);
-  return $ret;
-}
 /*
  * Implementation of hook_install().
  * Install the current version of the database schema, and any other setup tasks. 

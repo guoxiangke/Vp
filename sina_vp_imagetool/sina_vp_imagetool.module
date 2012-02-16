@@ -17,7 +17,7 @@ function sina_vp_imagetool_init(){
  * 添加一个imageCache 微博头像 50X 150X 180X
  * HOOK_imagecache_default_presets()
  */
-function sina_vp_imagetool_imagecache_default_presets() {
+function sina_vp_imagetool_imagecache_default_presets(){
   $presets = array();
 	$presets['thumbnail_width'] = array ( //微博小图片
     'presetname' => 'thumbnail_width',

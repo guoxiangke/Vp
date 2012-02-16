@@ -489,10 +489,15 @@ function sina_open_t_login_url(array $values = array()) {
       $tok->secret = $token['oauth_token_secret'];
       
       $_SESSION['sina_t_oauth_token'] = $tok;
-      
+      //https://api.weibo.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&response_type=code&redirect_uri=YOUR_REGISTERED_REDIRECT_URI
+      //https://api.weibo.com/oauth2/authorize?client_id=3688453594&redirect_uri=http%3A%2F%2Fdev.weipujie.com%2Fanywhere%2Fapi2%2Fcallback.php&response_type=code
       $url = 'http://api.t.sina.com.cn/oauth/authenticate';
       $url .= '?oauth_token='.$token['oauth_token'];
       $url .= '&oauth_callback='.urlencode($oauth_callback);
+			//dale $uri = 'https://api.weibo.com/oauth2/authorize';
+			$uri .= '?client_id='.variable_get('sina_open_oauth_consumer_key', '3688453594');
+			$uri .= '&response_type=code';
+      $uri .= '&redirect_uri='.urlencode('http://dev.weipujie.com/?q=sina_open/t_login&op=validate');;
       return $url;
     }
   }

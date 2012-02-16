@@ -1,6 +1,6 @@
 // $Id: sina_open.js,v 1.2 2011/02/11 03:52:44 eastcn Exp $
 
-Drupal.behaviors.sina = function (context) {
+Drupal.behaviors.comments = function (context) {
 	
 	function c() {
 		var _c = 140;

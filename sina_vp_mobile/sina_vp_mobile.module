@@ -1,0 +1,669 @@
+<?php
+function sina_vp_mobile_menu(){
+		// 我的点评(10000)
+	$items['mobile'] = array(//user
+    'title'            => '微铺街',
+    'page callback'    => '_sina_vp_mobile',
+    'type'             => MENU_CALLBACK,
+    'access callback' => TRUE,
+  );
+	$items['mobile/feedback'] = array(
+    'title'            => '用户反馈',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sina_vp_mobile_feedback'),
+    'type'             => MENU_CALLBACK,
+    'access callback' => 'user_access',
+    'access arguments' => array('view feedback'),
+  );
+	return $items;
+}
+
+function sina_vp_mobile_perm(){
+  return array(
+		'view feedback', //查看客户端用户反馈
+	);
+}
+function sina_vp_mobile_init(){
+	//$GLOBALS['MOBILE_MD5'] = '';
+	define('MOBILE_MD5', 'value');
+}
+function _sina_vp_mobile(){
+	//http://keke302-ip-46.westhost.cn/?q=mobile?user_client=android&client_version=1.0&result_format=2&
+	//udid=ff5b75dd5f7177ddaa8c765aa69ab261&action=get_timestamp&
+	//model=hkcsl_cht-HTC+Desire+S&os_version=2.3.3&imei=手机imei码&phonenum=手机号码&
+	//timestamp=时间戳（本地）
+	//&time_code=MD5加密码 
+	$mobile_id =$_REQUEST['mobile_id'];
+	$uid = $_REQUEST['uid'];
+	
+
+	$action = $_REQUEST['action'];
+	$md5_string[] = $action;
+	$timestamp = $_REQUEST['timestamp'];
+	$md5_string[] = $timestamp;
+	$md5_string[] = MOBILE_MD5;
+	$udid = $_REQUEST['udid'];
+	$md5_string[] = $udid;
+	
+	$md5_string = implode(',', $md5_string);
+
+	//action + "," + timestamp + "," + ConstData.MD5String+ "," + ConstData.uuid;	
+	$time_code = $_REQUEST['time_code'];//MD5加密码 
+	
+	//$output['md5_string']=$md5_string;
+	//$output['time_code']=$time_code;
+	//记录访问数据
+	$imei = $_REQUEST['imei'];
+	$phonenum = $_REQUEST['phonenum'];
+	$model = $_REQUEST['model'];	
+	$user_client = $_REQUEST['user_client'];
+	$client_version = $_REQUEST['client_version'];
+	$result_format = $_REQUEST['result_format'];
+	$os_version = $_REQUEST['os_version'];
+	if(!$mobile_id){ //		
+		if(!$uid){ //错误代码 1开头 0开头 10001:非法请求！无的卖家 uid
+			$error_code = 10001;
+			db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
+						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);		
+			return drupal_json(
+							array('errorCode'=>'1',
+							'errorMsg'=>'非法请求！需要指定卖家id',
+							'timestamp'=>time()
+							)
+			);
+		}
+		$mobile_id = db_result(db_query("select mobile_id from {sina_vp_mobile} where phonenum='$phonenum' AND imei='$imei' AND client_version='$client_version' AND uid=$uid AND user_client='$user_client' "));
+		
+	}
+
+	if(!$mobile_id){
+		db_query("INSERT INTO {sina_vp_mobile}(`imei` ,`phonenum` ,`model`,`client_version` ,`os_version`,`uid`,`user_client`  )
+						VALUES ('%s','%s','%s','%s','%s','%d','%s')",$imei,$phonenum,$model,$client_version,$os_version,$uid,$user_client);
+		$mobile_id = db_result(db_query("select mobile_id from {sina_vp_mobile} where phonenum='$phonenum' AND imei='$imei' AND client_version='$client_version' AND uid=$uid AND user_client='$user_client' "));
+	}
+  //http://xxx/index.php?user_client=android&client_version=1.0&result_format=2&
+	//udid=ff5b75dd5f7177ddaa8c765aa69ab261&action=get_timestamp&
+	//model=hkcsl_cht-HTC+Desire+S&os_version=2.3.3&imei=手机imei码&phonenum=手机号码&
+	//timestamp=时间戳（本地）
+	//&time_code=MD5加密码 
+	if(0&&$time_code!=md5($md5_string)){ //错误代码 1开头 0开头 10000:非法请求！md5验证错误
+		$error_code = 10000;
+		db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
+						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);	
+		return drupal_json(
+						array('errorCode'=>'1',
+						'errorMsg'=>'非法请求！md5验证错误',
+						'timestamp'=>time()
+						)
+		);
+		//{"errorCode":"0","errorMsg":"","timestamp":"1326786442"}
+	}
+	if(!user_load($uid)->uid){ //错误代码 1开头 0开头 10002:非法请求！无效的卖家 uid
+		$error_code = 10002;
+		db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
+						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);		
+		return drupal_json(
+						array('errorCode'=>'1',
+						'errorMsg'=>'非法请求！卖家id错误，不存在该卖家',
+						'timestamp'=>time()
+						)
+		);
+	}
+	switch ($action) {
+		case 'get_timestamp':
+			$output['errorCode']='0';
+			$error_code = '0000';
+			$output['errorMsg']='';
+			$output['timestamp']=time();
+			$output['mobile_id']=$mobile_id;
+			
+			break;
+		case 'get_front_page':
+			$output['errorCode']='0';
+			$error_code = '0000';
+			$output['errorMsg']='';
+			$output['mobile_id']=$mobile_id;
+			$output['timestamp']=time();
+			$output['return']=sina_vp_mobile_get_front_page($uid);
+			break;
+		case 'get_timeline':
+			$output['errorCode']='0';
+			$error_code = '0000';
+			$output['errorMsg']='';
+			$output['mobile_id']=$mobile_id;
+			$output['timestamp']=time();
+			$tid = $_REQUEST['tid'];//1,2,3,4,5,6, -1 所有的。
+			if(!$tid){
+				$error_code = 10003;
+				db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
+						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);	
+				return drupal_json(
+								array('errorCode'=>'1',
+								'errorMsg'=>'非法请求！需要指定微博分类tid',
+								'timestamp'=>time(),
+								)
+							);
+			}//不存在的tid 。。。。省略
+			$output['return']=sina_vp_mobile_get_timeline($uid,$tid);
+			break;
+		case 'get_comments':
+			$output['errorCode']='0';
+			$error_code = '0000';
+			$output['errorMsg']='';
+			$output['mobile_id']=$mobile_id;
+			$output['timestamp']=time();
+			$nid = $_REQUEST['nid'];
+			if(!$nid){
+				$error_code = 10004;
+				db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
+						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);		
+				return drupal_json(
+								array('errorCode'=>'1',
+								'errorMsg'=>'非法请求！需要nid',
+								'timestamp'=>time(),
+								)
+							);
+			}//不存在的nid 。。。。省略
+			$output['return']=sina_vp_mobile_get_comments($nid);
+			break;
+		case 'get_detail': //微博详情
+			$output['errorCode']='0';
+			$error_code = '0000';
+			$output['errorMsg']='';
+			$output['mobile_id']=$mobile_id;
+			$output['timestamp']=time();
+			$nid = $_REQUEST['nid'];
+			if(!$nid){
+				$error_code = 10004;
+				db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
+						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);	
+				return drupal_json(
+								array('errorCode'=>'1',
+								'errorMsg'=>'非法请求！需要nid',
+								'timestamp'=>time(),
+								)
+							);
+			}//不存在的nid 。。。。省略
+			$output['return']=sina_vp_mobile_get_detail($nid);
+			break;
+		case 'get_news': //获取卖家更新数据
+			$output['errorCode']='0';
+			$error_code = '0000';
+			$output['errorMsg']='';
+			$output['mobile_id']=$mobile_id;
+			$output['timestamp']=time();
+			$nid = $_REQUEST['nid']; //当前第一个nid
+			if(!$nid){
+				$error_code = 10004;
+				db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
+						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);	
+				return drupal_json(
+								array('errorCode'=>'1',
+								'errorMsg'=>'非法请求！需要指定更新频道开始的nid',
+								'timestamp'=>time(),
+								)
+							);
+			}//不存在的nid 。。。。省略
+			$tid = $_REQUEST['tid'];
+			if(!$tid){
+				$error_code = 10003;
+				db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
+						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);	
+				return drupal_json(
+								array('errorCode'=>'1',
+								'errorMsg'=>'非法请求！需要指定更新频道微博分类tid',
+								'timestamp'=>time(),
+								)
+							);
+			}//不存在的tid 。。。。省略
+			$output['return']=sina_vp_mobile_get_new($nid,$tid);
+			break;
+		case 'feedback':
+			$output['errorCode']='0';
+			$error_code = '0000';
+			$output['errorMsg']='';
+			$output['mobile_id']=$mobile_id;
+			$output['timestamp']=time();
+			$content = $_REQUEST['content'];//建议内容
+			$passport = $_REQUEST['passport'];//邮箱
+			db_query("INSERT INTO {sina_vp_mobile_feedback}(`mobile_id`,`content` ,`passport` ,`timestamp`)
+						VALUES ('%d','%s','%s','%d')",$mobile_id,$content,$passport,time());	
+			$output['return']='success';
+			break;
+		case 'get_user':
+			$output['errorCode']='0';
+			$error_code = '0000';
+			$output['errorMsg']='';
+			$output['mobile_id']=$mobile_id;
+			$output['timestamp']=time();
+			if(!$uid){
+				$error_code = 10004;
+				db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
+						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);	
+				return drupal_json(
+								array('errorCode'=>'1',
+								'errorMsg'=>'非法请求！需要uid',
+								'timestamp'=>time(),
+								)
+							);
+			}
+			$output['return']=sina_vp_mobile_get_user($uid);
+			break;
+		default:
+			
+			break;
+	}
+
+	db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
+						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);	
+	//return drupal_json($output);
+	dpm($output);
+	return $output;
+}
+function sina_vp_mobile_get_front_page($uid=null){
+	$account = user_load($uid);
+	$sql='SELECT nid FROM  {sina_vp_weibo2node} where cid=0 AND zid=0 AND uid=%d  			
+			ORDER BY created_at DESC LIMIT 0 , 3';//最新3条微博
+  	  $results = db_query($sql,$account->uid);
+			while($row = db_fetch_array($results)){
+	      $activity_nids [] = $row['nid'];
+	    }
+			if($activity_nids){
+				foreach ($activity_nids as $activity_nid) {
+					$activity_node = node_load($activity_nid);
+					$taxonomys = $activity_node->taxonomy;
+					foreach($taxonomys as $key=>$obj){
+						if($obj->vid==2){//v2 == 微博类型
+							$taxonomy_name=$obj->name;
+							$taxonomy_id = 		$obj->tid;	
+						}
+					}
+					$share_sql = "SELECT count(*) FROM  {sina_vp_weibo2node} WHERE  `zid` =$activity_node->nid AND  `cid` =0";
+					$share_counts = db_result(db_query($share_sql));		
+					$favor = flag_get_counts('node', $activity_nid, $reset = FALSE) ;		
+					$output[$activity_nid]=array(
+						'nid'=>$activity_nid,
+						'name'=>$activity_node->name,
+						'title'=>$activity_node->title,
+						'taxonomy_name'=>$taxonomy_name,
+						'tid'=>$taxonomy_id,
+						'field_weibo_image'=>$activity_node->field_weibo_image['0']['filepath'],
+						'comment_count'=>$activity_node->comment_count,
+						'share_counts'=>$share_counts,
+						'favor' =>$favor['bookmarks'],//喜欢（N）
+					);
+				}
+			}else{
+				$output='该卖家很懒，还没有发布微博！';
+			}			
+		return $output;
+}
+function sina_vp_mobile_get_timeline($uid,$tid){
+	//tid 1=新品  2=活动 3=爆款 4=特卖 5=转让 6=真人秀  -1 全部
+	$account = user_load($uid);
+	if($tid==5||$tid==6){
+		$sql="SELECT sina.nid  AS nid
+								FROM  `sina_vp_weibo2node` sina
+								WHERE sina.zid
+								IN (
+								
+								SELECT n.nid
+								FROM node n
+								WHERE n.nid
+								IN (
+								
+								SELECT sina.zid
+								FROM  `sina_vp_weibo2node` sina
+								WHERE sina.`sina_vp_type` =$tid
+								ORDER BY  `created_at` DESC
+								)
+								AND n.uid =$uid
+								)
+								AND sina.`sina_vp_type` =$tid AND sina.`cid` =0
+								";
+	}elseif($tid==-1){
+		$sql="SELECT node.nid AS nid, node.created AS node_created FROM node node INNER JOIN users_roles users_roles ON node.uid = users_roles.uid LEFT JOIN term_node term_node ON node.vid = term_node.vid LEFT JOIN term_data term_data ON term_node.tid = term_data.tid WHERE (users_roles.rid = 3) AND (node.status = 1) AND (node.uid = $account->uid) AND (node.type in ('weibo')) AND ((term_data.tid) in (1,2,3,4,5,6)) ORDER BY node_created DESC";
+	}else{		
+		$sql="SELECT node.nid AS nid, node.created AS node_created FROM node node INNER JOIN users_roles users_roles ON node.uid = users_roles.uid LEFT JOIN term_node term_node ON node.vid = term_node.vid LEFT JOIN term_data term_data ON term_node.tid = term_data.tid WHERE (users_roles.rid = 3) AND (node.status = 1) AND (node.uid = $account->uid) AND (node.type in ('weibo')) AND ((term_data.tid) = $tid) ORDER BY node_created DESC";
+	}
+  $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 5));
+
+  $output = '';
+  $num_rows = FALSE;
+  while ($nid = db_fetch_object($result)) {
+    $node = node_load($nid->nid);
+    $num_rows = TRUE;    
+		$share_sql = "SELECT count(*) FROM  {sina_vp_weibo2node} WHERE  `zid` =$node->nid AND  `cid` =0";
+		$share_counts = db_result(db_query($share_sql));
+		$taxonomys = $node->taxonomy;
+		foreach($taxonomys as $key=>$obj){
+			if($obj->vid==2){//v2 == 微博类型
+				$taxonomy_name=$obj->name;
+				//$taxonomy_id = 		$obj->tid;	
+			}
+		}
+		$favor = flag_get_counts('node', $node->nid, $reset = FALSE) ;			
+		$output[$node->nid]=array(
+			'nid'=>$node->nid,
+			'name'=>$node->name,
+			'title'=>$node->title,
+			'taxonomy_name'=>$taxonomy_name,		
+			'tid'=>$tid,
+			'field_weibo_image'=>$node->field_weibo_image['0']['filepath'],
+			'comment_count'=>$node->comment_count,
+			'share_counts'=>$share_counts,
+			'favor' =>$favor['bookmarks']?$favor['bookmarks']:0,//喜欢（N）
+		);
+			imagecache_generate_image('mobile_W220', $node->field_weibo_image['0']['filepath']);//应该放到发布微博node_api上去。
+			imagecache_generate_image('mobile_W110', $node->field_weibo_image['0']['filepath']);//应该放到发布微博node_api上去。
+  }
+
+  if (!$num_rows){
+  	$output .='暂无数据，@name，不够活跃噢！';
+	}
+	return $output;
+}
+function sina_vp_mobile_get_comments($nid){
+		$node = node_load($nid);
+    $num_rows = TRUE;    
+		$share_sql = "SELECT count(*) FROM  {sina_vp_weibo2node} WHERE  `zid` =$node->nid AND  `cid` =0";
+		$share_counts = db_result(db_query($share_sql));
+		$taxonomys = $node->taxonomy;
+		foreach($taxonomys as $key=>$obj){
+			if($obj->vid==2){//v2 == 微博类型
+				$taxonomy_name=$obj->name;
+				$taxonomy_id = 		$obj->tid;	
+			}
+		}
+		
+		$favor = flag_get_counts('node', $node->nid, $reset = FALSE) ;			
+		$output[$node->nid]=array(
+			'nid'=>$node->nid,
+			'name'=>$node->name,
+			'uid'=>$node->uid,
+			'title'=>$node->title,
+			'taxonomy_name'=>$taxonomy_name,		
+			'tid'=>$taxonomy_id,
+			'field_weibo_image'=>$node->field_weibo_image['0']['filepath'],
+			'comment_count'=>$node->comment_count,
+			'share_counts'=>$share_counts,
+			'favor' =>$favor['bookmarks']?$favor['bookmarks']:0,//喜欢（N）
+			'comments'=>comment_render4mobile($node),
+		);
+		return $output;
+		
+};
+function comment_render4mobile($node, $cid = 0) {
+			 $nid = $node->nid;
+	    if (empty($nid)) {
+	      $nid = 0;
+	    }
+
+	    $mode = _comment_get_display_setting('mode', $node);
+	    $order = _comment_get_display_setting('sort', $node);
+	    $comments_per_page = _comment_get_display_setting('comments_per_page', $node);
+      // Multiple comment view
+      $query_count = 'SELECT COUNT(*) FROM {comments} c WHERE c.nid = %d';
+      $query = 'SELECT c.cid as cid, c.pid, c.nid, c.subject, c.comment, c.format, c.timestamp, c.name, c.mail, c.homepage, u.uid, u.name AS registered_name, u.signature, u.signature_format, u.picture, u.data, c.thread, c.status FROM {comments} c INNER JOIN {users} u ON c.uid = u.uid WHERE c.nid = %d';
+
+      $query_args = array($nid);
+      if (!user_access('administer comments')) {
+        $query .= ' AND c.status = %d';
+        $query_count .= ' AND c.status = %d';
+        $query_args[] = COMMENT_PUBLISHED;
+      }
+
+      if ($order == COMMENT_ORDER_NEWEST_FIRST) {
+        if ($mode == COMMENT_MODE_FLAT_COLLAPSED || $mode == COMMENT_MODE_FLAT_EXPANDED) {
+          $query .= ' ORDER BY c.cid DESC';
+        }
+        else {
+          $query .= ' ORDER BY c.thread DESC';
+        }
+      }
+      else if ($order == COMMENT_ORDER_OLDEST_FIRST) {
+        if ($mode == COMMENT_MODE_FLAT_COLLAPSED || $mode == COMMENT_MODE_FLAT_EXPANDED) {
+          $query .= ' ORDER BY c.cid';
+        }
+        else {
+          // See comment above. Analysis reveals that this doesn't cost too
+          // much. It scales much much better than having the whole comment
+          // structure.
+          $query .= ' ORDER BY SUBSTRING(c.thread, 1, (LENGTH(c.thread) - 1))';
+        }
+      }
+      $query = db_rewrite_sql($query, 'c', 'cid');
+      $query_count = db_rewrite_sql($query_count, 'c', 'cid');
+
+      // Start a form, for use with comment control.
+      $result = pager_query($query, $comments_per_page, 0, $query_count, $query_args);
+ 
+      $num_rows = FALSE;
+      //$comments$comments = ''; 
+      while ($comment = db_fetch_object($result)) {
+        $comment = drupal_unpack($comment);
+        $comment->name = $comment->uid ? $comment->registered_name : $comment->name;
+				$comments[$comment->cid]=array(
+					'cid' =>$comment->cid, 
+					'nid' =>$comment->nid,				
+					'pid' =>$comment->pid,
+					'subject' =>$comment->subject,
+					'timestamp' =>$comment->timestamp,
+					'name' =>$comment->name,
+					'uid' =>$comment->uid,
+					'picture' =>$comment->picture,
+					'comments_per_page'=>$comments_per_page,
+					'signature' =>$comment->signature,
+				);
+        $num_rows = TRUE;				
+      }
+      return $output = $comments; 
+}
+function sina_vp_mobile_get_detail($nid){
+	$node = node_load($nid);
+	$num_rows = TRUE;    
+		$share_sql = "SELECT count(*) FROM  {sina_vp_weibo2node} WHERE  `zid` =$node->nid AND  `cid` =0";
+		$share_counts = db_result(db_query($share_sql));
+		$taxonomys = $node->taxonomy;
+		foreach($taxonomys as $key=>$obj){
+			if($obj->vid==2){//v2 == 微博类型
+				$taxonomy_name=$obj->name;
+				$taxonomy_id = 		$obj->tid;	
+			}
+		}
+	$favor = flag_get_counts('node', $node->nid, $reset = FALSE) ;		
+	$output['detail']=array(
+		'nid'=>$node->nid,
+		'name'=>$node->name,
+		'title'=>$node->title,
+		'taxonomy_name'=>$taxonomy_name,		
+		'tid'=>$taxonomy_id,
+		'field_weibo_image'=>$node->field_weibo_image['0']['filepath'],
+		'comment_count'=>$node->comment_count,
+		'share_counts'=>$share_counts,
+		'favor' =>$favor['bookmarks']?$favor['bookmarks']:0,//喜欢（N）
+	);
+	return $output; 
+}
+
+function sina_vp_mobile_get_new($nid,$tid){
+	//tid 1=新品  2=活动 3=爆款 4=特卖 5=转让 6=真人秀 
+	$account = user_load($uid);
+	if($tid==5||$tid==6){
+		$sql="SELECT sina.nid  AS nid
+								FROM  `sina_vp_weibo2node` sina
+								WHERE sina.zid
+								IN (
+								
+								SELECT n.nid
+								FROM node n
+								WHERE n.nid
+								IN (
+								
+								SELECT sina.zid
+								FROM  `sina_vp_weibo2node` sina
+								WHERE sina.`sina_vp_type` =$tid
+								ORDER BY  `created_at` DESC
+								)
+								AND n.uid =$uid
+								)
+								AND sina.`sina_vp_type` =$tid AND sina.`cid` =0 AND sina.`nid` >$nid
+								ORDER BY  `created_at` DESC
+								";
+	}else{		
+		$sql="SELECT node.nid AS nid, node.created AS node_created FROM node node INNER JOIN users_roles users_roles ON node.uid = users_roles.uid LEFT JOIN term_node term_node ON node.vid = term_node.vid LEFT JOIN term_data term_data ON term_node.tid = term_data.tid WHERE (users_roles.rid = 3) AND (node.status = 1) AND (node.uid = $account->uid) AND (node.type in ('weibo')) AND ((term_data.tid) = $tid) AND ((node.nid) > $nid) ORDER BY node_created DESC";
+	}
+  $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 5));
+
+  //$output = '';
+  $num_rows = FALSE;
+  while ($nid = db_fetch_object($result)) {
+    $node = node_load($nid->nid);
+    $num_rows = TRUE;    
+		$share_sql = "SELECT count(*) FROM  {sina_vp_weibo2node} WHERE  `zid` =$node->nid AND  `cid` =0";
+		$share_counts = db_result(db_query($share_sql));
+		$taxonomys = $node->taxonomy;
+		foreach($taxonomys as $key=>$obj){
+			if($obj->vid==2){//v2 == 微博类型
+				$taxonomy_name=$obj->name;
+				//$taxonomy_id = 		$obj->tid;	
+			}
+		}
+		$favor = flag_get_counts('node', $node->nid, $reset = FALSE) ;			
+		$output[$node->nid]=array(
+			'nid'=>$node->nid,
+			'name'=>$node->name,
+			'title'=>$node->title,
+			'taxonomy_name'=>$taxonomy_name,		
+			'tid'=>$tid,
+			'field_weibo_image'=>$node->field_weibo_image['0']['filepath'],
+			'comment_count'=>$node->comment_count,
+			'share_counts'=>$share_counts,
+			'favor' =>$favor['bookmarks']?$favor['bookmarks']:0,//喜欢（N）
+		);
+			imagecache_generate_image('mobile_W220', $node->field_weibo_image['0']['filepath']);//应该放到发布微博node_api上去。
+			imagecache_generate_image('mobile_W110', $node->field_weibo_image['0']['filepath']);//应该放到发布微博node_api上去。
+  }
+	$output['counts']=count($output);
+  if (!$num_rows){
+  	//$output['message']='暂无更新数据，@name，不够活跃噢！';
+	}
+	return $output;
+}
+/*
+ * Implementation of hook_nodeapi().
+ * Act on nodes defined by other modules.
+ */
+function sina_vp_mobile_nodeapi(&$node, $op){
+	 global $user;
+  if($node->type=='weibo'){
+  	switch ($op) {
+			case 'insert': 
+				if($path = $node->field_weibo_image['0']['filepath']){					
+					imagecache_generate_image('mobile_W220', $path);//应该放到发布微博node_api上去。
+					imagecache_generate_image('mobile_W110', $path);//应该放到发布微博node_api上去。
+				}
+        break;
+      case 'update':
+        break;
+      case 'delete': 
+				if($path = $node->field_weibo_image['0']['filepath']){					
+					imagecache_file_delete($path);
+				}				
+				break;
+		}
+	}
+}
+
+
+function sina_vp_mobile_get_user($uid){ //必须有uid，下一步做登录时可以 global $user
+	$account = user_load($uid);
+	$roles = $account->roles;
+	if(array_key_exists('5', $roles)){
+		$roles ='Buyer';
+	}elseif(array_key_exists('3', $roles)){
+		$roles ='Saler';
+	}else{$roles=null;};
+	$q = flag_get_user_flags('node', $content_id = NULL, $account->uid, $sid = NULL, $reset = FALSE);
+	$favor_counts=count($q['bookmarks']);
+	$comment_counts_sql = "SELECT count(*) FROM  {comments} WHERE  `uid` =$account->uid";
+	$comment_counts = db_result(db_query($comment_counts_sql));
+	$node_counts_sql = "SELECT count(*) FROM  {node} WHERE  `uid` =$account->uid AND status=1";
+	$node_counts = db_result(db_query($node_counts_sql));
+		
+	$output[$account->uid]=array(
+		'uid'=>$account->uid,//uid
+		'name'=>$account->name,//名字
+		'signature'=>$account->signature,//个性签名
+		'created'=>$account->created,	//注册时间
+		'login'=>$account->login,//上次登录
+		'status'=>$account->status,	//账户状态 0未激活 1为激活
+		'sina_name'=>$account->sina_open_t->sina_name, //绑定的新浪用户名
+		'picture'=>$account->picture, // 默认新浪抓取的大头像 180X180          可以通过middle_picture 120 small_picture 50目录获取小图片
+		'profile_province'=>$account->profile_province,	//省 从新浪抓取
+		'profile_city'=>$account->profile_city,		//市 从新浪抓取
+		'loginhistory_count'=>$account->loginhistory_count,//登录次数
+		'roles'=>$roles, //角色 Buyer/Saler null未正确获得角色认证。
+		//订阅   user_relationships_load(array("requester_id" => $account->uid,"rtid" => $rtid=2),array("count" => TRUE));
+		//关注  user_relationships_load(array("requester_id" => $account->uid,"rtid" => $rtid=1),array("count" => TRUE));
+		//粉丝 user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE));
+		'ur2'=>user_relationships_load(array("requester_id" => $account->uid,"rtid" => $rtid=2),array("count" => TRUE)),
+		'focus'=>user_relationships_load(array("requester_id" => $account->uid,"rtid" => $rtid=1),array("count" => TRUE)),
+		'follow'=>user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)),
+		'comment_counts'=>$comment_counts,//所有评论数量
+		'node_counts'=>$node_counts,//所有微博数量
+		'favor_counts' =>$favor_counts,//所有喜欢的数量
+	);
+
+	return $output; 
+}
+
+
+/**
+ * Menu callback: administer permissions.
+ *
+ * @ingroup forms
+ * @see user_admin_perm_submit()
+ * @see theme_user_admin_perm()
+ */
+function sina_vp_mobile_feedback($form_state, $rid = NULL) {//message id
+  if (is_numeric($rid)) {
+    $result = db_query('SELECT * FROM {sina_vp_mobile_feedback} r  WHERE r.rid = %d', $rid);
+  }
+  else {
+    $result = db_query('SELECT * FROM {sina_vp_mobile_feedback} WHERE 1 ORDER BY id desc');
+  }
+  while ($feedback = db_fetch_object($result)) {
+    $form['feedback'][$feedback->id]['mobile_id'] = array('#value' => $feedback->mobile_id);
+		$form['feedback'][$feedback->id]['passport'] = array('#value' => $feedback->passport);
+		$form['feedback'][$feedback->id]['content']= array('#value' => $feedback->content);
+		$form['feedback'][$feedback->id]['timestamp'] = array('#value' => $feedback->timestamp);
+  }
+  return $form; 
+}
+function sina_vp_mobile_theme() {
+  return array(
+  	'sina_vp_mobile_feedback' => array(
+    	'arguments' => array('form' => NULL)
+    ),
+  );
+}
+/**
+ * Theme the administer permissions page.
+ *
+ * @ingroup themeable
+ */
+function theme_sina_vp_mobile_feedback($form) {
+  foreach (element_children($form['feedback']) as $key) {
+    // Don't take form control structures
+    $rows[]=array($key,$form['feedback'][$key]['mobile_id']['#value'],$form['feedback'][$key]['passport']['#value'],$form['feedback'][$key]['content']['#value'],date("Y-m-d H:i:s",$form['feedback'][$key]['timestamp']['#value']));
+    drupal_render($form['feedback'][$key]['mobile_id']);
+    drupal_render($form['feedback'][$key]['passport']);
+    drupal_render($form['feedback'][$key]['content']);
+    drupal_render($form['feedback'][$key]['timestamp']);
+  }
+  $header  = array('id','mobile_id','passport','content','时间');
+  $output = theme('table', $header, $rows, array('id' => 'mobile_feedback_table'));
+  $output .= drupal_render($form);
+  return $output;
+}

@@ -1,5 +1,5 @@
 name = sina_vp_imagetool
-description = 新浪图片展现方式.
+description = 图片懒加载与imagecache预设.
 core = 6.x
 package = A-DEV
 dependencies[] = sina_vp

@@ -13,21 +13,21 @@ function get_uid_by_name($name) {
    $uid = db_fetch_object(db_query("SELECT uid FROM {users} WHERE name = LOWER('%s')", $name))->uid;
 	 return $uid;
 }
-
-function sina_vp_mentions_nodeapi(&$node, $op){
+function sina_vp_mentions_nodeapi(&$node, $op){ 
 	 global $user;
     if($node->type =='weibo'){
       switch ($op) {
-        case 'insert':			  	
+        case 'insert':
 					 $pattern_at = '/@([^\\@|\s{1}]+)/';
 					 $subject = $node->title;
 					 preg_match_all($pattern_at, $subject,$match);
-					 $match_users = array_unique($match['1']);
+					 $match_users = array_unique($match['1']); 
 					 foreach($match_users as $name){
 					 		if($mention_uid = get_uid_by_name($name)){
 					 				db_query("INSERT INTO {sina_vp_mentions}(`uid` ,`nid` )VALUES ('%d','%d')",$mention_uid,$node->nid);
 					 		}
 					 }
+					drupal_goto('UCenter');	
           break;
         case 'update':
           
@@ -53,20 +53,24 @@ function sina_vp_mentions_nodeapi(&$node, $op){
  * copy form sina_open_comment()
  */
 function sina_vp_mentions_comment(&$comment, $op) {
-
 	
-   if ($op == 'insert' && isset($comment['sina_vp_open'])){	  	
-					 $pattern_at = '/@([^\\@|\s{1}]+)/';
-					 $subject = $comment['comment'];
-					 $count = preg_match_all($pattern_at, $subject,$match);
-					 $match_users = array_unique($match['1']);
-					 dpm($match_users,$counts);
-					 foreach($match_users as $name){
-					 		if($mention_uid = get_uid_by_name($name)){
-					 				db_query("INSERT INTO {sina_vp_mentions}(`uid`,`nid` ,`cid` )VALUES ('%d','%d','%d')",$mention_uid,$comment['nid'],$comment['cid']);
-					 		}
-					 }	
-					 dpm(&$comment,$op);
+   if ($op == 'insert' && isset($comment['sina_vp_open'])){
+   	//?q=comment/reply/365/211 回复的回复 
+		if(arg(0)=='comment'&& arg(1)=='reply' && is_numeric(arg(3))){ dpm(__FILE__);
+			$reply = _comment_load(arg(3));
+			$comment['comment'] = "回复@$reply->name ：".$comment['comment'];
+		}
+		drupal_write_record('comments', $comment, 'cid');
+		
+		 $pattern_at = '/@([^\\@|\s{1}]+)/';
+		 $subject = $comment['comment'];
+		 $count = preg_match_all($pattern_at, $subject,$match);
+		 $match_users = array_unique($match['1']);
+		 foreach($match_users as $name){
+		 		if($mention_uid = get_uid_by_name($name)){
+		 				db_query("INSERT INTO {sina_vp_mentions}(`uid`,`nid` ,`cid` )VALUES ('%d','%d','%d')",$mention_uid,$comment['nid'],$comment['cid']);
+		 		}
+		 }	
 		}
 		if ($op == 'delete'){// && isset($comment->sina_vp_open)
 			db_query("DELETE FROM {sina_vp_mentions} WHERE `cid`='%d'",$comment->cid);
@@ -75,7 +79,14 @@ function sina_vp_mentions_comment(&$comment, $op) {
 
 function sina_vp_mentions_menu() {
 	global $user;
-  $items['user/%user/mentions'] = array(
+	$items['Mentions'] = array(
+    'title' => '@提到我的',
+    'page callback' => 'sina_vp_mentions_page',
+    'access callback' => 'user_edit_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['Mentions/%user'] = array(
     'title' => '提到我的@Me',
     'page callback' => 'sina_vp_mentions_page',
     'page arguments' => array(1),
@@ -83,16 +94,38 @@ function sina_vp_mentions_menu() {
     'access arguments' => array(1),
     'type' => MENU_LOCAL_TASK,
   );
+	$items['getMyfollows'] = array(
+    'title' => '我的朋友@',
+    'page callback' => 'sina_vp_getMyfollows',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
 	return $items;
 }
-
-function sina_vp_mentions_page($ac) {
+function sina_vp_getMyfollows(){
+	global $user;
+	$array=user_relationships_load(array("requester_id" => $user->uid),array("sort" => 'requestee_id',"include_user_info" => TRUE));//所有的;
+	foreach($array as $obj){
+		$user_names_array[]=$obj['0']->requestee->name;
+		
+	}
+	return  drupal_json($user_names_array);
+}
+function sina_vp_mentions_page($ac=NULL) {
+	if(is_null($ac)){global $user;$ac=$user;}
   $output = '';
-
   $data = db_query('SELECT * FROM {sina_vp_mentions} WHERE uid = %d', $ac->uid);
   
 	 while ($row = db_fetch_object($data)) {
-	    $output .= node_view(node_load($row->nid),  $teaser = TRUE, $page = FALSE, $links = TRUE);
+	 		$node_ids[] = $row->nid;	   
+	  }//去重复
+	 if(count($node_ids)) {
+	 	$node_ids = array_unique($node_ids);
+	  foreach ($node_ids as $nid) {
+		  $output .= node_view(node_load($nid),  $teaser = TRUE, $page = FALSE, $links = TRUE);
 	  }
+	 }else{
+	 	$output .='暂无被@数据！';
+	 }
   return $output;
 }
