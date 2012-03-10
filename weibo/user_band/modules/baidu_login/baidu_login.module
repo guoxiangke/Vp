@@ -1,0 +1,79 @@
+<?php
+// $Id: baidu_login.info,v 0.1 20110527 Felix $
+
+/**
+ * @file
+ * 实现百度hao123用户共享登录
+ */
+
+/**
+ * Implementation of hook_menu.
+ */
+function baidu_login_menu() {
+  
+  $items['baidu/login'] = array(
+    'description' => '百度hao123用户登录或者绑定',
+    'page callback' => 'baidu_login_page_login',
+    'access callback' => 'user_is_anonymous',
+    'type' => MENU_CALLBACK,
+    'file' => 'baidu_login.pages.inc',
+  );
+  $items['admin/settings/band/baidu'] = array(
+    'title' => '百度hao123共享登录',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('baidu_login_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'baidu_login.admin.inc',
+  );
+  
+  return $items;
+}
+
+function baidu_login_get_config(){
+	$baidu_config['app_id'] = variable_get('baidu_login_app_id', NULL);
+	$baidu_config['app_key'] = variable_get('baidu_login_app_key', NULL);
+	$baidu_config['app_secret'] = variable_get('baidu_login_app_secret', NULL);
+
+	return $baidu_config;
+}
+
+/**
+ * 使用百度hao123帐号登录或绑定帐号的权限
+ */
+function baidu_login_is_access() {
+  global $user;
+  return $user->uid > 0 || variable_get('baidu_login_is_login', 1);
+}
+
+/**
+ * Implementation of hook_form_alter
+ */
+function baidu_login_form_alter(&$form, $form_state, $form_id) {
+  if (variable_get('baidu_login_is_login', 1) && ($form_id == 'user_login_block' || $form_id == 'user_login')) {
+    $form['baidu_login_button'] = array(
+      '#type' => 'item',
+      '#value' => baidu_login_render_button(),
+      '#weight' => 13,
+    );
+  }
+  return $form;
+}
+
+function baidu_login_render_button(){
+	$html = '<a href="/baidu/login" alt="使用百度hao123帐号登录"><img width=110 height=24 src="/sites/all/modules/user_band/images/baidu_login.png"></a>';
+	return $html;
+}
+
+/**
+ * @Implement of hook_user()
+ */
+function baidu_login_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'delete':
+      db_query("DELETE FROM {user_band_user} WHERE uid = %d AND thirdpart_type = 'baidu'", $account->uid);
+    break;   
+  }
+}
+
+
+

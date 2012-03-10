@@ -1,0 +1,4 @@
+name = weibo
+description = 各种微博API接口.
+core = 6.x
+package = A-DEV

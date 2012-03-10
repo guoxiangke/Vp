@@ -1,0 +1,6 @@
+; $Id: baidu_login.info,v 0.1 20110525 Felix $
+name = BAIDU LOGIN API
+dependencies[] = user_band
+description = 百度hao123用户登录接口
+core = 6.x
+package = "User Login"

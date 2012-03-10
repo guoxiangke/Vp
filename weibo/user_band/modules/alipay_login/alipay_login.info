@@ -1,0 +1,6 @@
+; $Id: alipay_login.info,v 0.1 20110504 Felix $
+name = ALIPAY LOGIN API
+dependencies[] = user_band
+description = 支付宝用户登录接口
+core = 6.x
+package = "User Login"

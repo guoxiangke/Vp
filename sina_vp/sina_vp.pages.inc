@@ -609,8 +609,347 @@ function show_more_node_view(){
  * 店铺列表
  * /VCenter
  */
-function sina_VCenter_page($tid = NULL) {
-	return '详见page-VCenter.tpl.php';
+function sina_VCenter_page($type = 'all') {
+	//$items['VCenter/Sub_most'] = array(//Subscribe to a maximum of 订阅最多
+	//$items['VCenter/New'] = array(//最新加入
+	//$items['VCenter/Active'] = array(//最新更新
+	switch ($type) {
+		case 'Sub_most':	//订阅最多
+			//订阅最多
+			$sql='SELECT `requestee_id` FROM `user_relationships` where `rtid`=2  group by `requestee_id` order by count(1) desc limit 0,30';
+			$results = db_query($sql);
+			$count =30;
+			$output = '<div class="dpbody-right-content VCenter-Sub_most">
+					    <div class="dpright-content-top">
+						    <div class="dpright-content-title">喜欢最多</div>
+								<div class="dpright-content-right">
+									<input type="checkbox" class="dpfxk" />
+									<p>全选</p>
+									<input type="button" class="dpdybtn"/>
+									<div class="clear"></div>
+								</div>
+							<div class="clear"></div>
+						  </div>
+						  <div class="dpright-content-inner">';
+			while($row = db_fetch_array($results)){
+				$account = user_load($row['requestee_id']);		
+				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
+				$output.='<div class="dpdianpu-content odd">
+									<div class="dpdianpu-pic">'.
+									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
+									.'</div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
+										<p class="dpdpgg">'.truncate_utf8($account->signature, 55, $wordsafe = false, $dots = TRUE).'</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
+										<p>已订阅</p>
+									</div>						
+								</div>';
+				$count--;
+			}
+			while ($count--) {
+				$output.='<div class="dpdianpu-content odd">
+									<div class="dpdianpu-pic"><img src="/'.path_to_theme().'/images/3.jpg" alt="" width="65" height="65"/></div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">小琳琳店铺</p>
+										<p class="dpdpgg">主打针织袖点点广告</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>232323</p>
+										<p>已订阅</p>
+									</div>
+								</div>';
+			}
+			$output.='<div class="clear"></div></div>';
+			$output.='<div class="clear"></div>					
+					<div class="dpvp-more">'.l('订阅最多>>','VCenter/Sub_most').'</div>
+				</div>';
+			
+			break;
+		case 'New'://最新加入
+			$sql='select u.uid uid from users u  INNER JOIN users_roles users_roles ON u.uid = users_roles.uid
+	 			WHERE (users_roles.rid = 3) AND (u.status <> 0) order by created desc limit 0,30';
+			$results = db_query($sql);
+			$count =30;
+			$output.='<div class="dpbody-right-content VCenter-New">
+					    <div class="dpright-content-top">
+						    <div class="dpright-content-title">最新加入</div>
+								<div class="dpright-content-right">
+									<input type="checkbox" class="dpfxk" />
+									<p>全选</p>
+									<input type="button" class="dpdybtn"/>
+									<div class="clear"></div>
+								</div>
+							<div class="clear"></div>
+						  </div>
+						  <div class="dpright-content-inner">';
+			while($row = db_fetch_array($results)){
+				$account = user_load($row['requestee_id']);		
+				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
+				$output.='<div class="dpdianpu-content odd">
+									<div class="dpdianpu-pic">'.
+									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
+									.'</div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
+										<p class="dpdpgg">'.truncate_utf8($account->signature, 55, $wordsafe = false, $dots = TRUE).'</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
+										<p>已订阅</p>
+									</div>						
+								</div>';
+				$count--;
+			}
+			while ($count--) {
+				$output.='<div class="dpdianpu-content odd">
+									<div class="dpdianpu-pic"><img src="/'.path_to_theme().'/images/3.jpg" alt="" width="65" height="65"/></div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">小琳琳店铺</p>
+										<p class="dpdpgg">主打针织袖点点广告</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>232323</p>
+										<p>已订阅</p>
+									</div>
+								</div>';
+			}
+			$output.='<div class="clear"></div></div>';
+			$output.='<div class="clear"></div>
+					<div class="dpvp-more">'.l('最近更新>>','VCenter/Active').'</div>
+				</div>';
+			break;
+		case 'Active'://最新更新
+			$sql='select n.uid uid from node n  INNER JOIN users_roles users_roles ON n.uid = users_roles.uid
+ WHERE (users_roles.rid = 3)  group by n.uid order by count(1) desc limit 0,30';
+			$results = db_query($sql);
+			$count =30;
+			$output.='<div class="dpbody-right-content VCenter-Active">
+					    <div class="dpright-content-top">
+						    <div class="dpright-content-title">最近更新</div>
+								<div class="dpright-content-right">
+									<input type="checkbox" class="dpfxk" />
+									<p>全选</p>
+									<input type="button" class="dpdybtn"/>
+									<div class="clear"></div>
+								</div>
+							<div class="clear"></div>
+						  </div>
+						  <div class="dpright-content-inner">';
+			while($row = db_fetch_array($results)){
+				$account = user_load($row['requestee_id']);		
+				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
+				$output.='<div class="dpdianpu-content '.($count%2?'odd':'even').'">
+									<div class="dpdianpu-pic">'.
+									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
+									.'</div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
+										<p class="dpdpgg">'.truncate_utf8($account->signature, 55, $wordsafe = false, $dots = TRUE).'</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
+										<p>已订阅</p>
+									</div>						
+								</div>';
+				$count--;
+			}
+			while ($count) {
+				$output.='<div class="dpdianpu-content '.($count%2?'odd':'even').'">
+									<div class="dpdianpu-pic"><img src="/'.path_to_theme().'/images/3.jpg" alt="" width="65" height="65"/></div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">小琳琳店铺</p>
+										<p class="dpdpgg">主打针织袖点点广告</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>232323</p>
+										<p>已订阅</p>
+									</div>
+								</div>';
+				$count--;
+			}
+			$output.='<div class="clear"></div></div>';
+			$output.='  <div class="clear"></div>
+					<div class="dpvp-more">'.l('最近更新>>','VCenter/Active').'</div>
+				</div>';
+			break;
+		default:
+			//订阅最多
+			$sql='SELECT `requestee_id` FROM `user_relationships` where `rtid`=2  group by `requestee_id` order by count(1) desc limit 0,6';
+			$results = db_query($sql);
+			$count =6;
+			$output.='<div class="dpbody-right-content VCenter-Sub_most">
+					    <div class="dpright-content-top">
+						    <div class="dpright-content-title">喜欢最多</div>
+								<div class="dpright-content-right">
+									<input type="checkbox" class="dpfxk" />
+									<p>全选</p>
+									<input type="button" class="dpdybtn"/>
+									<div class="clear"></div>
+								</div>
+							<div class="clear"></div>
+						  </div>
+						  <div class="dpright-content-inner">';
+			while($row = db_fetch_array($results)){
+				$account = user_load($row['requestee_id']);		
+				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
+				$output.='<div class="dpdianpu-content odd">
+									<div class="dpdianpu-pic">'.
+									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
+									.'</div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
+										<p class="dpdpgg">'.truncate_utf8($account->signature, 55, $wordsafe = false, $dots = TRUE).'</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
+										<p>已订阅</p>
+									</div>						
+								</div>';
+				$count--;
+			}
+			while ($count--) {
+				$output.='<div class="dpdianpu-content odd">
+									<div class="dpdianpu-pic"><img src="/'.path_to_theme().'/images/3.jpg" alt="" width="65" height="65"/></div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">小琳琳店铺</p>
+										<p class="dpdpgg">主打针织袖点点广告</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>232323</p>
+										<p>已订阅</p>
+									</div>
+								</div>';
+			}
+			$output.='<div class="clear"></div></div>';
+			$output.='<div class="clear"></div>					
+					<div class="dpvp-more">'.l('订阅最多>>','VCenter/Sub_most').'</div>
+				</div>';
+			//最新加入
+				$sql='select u.uid uid from users u  INNER JOIN users_roles users_roles ON u.uid = users_roles.uid
+	 			WHERE (users_roles.rid = 3) AND (u.status <> 0) order by created desc limit 0,6';
+			$results = db_query($sql);
+			$count =6;
+			$output.='<div class="dpbody-right-content VCenter-New">
+					    <div class="dpright-content-top">
+						    <div class="dpright-content-title">最新加入</div>
+								<div class="dpright-content-right">
+									<input type="checkbox" class="dpfxk" />
+									<p>全选</p>
+									<input type="button" class="dpdybtn"/>
+									<div class="clear"></div>
+								</div>
+							<div class="clear"></div>
+						  </div>
+						  <div class="dpright-content-inner">';
+			while($row = db_fetch_array($results)){
+				$account = user_load($row['requestee_id']);		
+				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
+				$output.='<div class="dpdianpu-content odd">
+									<div class="dpdianpu-pic">'.
+									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
+									.'</div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
+										<p class="dpdpgg">'.truncate_utf8($account->signature, 55, $wordsafe = false, $dots = TRUE).'</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
+										<p>已订阅</p>
+									</div>						
+								</div>';
+				$count--;
+			}
+			while ($count--) {
+				$output.='<div class="dpdianpu-content odd">
+									<div class="dpdianpu-pic"><img src="/'.path_to_theme().'/images/3.jpg" alt="" width="65" height="65"/></div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">小琳琳店铺</p>
+										<p class="dpdpgg">主打针织袖点点广告</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>232323</p>
+										<p>已订阅</p>
+									</div>
+								</div>';
+			}
+			$output.='<div class="clear"></div></div>';
+			$output.='<div class="clear"></div>
+					<div class="dpvp-more">'.l('最近更新>>','VCenter/Active').'</div>
+				</div>';
+			//最近更新
+			$sql='select n.uid uid from node n  INNER JOIN users_roles users_roles ON n.uid = users_roles.uid
+ WHERE (users_roles.rid = 3)  group by n.uid order by count(1) desc limit 0,6';
+			$results = db_query($sql);
+			$count =6;
+			$output.='<div class="dpbody-right-content VCenter-Active">
+					    <div class="dpright-content-top">
+						    <div class="dpright-content-title">最近更新</div>
+								<div class="dpright-content-right">
+									<input type="checkbox" class="dpfxk" />
+									<p>全选</p>
+									<input type="button" class="dpdybtn"/>
+									<div class="clear"></div>
+								</div>
+							<div class="clear"></div>
+						  </div>
+						  <div class="dpright-content-inner">';
+			while($row = db_fetch_array($results)){
+				$account = user_load($row['requestee_id']);		
+				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
+				$output.='<div class="dpdianpu-content '.($count%2?'odd':'even').'">
+									<div class="dpdianpu-pic">'.
+									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
+									.'</div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
+										<p class="dpdpgg">'.truncate_utf8($account->signature, 55, $wordsafe = false, $dots = TRUE).'</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
+										<p>已订阅</p>
+									</div>						
+								</div>';
+				$count--;
+			}
+			while ($count) {
+				$output.='<div class="dpdianpu-content '.($count%2?'odd':'even').'">
+									<div class="dpdianpu-pic"><img src="/'.path_to_theme().'/images/3.jpg" alt="" width="65" height="65"/></div>
+									<div class="dpdianpu-xx">
+										<p class="dpdpname">小琳琳店铺</p>
+										<p class="dpdpgg">主打针织袖点点广告</p>
+										<input type="checkbox" checked="checked"/>
+									</div>
+									<div class="dpdianpu-dy">
+										<p>232323</p>
+										<p>已订阅</p>
+									</div>
+								</div>';
+				$count--;
+			}
+			$output.='<div class="clear"></div></div>';
+			$output.='  <div class="clear"></div>
+					<div class="dpvp-more">'.l('最近更新>>','VCenter/Active').'</div>
+				</div>';
+			break;
+	}
+	
+	
+	return $output;
+	 
 }
 /**
  * Menu callback; Generate a listing of promoted nodes.
@@ -826,8 +1165,6 @@ function sina_UCenter_page($tid = NULL,$uid=NUll) {
 		 }elseif(in_array('Buyer',$user->roles)){			//if(in_array('Buyer',$user->roles))
 	  	//一键关注js css
 	  	if(arg(1)==0){
-		  	drupal_add_css(drupal_get_path('theme', 'vp').'/dialog.css');
-				drupal_add_js(drupal_get_path('theme', 'vp').'/dialog.js');
 				$default_message = '<div class="wb_02 bor_top" id="node-275">
 													  <div class="fb_time">
 													     <p>15秒前</p></div>
@@ -983,144 +1320,224 @@ function pager_query_for_vp($query, $limit = 10, $element = 0, $count_query = NU
   return db_query_range($query, $args, $pager_page_array[$element] * $limit, $limit);
 }
 
-/*
- * 新注册用户推荐卖家 页面
- */
-function sina_vp_recommend(&$form_state, $type = NULL) {//
-	global $user;
-	//关注最多的卖家
-	$sql = 'select u.name,u.uid,u.picture from {users} u 
-					INNER JOIN {users_roles} users_roles 
-					ON u.uid = users_roles.uid 
-					INNER JOIN {user_relationships} ur 
-					ON ur.requestee_id = u.uid  
-					WHERE  (users_roles.rid = 3) group by u.uid  ORDER BY count(1) desc limit 0,6';// ORDER BY count(1) desc 
-	//requestee_id=uid rid=2   AND u.picture<>"" 
-	$result = db_query($sql);
-	while($value = db_fetch_object($result)){
-				$form['most_focus']['option'][$value->uid] = array('#type' => 'checkbox');
-				$form['most_focus']['uid'][$value->uid] =  array('#value' =>$value->uid );
-				$form['most_focus']['name'][$value->uid] =  array('#value' =>$value->name );
-				$form['most_focus']['picture'][$value->uid] =  array('#value' =>$value->picture );
-				
-		}
-	//最新加入的卖家
-	$sql = 'select u.name,u.uid,u.picture from {users} u 
-					INNER JOIN {users_roles} users_roles 
-					ON u.uid = users_roles.uid  
-					WHERE  (users_roles.rid = 3) AND u.status=1  AND u.picture<>""  ORDER BY u.created DESC limit 0,6';//
-	$result = db_query($sql);
-	while($value = db_fetch_object($result)){
-				$form['new_seller']['option'][$value->uid] = array('#type' => 'checkbox');
-				$form['new_seller']['uid'][$value->uid] =  array('#value' =>$value->uid );
-				$form['new_seller']['name'][$value->uid] =  array('#value' =>$value->name );
-				$form['new_seller']['picture'][$value->uid] =  array('#value' =>$value->picture );
-		}
- 	$form['options']['submit'] = array(
-    '#type' => 'submit',
-    '#value' => '确定',
-    '#submit' => array('sina_vp_recommend_submit'),
-  );
-	$form['select_all']=array(
-		'#type'=>'markup',
-		'#value'=>'<span calss="select-all4vp"><input id="select-all4vp" type="checkbox" class="form-checkbox" title="选择所有">全选</span>',
-		
-	);
- 	$form['#theme'] = 'sina_vp_recommend';
-	return $form;
- 
-}
-/**
- *
- */
-function sina_vp_recommend_submit($form, &$form_state) {
-	global $user;
-	if($form_state['submitted']){
-		foreach ($form_state['values'] as $requestee_uid => $value) {
-      if($value==1){
-      	user_relationships_request_relationship($user->uid, $requestee_uid, $type = 2, $approved = FALSE);      	
-			}
-    }
-		drupal_set_message(t('已成功关注他们！'));
-	}
-  $form_state['values']['#redirect'] = 'UCenter';//$form_state['redirect'] = 'UCenter';
-  return;
-}
-
-function theme_sina_vp_recommend_add($form){
- 	$output = drupal_render($form);
-  return  $output;
-}
-function theme_sina_vp_recommend ($form){
-	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/recommend-select-all.js');
-	$has_posts = isset($form['most_focus']['uid']) && is_array($form['most_focus']['uid']);
-	$select_header = $has_posts ? theme('table_select_header_cell') : '';
-  $output = '<div class="recommend_title">推荐店铺</div>';
-	$new_header[]=$select_header;
-  if ($has_posts) {
-    foreach (element_children($form['most_focus']['uid']) as $key) {
-	  $row = array();
-	  $uid =drupal_render($form['most_focus']['uid'][$key]);
-		$name =drupal_render($form['most_focus']['name'][$key]);
-		$picture = drupal_render($form['most_focus']['picture'][$key]);
-		$picture = $picture?$picture:'sites/default/files/users/0.gif';
-		$option = drupal_render($form['most_focus']['option'][$key]);
-    $row['picture'] =array('data' => '<span class="focus focus_picture"><img width="50px" height="50px" src="'.$picture.'"/></span><span class="focus focus_option">'.$option.'</span><span class="focus focus_name">'.$name.'</p>', 'class' => 'profile_image');
-    $rows[] = $row;
-		
-		$new_header[]='more'; //
-		
-    }
-  }
-  else {
-    $rows[] = array(array('data' => t('No posts available.'), 'colspan' => '6'));
-  }
-	//行列互换
-	$new_row[]='';
-	foreach ($new_header as $key => $value) {
-		$new_row[]=$rows[$key]['picture'];
-	}
-		
-	$new_rows[]=$new_row;
-
-	$output .= '<div class="most_focus"><span class="focus_title">关注最多</span>'.theme('table', $new_header, $new_rows).'</div>';	
-
-///////////////////////////////////////
-	
-	$has_posts = isset($form['new_seller']['uid']) && is_array($form['new_seller']['uid']);
-	$select_header = $has_posts ? theme('table_select_header_cell') : '';
-	$new_header2[]=$select_header;
-  if ($has_posts) {
-    foreach (element_children($form['new_seller']['uid']) as $key) {
-	  $row2 = array();
-	  $uid =drupal_render($form['new_seller']['uid'][$key]);
-		$name =drupal_render($form['new_seller']['name'][$key]);
-		$picture = drupal_render($form['new_seller']['picture'][$key]);
-		$picture = $picture?$picture:'sites/default/files/users/0.gif';
-		$option = drupal_render($form['new_seller']['option'][$key]);
-    $row2['picture']=array('data' => '<span class="focus focus_picture"><img width="50px" height="50px" src="'.$picture.'"/></span><span class="focus focus_option">'.$option.'</span><span class="focus focus_name">'.$name.'</p>', 'class' => 'profile_image');
-    $rows2[] = $row2;
-		
-		$new_header2[]='more'; //
-		
-    }
-  }
-  else {
-    $rows2[] = array(array('data' => t('No posts available.'), 'colspan' => '6'));
-  }
-	//行列互换
-	$new_row=array();
-	$new_row[]='';
-	foreach ($new_header2 as $key => $value) {
-		$new_row[]=$rows2[$key]['picture'];
-	}
-		
-	$new_rows2[]=$new_row;
-
-	$output .= '<div class="most_focus"><span class="focus_title">最新入住</span>'.theme('table', $new_header2, $new_rows2).'</div>';	
- 	$output .= drupal_render($form);
-  return  $output;
-}
-
 ///////////主题化
 function sina_vp_Activity(){return '详见page-Activity.tpl.php';}
+/**
+ * $plaza_type 广场类型  News 新品 
+ * $child_type 子类型 most_favor喜欢最多  most_comments评论最多 most_favor最新更新
+ * $uid 某个卖家的类型广场
+ */
+function sina_vp_plaza($plaza_type='Shows',$child_type='all',$uid=null){
+
+	if($plaza_type=='News'){
+				if(is_null($uid)){ //ALL News
+				
+					
+					switch ($child_type) {
+						case 'all':							
+								$sql='SELECT node.nid AS nid, node.created AS node_created ,node.uid AS node_uid ,coalesce(flag.count,0)  AS counts1 FROM node AS node
+		LEFT JOIN flag_counts  as flag ON flag.content_id = node.nid  
+		LEFT JOIN users_roles users_roles ON node.uid = users_roles.uid 
+								LEFT JOIN term_node term_node ON node.vid = term_node.vid  								
+								LEFT JOIN term_data term_data ON term_node.tid = term_data.tid 
+
+								WHERE (users_roles.rid = 3) AND (node.status = 1)
+								AND (node.type in ("weibo")) AND ((term_data.name) = ("新品")) 
+								ORDER BY counts1 desc ,node_created DESC LIMIT 0 , 30';//活动30条
+							break;
+						case 'most_comments':							
+								$sql='SELECT node.nid AS nid, node.created AS node_created FROM node node  
+								INNER JOIN users_roles users_roles ON node.uid = users_roles.uid 
+								LEFT JOIN term_node term_node ON node.vid = term_node.vid 
+								LEFT JOIN term_data term_data ON term_node.tid = term_data.tid 
+								WHERE (users_roles.rid = 3) AND (node.status = 1)
+								AND (node.type in ("weibo")) AND ((term_data.name) = ("新品")) 
+								ORDER BY node_created DESC LIMIT 0 , 30';//活动30条
+							break;
+							case ' most_favor':							
+								$sql='SELECT node.nid AS nid, node.created AS node_created FROM node node  
+								INNER JOIN users_roles users_roles ON node.uid = users_roles.uid 
+								LEFT JOIN term_node term_node ON node.vid = term_node.vid 
+								LEFT JOIN term_data term_data ON term_node.tid = term_data.tid 
+								WHERE (users_roles.rid = 3) AND (node.status = 1)
+								AND (node.type in ("weibo")) AND ((term_data.name) = ("新品")) 
+								ORDER BY node_created DESC LIMIT 0 , 30';//活动30条
+							break;
+						default:
+							$sql='SELECT node.nid AS nid, node.created AS node_created FROM node node  
+								INNER JOIN users_roles users_roles ON node.uid = users_roles.uid 
+								LEFT JOIN term_node term_node ON node.vid = term_node.vid 
+								LEFT JOIN term_data term_data ON term_node.tid = term_data.tid 
+								WHERE (users_roles.rid = 3) AND (node.status = 1)
+								AND (node.type in ("weibo")) AND ((term_data.name) = ("新品")) 
+								ORDER BY node_created DESC LIMIT 0 , 30';//活动30条
+							break;
+					}
+					dpm($sql);
+					$results = db_query($sql);
+				}else{ // A Seller's Activity
+					$sql='SELECT node.nid AS nid, node.created AS node_created FROM node node  
+					INNER JOIN users_roles users_roles ON node.uid = users_roles.uid 
+					LEFT JOIN term_node term_node ON node.vid = term_node.vid 
+					LEFT JOIN term_data term_data ON term_node.tid = term_data.tid 
+					WHERE (users_roles.rid = 3) AND (node.status = 1) AND (node.uid = %d) 
+					AND (node.type in ("weibo")) AND ((term_data.name) = ("新品")) 
+					ORDER BY node_created DESC LIMIT 0 , 30';//活动30条
+		  	  $results = db_query($sql,$uid);
+				}
+				while($row = db_fetch_array($results)){
+		      $news_nids [] = $row['nid'];
+		    }
+				$count=0;
+				$output = '<div class="gcbody-right-content">
+			    <div class="gcright-content-title">喜欢最多</div>
+				<div class="gcright-content-inner">';
+				if($news_nids)
+				foreach ($news_nids as $activity_nid) {
+						if($count==	16)break;
+						$activity_node = node_load($activity_nid);
+						if($weibo_image_filepath=$activity_node->field_weibo_image['0']['filepath']){							
+							$share_sql = "SELECT count(*) FROM  {sina_vp_weibo2node} WHERE  `zid` =$activity_node->nid AND  `cid` =0";
+							$share_counts = db_result(db_query($share_sql));
+							$count++;
+							
+							$activity_user = user_load($activity_node->uid);							
+							imagecache_generate_image('w200', $weibo_image_filepath);	
+							$output .= '<div class="gcbottom-pk-righ-body">			       
+	                       <div class="gcvp-body-bottom-pk-right-img">
+	                            '.theme('imagecache', 'w200',$weibo_image_filepath, '', '').'
+							    <div class="gctm-content"></div>
+							    <div class="gctm-pic">'.theme('imagecache', '35x35', $activity_user->picture, $activity_user->name, '').'</div>
+							    <div class="gctm-size">'.$activity_node->name.'</div>
+	                       </div>
+	                       <div class="gcvp-body-bottom-pk-right-xx">
+	                           <div class="gcpk-img-name">'.$activity_node->title.'</div>
+	                           <div class="gcpk-img-zz">
+									<span class="gcvp-loveit"><div class="gclovepic"><img src="/'.path_to_theme().'/images/xin.gif"></div>
+									<div class="gclovexh">'.flag_create_link('bookmarks', $activity_node->nid).'</div></span>
+									<span class="gcplfx">评论('.$activity_node->comment_count.')&nbsp;&nbsp;分享('.$share_counts.')</span>
+									<div class="clear"></div>
+	                           </div>
+	                       </div>
+	                 </div>';
+						}
+				}
+  	$output .= '</div>
+				</div>';
+		 if(!$news_nids){
+	    	echo '<div class="SaleCenter_detail none_info">这家伙很懒，暂无内容！</div>';
+	    }//<div class="more right"><a href="#">更多</a></div>
+	   
+		return $output.'<div class="gcbody-right-content">
+			    <div class="gcright-content-title">喜欢最多</div>
+				<div class="gcright-content-inner">
+				    <div class="gcbottom-pk-righ-body">			       
+                       <div class="gcvp-body-bottom-pk-right-img">
+                            <img width="200" height="200" src="images/3.jpg">
+						    <div class="gctm-content"></div>
+						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
+						    <div class="gctm-size">人人微铺街</div>
+                       </div>
+                       <div class="gcvp-body-bottom-pk-right-xx">
+                           <div class="gcpk-img-name">黑色修身好看经点的</div>
+                           <div class="gcpk-img-zz">
+								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
+								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
+								<div class="clear"></div>
+                           </div>
+                       </div>
+                   </div>
+				    <div class="gcbottom-pk-righ-body">			       
+                       <div class="gcvp-body-bottom-pk-right-img">
+                            <img width="200" height="200" src="images/3.jpg">
+						    <div class="gctm-content"></div>
+						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
+						    <div class="gctm-size">人人微铺街</div>
+                       </div>
+                       <div class="gcvp-body-bottom-pk-right-xx">
+                           <div class="gcpk-img-name">黑色修身好看经点的</div>
+                           <div class="gcpk-img-zz">
+								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
+								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
+								<div class="clear"></div>
+                           </div>
+                       </div>
+                   </div>
+				    <div class="gcbottom-pk-righ-body">			       
+                       <div class="gcvp-body-bottom-pk-right-img">
+                            <img width="200" height="200" src="images/3.jpg">
+						    <div class="gctm-content"></div>
+						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
+						    <div class="gctm-size">人人微铺街</div>
+                       </div>
+                       <div class="gcvp-body-bottom-pk-right-xx">
+                           <div class="gcpk-img-name">黑色修身好看经点的</div>
+                           <div class="gcpk-img-zz">
+								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
+								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
+								<div class="clear"></div>
+                           </div>
+                       </div>
+                   </div>
+				    <div class="gcbottom-pk-righ-body">			       
+                       <div class="gcvp-body-bottom-pk-right-img">
+                            <img width="200" height="200" src="images/3.jpg">
+						    <div class="gctm-content"></div>
+						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
+						    <div class="gctm-size">人人微铺街</div>
+                       </div>
+                       <div class="gcvp-body-bottom-pk-right-xx">
+                           <div class="gcpk-img-name">黑色修身好看经点的</div>
+                           <div class="gcpk-img-zz">
+								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
+								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
+								<div class="clear"></div>
+                           </div>
+                       </div>
+					    <div class="gcfudiv">
+					    <div class="gcfudiv-top"><input type="text" class="gcfudivtext"><input type="button" class="gcfudivbtn" value="点评"><div class="clear"></div></div>
+					    <div class="gcfudiv-bottom"><img width="35" height="35" src="images/5.jpg"><p><span class="gcvp-name">小精灵：</span>我觉的点点衣服好看看年年</p><div class="clear"></div></div>			
+					    </div>	
+                   </div>
+			   
+                    <div class="gcbottom-pk-righ-body">			       
+                       <div class="gcvp-body-bottom-pk-right-img">
+                            <img width="200" height="200" src="images/3.jpg">
+						    <div class="gctm-content"></div>
+						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
+						    <div class="gctm-size">人人微铺街</div>
+                       </div>
+                       <div class="gcvp-body-bottom-pk-right-xx">
+                           <div class="gcpk-img-name">黑色修身好看经点的</div>
+                           <div class="gcpk-img-zz">
+								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
+								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
+								<div class="clear"></div>
+                           </div>
+                       </div>
+                   </div>
+				    <div class="gcbottom-pk-righ-body">			       
+                       <div class="gcvp-body-bottom-pk-right-img">
+                            <img width="200" height="200" src="images/3.jpg">
+						    <div class="gctm-content"></div>
+						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
+						    <div class="gctm-size">人人微铺街</div>
+                       </div>
+                       <div class="gcvp-body-bottom-pk-right-xx">
+                           <div class="gcpk-img-name">黑色修身好看经点的</div>
+                           <div class="gcpk-img-zz">
+								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
+								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
+								<div class="clear"></div>
+                           </div>
+                       </div>
+                   </div>				   
+				   <div class="clear"></div>
+				</div>
+				<div class="gcvp-more">更多&gt;&gt;</div>
+			</div>';
+	}
+	return '详见page-Activity.tpl.php';
+}
+
+

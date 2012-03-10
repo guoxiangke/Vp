@@ -1,0 +1,6 @@
+; $Id: tuan800_login.info,v 0.1 20110504 Felix $
+name = TUAN800 LOGIN API
+dependencies[] = user_band
+description = 团800用户登录接口
+core = 6.x
+package = "User Login"

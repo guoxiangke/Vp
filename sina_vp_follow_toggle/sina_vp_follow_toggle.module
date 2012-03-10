@@ -118,9 +118,9 @@ function sina_vp_follow_toggle_link($type, $obj = NULL, $teaser = FALSE) {
         break;
       case 'comment':
         //fasttoggle_load_comment($obj);
-        foreach (array_keys($options) as $key) {
+        //foreach (array_keys($options) as $key) {
 			  //  $links['focus_toggle_'. $key] = fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $obj->uid .'/'. $options[$key][0] , FALSE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status);
-			  }
+			  //}
         break;
       // User is not one of the standard types for hook_link(). This
       // use enables adding of user links to a user profile.

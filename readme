@@ -1,0 +1,7 @@
+VP 
+1.hack core
+1.1 user.pages.inc line 297 //用户修改完资料后的跳转
+		if(module_exists('sina_vp'))drupal_goto("UCenter"); //dale 20120130
+1.2 评论框的位置
+	$output = comment_form_box(array('nid' => $nid), t('点评')).$output;
+

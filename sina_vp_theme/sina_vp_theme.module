@@ -5,7 +5,89 @@
  * @copyright dale
  * @package sina
  */
+include_once(drupal_get_path('module', 'user').'/user.pages.inc');
 
+function sina_vp_theme_menu(){
+	$items['user_info/%user_uid_optional'] = array(
+		'page callback' => 'vp_user_info_edit',
+		'page arguments' =>  array(1),
+		'access callback' => TRUE,
+		//'access callback' => 'user_edit_access',
+    //'access arguments' => user_category_load('vp_contact'),
+    'type' => MENU_LOCAL_TASK,
+		'weight' => -20,
+  );
+	//输入邀请码页面 accept_invite
+	$items['enter_regcode'] = array(
+		'page callback' => 'page_enter_regcode',
+		'access callback' => 'user_is_anonymous',
+		'file' => 'sina_vp_theme.pages.inc',
+    'type' => MENU_CALLBACK,
+		'weight' => -20,
+  );
+	//选择身份之前先输入邀请码。存入session，对邀请的判断。
+	$items['choose_a_role'] = array(
+		'page callback' => 'page_choose_a_role',
+		'access callback' => 'user_is_anonymous',
+		'file' => 'sina_vp_theme.pages.inc',
+    'type' => MENU_CALLBACK,
+		'weight' => -20,
+  );
+	//判断邀请吗与选择的角色是否一致。user/register/Buy|Sale
+	$items['user/register/%'] = array(
+		'page callback' => 'page_register_roles',
+		'page arguments' =>  array(2),
+		'access callback' => 'user_register_access',
+		'file' => 'sina_vp_theme.pages.inc',
+    'type' => MENU_CALLBACK,
+		'weight' => -20,
+  );
+	$items['register_success'] = array(
+		'page callback' => 'page_register_success',
+		'page arguments' =>  array(2),
+		'access callback' => 'user_register_access',
+		'file' => 'sina_vp_theme.pages.inc',
+    'type' => MENU_CALLBACK,
+		'weight' => -20,
+  );
+	//推荐关注页
+	$items['vp_recommend'] = array( 
+    'title' => t('推荐卖家'),
+    'page callback' => 'drupal_get_form',
+    'page arguments'   => array('vp_recommend'),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+	$items['vp_recommend/user'] = array( 
+    'title' => t('推荐买家'),
+    'page callback' => 'drupal_get_form',
+    'page arguments'   => array('vp_recommend_user'),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+	
+	$items['vpj_comment/ajax/submit'] = array( 
+    'title' => t('推荐买家'),
+    'page callback' => 'vpj_comment_ajax_submit',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+	return $items;
+}
+function vpj_comment_ajax_submit() {
+	
+}
+function sina_vp_theme_theme() {
+  return array(
+    'vp_recommend' => array(
+      'arguments' => array('form' => NULL),
+    ),
+    'vp_recommend_user' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
+	
+}
 
 /**
  * Implementation of hook_form_alter(). 
@@ -13,24 +95,107 @@
  * @Do before set_tweet ,insert into our Additional db_table sina_weibo2node info.
  */
 function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
-	variable_del("cron_semaphore");
-	variable_del("cron_last");
-		//user_login_block alter
+	
 	if($form_id=='user_login_block'){
+		//登录block链接修改。//登录表单 主题修饰
+		if(module_exists('regcode_voucher')){
+			$items = array();
+		  if (variable_get('user_register', 1)) {//user/register
+		    $items[] = l(t('Create new account'), 'enter_regcode', array('attributes' => array('title' => t('Create a new user account.'))));
+		  }
+		  $items[] = l(t('Request new password'), 'user/password', array('attributes' => array('title' => t('Request new password via e-mail.'))));		  
+		}				  
 		//$form['name']['#title']=FALSE;
 		//$form['pass']['#title']=FALSE;
 		//$form['name']['#default_value']='登录邮箱';
 		//$form['pass']['#default_value']='密码';
+		if (variable_get('sina_open_is_login', 1) && ($form_id == 'user_login_block' || $form_id == 'user_login')) {
+			$items[] = l('<img src="'.drupal_get_path('theme','vp').'/images/log_btn1.jpg"/>', 'sina_open/t_login', array('html' =>'true','attributes' => array('title' => t('Create a new user account.'),'class' => 'sina_open_login_links')));
+			unset($form['sina_open_links']);
+	  }
+		$form['links'] = array('#value' => theme('item_list', $items));
+		$form['vpj_register_links'] = array(
+			"#type" =>'markup',
+      '#value' => '<input id="edit-vpj-register-links" class="form-submit btn-large btn" type="button" value="立即注册微铺街" name="op">',
+      '#prefix' => '<div class="vp-login">',
+      '#suffix' => '</div>',
+      '#weight' => -31,
+      '#attributes'=>array('class' => 'btn-large btn'),
+    );
+		$form['submit']['#prefix'] ='<div class="ulogin">';
+		$form['submit']['#suffix'] ='</div>';
+		$form['submit']['#attributes'] = array('class' => 'btn-large btn');
+		
+		//点击账户密码特效
+		$form['name']['#prefix'] ='<div id="email_click">';
+		$form['name']['#suffix'] ='</div>';
+		$form['pass']['#prefix'] ='<div id="pass_click">';
+		$form['pass']['#suffix'] ='</div>';
+		
 	}
+	
 	if($form_id == 'user_login'){
 		$form['name']['#description']=FALSE;
 		$form['pass']['#description']=FALSE;
 	}
 	if($form_id == 'user_register'){
-		$form['Personal information']['#access']=FALSE;
+		//$form['Personal information']['#access']=FALSE;
 		$form['account']['name']['#description']=FALSE;
 		$form['account']['mail']['#description']=FALSE;
 		$form['account']['pass']['#description']=FALSE;		
+			
+		$form['account']['mail']['#title']='邮箱';
+		$form['submit']['#value']='确定';
+		$form['submit']['#prefix']='<div class="vp_register_submit">';
+		$form['submit']['#suffix']='</div>';
+		
+		//unset($form['regcode']);
+		if(module_exists('regcode_voucher')){
+			$form['regcode']['#access']=FALSE;	
+			$form['regcode']['regcode_code']['#default_value']=$_SESSION['reg_code'];
+		}
+		if($_SESSION['roles']!='Seller'){
+			$form['vp_contact']['#access']=FALSE;		
+		}
+		if(isset($form['Personal information'])){
+			$form['Personal information']['profile_sex']['#type'] = 'radios';
+			unset($form['Personal information']['profile_sex']['#options'][0]);// = 'Not specified';			
+		}
+			//dvm($_SESSION['roles']);
+			//dvm($_SESSION['reg_code']);
+			
+			//if卖家。注册需要验证，24小时。
+			//else 推荐卖家 -》推荐买家->首页。 
+			//user/register/Seller
+			if(arg(2)=='Sale'||arg(2)=='Buyer'){
+				//unset($form['#submit']);
+				$form['#submit'] = array();
+				array_push($form['#submit'],'vp_user_register_submit');
+			}
+			
+			//主题化：排列顺序
+			$form['submit']['#weight']=100;
+			
+		
+					dpm($_SESSION);
+			//新浪微博 认证后设置默认值。
+			if($_SESSION['sina_account']){
+				$form['account']['name']['#default_value']=$_SESSION['sina_account']['name'];
+			}
+			//$_SESSION['sina_account']=$ac;
+			//$_SESSION['sina_user_info']=$json;
+			if($sina_user_info=$_SESSION['sina_user_info']){					
+					$form['Personal information']['profile_province']['#default_value']=$sina_user_info->province;
+					$form['Personal information']['profile_city']['#default_value']=$sina_user_info->city;
+					if($sina_user_info->gender=='m'){
+						$form['Personal information']['profile_sex']['#default_value']='男';	
+					}elseif($sina_user_info->gender=='f'){
+						$form['Personal information']['profile_sex']['#default_value']='女';	
+					}
+					$form['vp_contact']['profile_weibo']['#default_value']='http://weibo/'.($sina_user_info->domain?$sina_user_info->domain:$sina_user_info->id);
+					
+					
+			};
 	}
 	if($form_id == 'user_profile_form'){
 		//$form['Personal information']['#access']=FALSE;
@@ -39,7 +204,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		$form['account']['pass']['#description']=FALSE;	
 		$form['locale']['#access']=FALSE;
 		$form['signature_settings']['signature_format']['#access']=FALSE;
-		$form['signature_settings']['signature']['#description']='您在本站的个性签名，不影响您的新浪微博签名。';
+		$form['signature_settings']['signature']['#description']='您在本站的个性签名，不影响您的新浪微博签名。0/140';
 		$form['signature_settings']['signature']['#cols']=20;	 
 		$form['signature_settings']['signature']['#rows']=4;
 		global $user;
@@ -47,25 +212,38 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		if($mail==$user->init||preg_match('/@weipujie.com/', $mail)){
 			$form['account']['mail']['#default_value']='请在这里输入您的邮箱';
 		}
+		//////////////////////////
+		//user_profile_form 如果已经输入邀请了，修改资料里不显示该项。
+		if(regcode_user_load()){$form['regcode'] ['#access']=FALSE;}
+		// vp用户资料定制，和Personal%20information加起来。
+		//if(!$form['Personal_information']&&!$form['Personal information'])
+		//$form['Personal_information'] = _user_forms($edit, $account, 'Personal information');
+		//性别 单选
+		if(isset($form['Personal information'])){
+			$form['Personal information']['profile_sex']['#type'] = 'radios';
+			unset($form['Personal information']['profile_sex']['#options'][0]);// = 'Not specified';			
+		}
+		// 邮箱-》密码-》确认密码-》昵称
+		$form['account']['mail']['#weight']=1;
+		$form['account']['pass']['#weight']=2;
+		$form['account']['name']['#weight']=3;
+		$form['account']['name']['#title']='昵称';
+		$form['account']['status']['#weight']=4;
+		$form['account']['roles']['#weight']=5;
+		
+		$form['signature_settings']['signature']['#title']='个人介绍';
+		
+		//$form['#submit'][]='vp_user_profile_form_submit';//($form, &$form_state, $category='vp_contact') ;
+		//$form['#submit'][]=vp_user_profile_form_submit($form, &$form_state, $category='Personal information') ;
+		//$form['#validate'][]=vp_user_profile_form_validate($form, &$form_state, $category='vp_contact') ;
+		//$form['#validate'][]='vp_user_profile_form_validate';//($form, &$form_state, $category='Personal information') ;
+		// 删除头像 /?q=user/1/edit	
+		$form['picture']['picture_delete']['#access']=FALSE;
+		$form['picture']['#weight']=-11;
+		$form['picture']['picture_upload']['#title']='上传一张自己的图片';
+		$form['picture']['picture_upload']['#description']='<a id="vp-upload-userinfo">上传我的照片</a>';
 	}
-	//登录表单 主题修饰
-	if (variable_get('sina_open_is_login', 1) && ($form_id == 'user_login_block')) {
-    
-    $form['sina_open_links'] = array(
-      '#value' => theme('item_list', array(array(
-        'data' => '<a href="'.url('sina_open/t_login').'"><img src="'.drupal_get_path('theme','vp').'/images/log_btn1.jpg"/></a>',//l('', 'sina_open/t_login'),
-        'class' => 'sina_open_login_links'
-      ))),
-      '#weight' => 1,
-    );
-     //$form['name']['#default_value'] ='邮箱/用户名';		 
-		 $form['name']['#prefix'] = '<div id="email_click">'; 
-	   $form['name']['#suffix'] = '</div>';
-		 
-		 //$form['pass']['#default_value'] ='密码';
-		 $form['pass']['#prefix'] = '<div id="pass_click">'; 
-     $form['pass']['#suffix'] = '</div>';
-  }
+	
 	//对私信的主题处理 发私信	
 	if($form_id == 'privatemsg_new'){
 		if(arg(1)=='new'){
@@ -95,10 +273,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		$form['regcode_submit']['#value']= '确定';		
 				
 	}
-	//user_profile_form 如果已经输入邀请了，修改资料里不显示该项。
-	if($form_id == 'user_profile_form'&&regcode_user_load()){
-		$form['regcode'] ['#access']=FALSE;
-	}
+
   //return $form;
   //修改 评论：*隐藏  
   if($form_id == 'comment_form'){
@@ -117,24 +292,18 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		$form['name']['#title']='邮箱/用户名';
 		unset($form['sina_open_links']);
 	}
-	//修改 ?q=user/register
-  if($form_id == 'user_register'){
-		$form['account']['mail']['#title']='邮箱';
-		$form['submit']['#value']='确定';
-	}
-	// 删除头像 /?q=user/1/edit
-	if($form_id == 'user_profile_form'){
-		$form['picture']['picture_delete']['#access']=FALSE;
-	}
+
+
 	 	$dispalyNone_forms = array(
 		'weibo_page_default',
 		'devel_execute_block_form',
 		'search_theme_form',
 		'search_block_form',
-		'devel_switch_user_form',
-		'user_login_block','profile_field_form'
+		'devel_switch_user_form'
+		,'user_login_block'
+		,'profile_field_form'
 		,'system_modules'
-		,'weibo_node_form'
+		//,'weibo_node_form'
 		,'collapse_node_form'
 		//,'hidden_node_form'
 		//,'collapse_node_form'
@@ -144,12 +313,16 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		,'regcode_voucher'
 		,'comment_form'
 		,'user_profile_form'
+		,'privatemsg_new'
+		,'privatemsg_list'
 		,'user_pass'
 		,'user_register'
 		,'user_login'
+		,'dblog_filter_form'
 	);
 	if(in_array($form_id, $dispalyNone_forms)){
 		//donothing...
+		 
 	}else{
 		if(function_exists(dpm)) dpm($form,$form_id);
 		//
@@ -158,6 +331,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		}
 	}
 }
+
 function regcode_voucher_submit2($form, $form_state) {
 	  $edit    = $form_state['values'];
   $account = $GLOBALS['user'];
@@ -188,10 +362,10 @@ function regcode_voucher_submit2($form, $form_state) {
   drupal_goto("user/$account->uid/edit"); //dale edit。。。输入注册邀请码 表单跳转  
 }
 function sina_vp_theme_init(){
-	
-		//如果没有输入注册码，跳出输入表单
-		drupal_add_css(drupal_get_path('theme', 'vp').'/dialog.css');		 
-		drupal_add_js(drupal_get_path('theme', 'vp').'/dialog.js');
+	if(module_exists(flag)){//喜欢功能+1
+		drupal_add_js(drupal_get_path('module', 'flag') .'/theme/flag.js');
+		drupal_add_css(drupal_get_path('module', 'flag') .'/theme/flag.css');
+	}
 	if(!regcode_user_load()){}
 	//滚动
 	//drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/scroll.css');
@@ -199,6 +373,9 @@ function sina_vp_theme_init(){
 	//gotop
 	drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/gotop.css');
 	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/gotop.js');
+	drupal_add_js(drupal_get_path('module', 'sina_vp_theme') .'/sina_vp_theme.js');
+	
+	
 }
 /**
  * Implementation of hook_link().
@@ -263,4 +440,410 @@ function sina_vp_theme_link_alter(&$links, $node, $comment=NULL){
 	}
         // this will sort the $links based on weight
 	array_multisort($weight, SORT_ASC, $links);
+}
+//用户资料的附加资料 表单验证提交。
+
+
+/**
+ * Form builder; Present the form to edit a given user or profile category.
+ *
+ * @ingroup forms
+ * @see user_edit_validate()
+ * @see user_edit_submit()
+ */
+function vp_user_info_edit($user) {//$account, $category = 'account'
+	$account =$user;
+  drupal_set_title(check_plain($account->name));
+  $output = drupal_get_form('user_profile_form', $account, 'account');
+	$output .= drupal_get_form('user_profile_form', $account, 'Personal information');
+	
+		if(in_array('Seller', $account->roles)&&(!$form[vp_contact])){//卖家联系信息 
+			$output .= drupal_get_form('user_profile_form', $account, 'vp_contact');
+		}	
+	return $output;
+}
+
+/**
+ * Submit handler for the user registration form.
+ * 用户注册后的登录处理，如果是卖家-->block24小时，买家直接登录。
+ * 同时处理注册码问题。
+ * This function is shared by the installation form and the normal registration form,
+ * which is why it can't be in the user.pages.inc file.
+ */
+function vp_user_register_submit($form, &$form_state) {
+		
+
+	//$_SESSION['roles'] Seller||Buyer
+	//$_SESSION['reg_code'] = $_REQUEST['regcode'];
+	// dpm($_SESSION['sina_account']);
+	 /**
+	 * Custom submit function for user registration form
+	 * //function logintoboggan_user_register_submit($form, &$form_state)
+	 * @ingroup logintoboggan_form
+	 */
+  $reg_pass_set = !variable_get('user_email_verification', TRUE);
+
+  // Test here for a valid pre-auth -- if the pre-auth is set to the auth user, we
+  // handle things a bit differently.
+  $pre_auth = logintoboggan_validating_id() != DRUPAL_AUTHENTICATED_RID;
+
+  // If we are allowing user selected passwords then skip the auto-generate function
+  // The new user's status should default to the site settings, unless reg_passwd_set == 1
+  // (immediate login, we are going to assign a pre-auth role), and we want to allow
+  // admin approval accounts access to the site.
+  if ($reg_pass_set) {
+    $pass = $form_state['values']['pass'];
+    $status = 1;
+  }
+  else {
+    $pass = user_password();
+    $status = variable_get('user_register', 1) == 1;
+  }
+
+  // Must unset mail confirmation to prevent it from being saved in the user table's 'data' field.
+  if (isset($form_state['values']['conf_mail'])) { unset($form_state['values']['conf_mail']); }
+
+  if (array_intersect(array_keys($form_state['values']), array('uid', 'roles', 'init', 'session', 'status'))) {
+    watchdog('security', 'Detected malicious attempt to alter protected user fields.', array(), WATCHDOG_WARNING);
+    $form_state['redirect'] = 'user/register';
+    return;
+  }
+
+  // The unset below is needed to prevent these form values from being saved as user data.
+  unset($form_state['values']['form_token'], $form_state['values']['submit'], $form_state['values']['op'], $form_state['values']['notify'], $form_state['values']['form_id'], $form_state['values']['form_build_id'], $form_state['values']['affiliates'], $form_state['values']['destination']);
+
+  // Set the roles for the new user -- add the pre-auth role if they can pick their own password,
+  // and the pre-auth role isn't anon or auth user.
+  $validating_id = logintoboggan_validating_id();
+  $roles = isset($form_state['values']['roles']) ? array_filter($form_state['values']['roles']) : array();
+  if ($reg_pass_set && ($validating_id > DRUPAL_AUTHENTICATED_RID)) {
+    $roles[$validating_id] = 1;
+  }
+	
+	//$_SESSION['sina_account']
+  $edit = array_merge($form_state['values'], array('pass' => $pass, 'init' => $form_state['values']['mail'], 'roles' => $roles, 'status' => $status));
+  //用户注册后的登录处理，如果是卖家-->block24小时，买家直接登录。
+  if($_SESSION['roles']=='Seller'){
+  	$status = 0;//'block' => 'block'
+  	$edit = array_merge($form_state['values'], array('pass' => $pass, 'init' => $form_state['values']['mail'], 'roles' => $roles, 'status' => $status));
+  } 
+	//$_SESSION['sina_user_info']	
+  if($_SESSION['sina_user_info']){ //新浪用户
+  	$user_info_add = array(
+			'signature' => $_SESSION['sina_user_info']->description,
+			'picture' => $_SESSION['sina_user_info']->profile_image_url,
+		);
+  	$edit =array_merge($edit,$user_info_add);
+  	/*
+          if (!$account = user_save('', $ac)) {
+            drupal_set_message('无法注册帐号', 'error');
+            drupal_goto('user/register');
+          }
+          
+          db_query("INSERT INTO {sina_open_user} (uid, sina_uid, sina_name, token, config) VALUES ('%s', '%s', '%s', '%s', '')",
+          $account->uid, $sina_uid, $authname, serialize($tok));
+          drupal_set_message('已为你成功创建帐号，随机密码：'.$pass.'，如果你需要从本站直接登录，请记住此密码或'.l('立即修改', 'user/'.$account->uid.'/edit'));
+          user_external_login($account);
+					*/
+  }
+  $account = user_save('', $edit);
+	if($_SESSION['sina_user_info']){
+		db_query("INSERT INTO {sina_open_user} (uid, sina_uid, sina_name, token, config) VALUES ('%s', '%s', '%s', '%s', '')",
+    $account->uid, $_SESSION['sina_user_info']->id, $_SESSION['sina_user_info']->name, serialize($_SESSION['sina_tok']));
+    //drupal_set_message('已为你成功创建帐号，随机密码：'.$pass.'，如果你需要从本站直接登录，请记住此密码或'.l('立即修改', 'user/'.$account->uid.'/edit'));
+    //user_external_login($account);
+	}
+  // Add plain text password into user account to generate mail tokens.
+  $account->password = $pass;
+  $form_state['user'] = $account;
+
+  watchdog('user', 'New user: %name (%email).', array('%name' => $account->name, '%email' => $account->mail), WATCHDOG_NOTICE, l(t('edit'), 'user/'. $account->uid .'/edit'));
+
+  $login_url = variable_get('user_register', 1) == 1 ? logintoboggan_eml_validate_url($account) : NULL;
+
+  // Compose the appropriate user message--admin approvals don't require a validation email.
+  if($reg_pass_set && variable_get('user_register', 1) == 1) {
+    if ($pre_auth) {
+      $message = t('A validation e-mail has been sent to your e-mail address. In order to gain full access to the site, you will need to follow the instructions in that message.');
+    }
+    else {
+      $message = '';
+    }
+  } else {
+    $message = t('Your password and further instructions have been sent to your e-mail address.');
+  }
+
+  if (variable_get('user_register', 1) == 1) {
+
+    // Create new user account, no administrator approval required.
+    $mailkey = 'register_no_approval_required';
+
+  } elseif (variable_get('user_register', 1) == 2) {
+
+    // Create new user account, administrator approval required.
+    $mailkey = 'register_pending_approval';
+
+    //$message = t('Thank you for applying for an account. Your account is currently pending approval by the site administrator.<br />Once it has been approved, you will receive an e-mail containing further instructions.');
+  }
+
+  // Mail the user.
+  _logintoboggan_mail_notify($mailkey, $account, $login_url);
+
+  drupal_set_message($message);
+	//注册码处理。
+	if(module_exists(regcode_voucher)){//begin regcode_voucher_submit
+		//regcode_voucher_submit($form, $form_state);
+		
+	  $edit    = $form_state['values'];
+	  //$account = $GLOBALS['user'];
+	
+	  // We cannot simply call user_save here because any module that expects
+	  // the $edit variable to contain their form data will be disappointed.
+	  // This includes the simplenews, profile, and especially the role_expire
+	  // module which cause a notice error, a blank profile, and wiped out
+	  // user roles respectively.
+	  $code = regcode_use_helper($edit, $account);
+	  if (is_object($code)) {
+	    drupal_set_message(variable_get('regcode_voucher_message', t('Voucher code used successfully.')));
+	  }
+	  
+	  // Make use of $edit which has been changed by the hooks to see what roles need to be saved
+	  // Again, we can't call user_save($account, array('roles' => $edit['roles'])) because the
+	  // role_expire module deletes all of the roles because it's stupid.
+	  if (!empty($edit['roles'])) {
+	    foreach ($edit['roles'] as $rid => $role_name) {
+	      if ($rid > DRUPAL_AUTHENTICATED_RID) {
+	        $res = db_query('SELECT uid FROM {users_roles} WHERE uid=%d AND rid=%d', $account->uid, $rid);
+	        if (!$row = db_fetch_object($res)) {
+	          db_query('INSERT INTO {users_roles} (uid, rid) VALUES (%d, %d)', $account->uid, $rid);
+	        }
+	      }
+	    }
+	  }
+	
+	  //drupal_goto('user'); 
+	}//end regcode_voucher_submit
+ 	
+ 	//跳转处理。
+ 	//用户注册后的登录处理，如果是卖家-->block24小时，买家直接登录。
+	if($_SESSION['roles']=='Buyer'){
+		drupal_goto('register_success'); 		
+	  // where do we need to redirect after registration?
+	  $redirect = _logintoboggan_process_redirect(variable_get('logintoboggan_redirect_on_register', ''), $account);
+	
+	  // Log the user in if they created the account and immediate login is enabled.
+	  if($reg_pass_set && variable_get('logintoboggan_immediate_login_on_register', TRUE)) {
+	    $form_state['redirect'] = logintoboggan_process_login($account, $edit, $redirect);
+	  }
+	  else {
+	    // Redirect to the appropriate page.
+	    $form_state['redirect'] = $redirect;
+	  }
+	}elseif($_SESSION['roles']=='Seller'){
+		unset($_SESSION['messages']);
+		drupal_goto('register_success'); 
+	}
+			unset($_SESSION['sina_account']);
+			unset($_SESSION['sina_user_info']);
+			unset($_SESSION['roles']);
+			unset($_SESSION['reg_code']);
+			unset($_SESSION['sina_tok']);
+}
+/*
+ * 新注册用户推荐卖家 页面
+ * $type 最新加入 new 关注最多  发布节点最多（ 最活跃） 
+ */
+function vp_recommend(&$form_state, $type = NULL) {
+	global $user;
+	switch ($type) {
+		case '最新加入':
+				//最新加入的卖家
+				$sql = 'select u.uid from {users} u 
+								INNER JOIN {users_roles} users_roles 
+								ON u.uid = users_roles.uid  
+								WHERE  (users_roles.rid = 3) AND u.status=1  AND u.picture<>"" AND u.uid not in ('.implode(',', $most_focus_uid).') ORDER BY u.created DESC limit 0,2';//
+				$result = db_query($sql);
+				while($value = db_fetch_object($result)){
+							$form['new_seller']['option'][$value->uid] = array('#type' => 'checkbox');
+							//$form['new_seller']['uid'] = $value->uid;			
+					}
+			break;
+		
+		default:
+				//关注最多的卖家
+				$sql = 'select u.uid from {users} u 
+								INNER JOIN {users_roles} users_roles 
+								ON u.uid = users_roles.uid 
+								INNER JOIN {user_relationships} ur 
+								ON ur.requestee_id = u.uid  
+								WHERE  (users_roles.rid = 3) group by u.uid  ORDER BY count(1) desc limit 0,2';// ORDER BY count(1) desc 
+				//requestee_id=uid rid=2   AND u.picture<>"" 
+				$result = db_query($sql);
+				while($value = db_fetch_object($result)){
+							$form['most_focus']['option'][$value->uid] = array('#type' => 'checkbox');
+							$most_focus_uid[] = $value->uid;			
+					}
+			break;
+	}
+
+
+ 	$form['options']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => '确定',
+    '#submit' => array('vp_recommend_submit'),
+  );
+ 	$form['#theme'] = 'vp_recommend';
+	return $form;
+
+}
+
+function vp_recommend_submit($form, &$form_state) {
+	global $user;
+	if($form_state['submitted']){
+		foreach ($form_state['values'] as $requestee_uid => $value) {
+      if($value==1){
+      	user_relationships_request_relationship($user->uid, $requestee_uid, $type = 2, $approved = FALSE);      	
+			}
+    }
+		drupal_set_message(t('已成功关注他们！'));
+	}
+  $form_state['values']['#redirect'] = 'UCenter';//$form_state['redirect'] = 'UCenter';
+  return;
+}
+function theme_vp_recommend($form){
+	
+	$has_posts = isset($form['most_focus']['option']) && is_array($form['most_focus']['option']);
+  if ($has_posts) {
+  	$count = 0;
+	  foreach (element_children($form['most_focus']['option']) as $uid) {	  	
+	  	++$count;
+			//if($count>2) break;
+			$option = drupal_render($form['most_focus']['option'][$uid]);
+			$account = user_load($uid);
+			$picture = $account->picture;
+			$picture = $picture?$picture:'/sites/default/files/users/0.gif';
+			$grey = drupal_get_path('module', 'sina_vp_imagetool').'/images/grey.gif';
+			imagecache_generate_image('65x65',  $picture);
+			$picture = imagecache_create_path('65x65', $picture);
+			
+			$user_link = 'UCenter/0/'.$uid;
+			$output .= '<div class="dpdianpu-content '.($count/2?"odd":"even").'">
+						<div class="dpdianpu-pic">'
+						.l(theme('imagecache', '65x65', $grey, '', '', array('class'=>'lazy','data-original'=>'/'.$picture),FALSE),$user_link,array('html'=>TRUE,'attributes'=>array('class'=>'vp-user-pic-link')))
+			.'</div>
+						<div class="dpdianpu-xx">
+							<p class="dpdpname">'.$account->name.'</p>
+							<p class="dpdpgg">'.($account->signature?$account->signature:'暂无店铺介绍').'</p>
+							'.$option.'
+						</div>
+						<div class="dpdianpu-dy">
+							<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
+							<p>已订阅</p>
+						</div>						
+					</div>';
+	  }
+					$output .=$output;		
+	}
+	$has_posts = isset($form['new_seller']['option']) && is_array($form['new_seller']['option']);
+  if ($has_posts) {
+  	$count = 0;
+	  foreach (element_children($form['new_seller']['option']) as $uid) {
+	  	//if($count>2) break;
+	  	++$count;
+			$option = drupal_render($form['new_seller']['option'][$uid]);
+			
+			$account = user_load($uid);
+			$picture = $account->picture;
+			$picture = $picture?$picture:'/sites/default/files/users/0.gif';
+			$grey = drupal_get_path('module', 'sina_vp_imagetool').'/images/grey.gif';
+			imagecache_generate_image('65x65',  $picture);
+			$picture = imagecache_create_path('65x65', $picture);
+			
+			$user_link = 'UCenter/0/'.$uid;
+			$output .= '<div class="dpdianpu-content '.($count/2?"odd":"even").'">
+						<div class="dpdianpu-pic">'
+						.l(theme('imagecache', '65x65', $grey, '', '', array('class'=>'lazy','data-original'=>'/'.$picture),FALSE),$user_link,array('html'=>TRUE,'attributes'=>array('class'=>'vp-user-pic-link')))
+			.'</div>
+						<div class="dpdianpu-xx">
+							<p class="dpdpname">'.$account->name.'</p>
+							<p class="dpdpgg">'.($account->signature?$account->signature:'暂无店铺介绍').'</p>
+							'.$option.'
+						</div>
+						<div class="dpdianpu-dy">
+							<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
+							<p>已订阅</p>
+						</div>						
+					</div>';
+				
+	  }		
+	}
+ 	$output .= drupal_render($form);
+  return  $output;
+}
+/*
+ * 新注册用户推荐买家 页面
+ */
+function vp_recommend_user(&$form_state, $type = NULL) {
+	global $user;
+	//获取新浪朋友～！
+	
+	//关注最多的买家
+	$sql = 'select u.name,u.uid,u.picture from {users} u 
+					INNER JOIN {users_roles} users_roles 
+					ON u.uid = users_roles.uid 
+					INNER JOIN {user_relationships} ur 
+					ON ur.requestee_id = u.uid  
+					WHERE  (users_roles.rid = 5) group by u.uid  ORDER BY count(1) desc limit 0,6';// ORDER BY count(1) desc 
+	//requestee_id=uid rid=2   AND u.picture<>"" 
+	$result = db_query($sql);
+	while($value = db_fetch_object($result)){
+				$form['most_focus']['option'][$value->uid] = array('#type' => 'checkbox');
+				$form['most_focus']['uid'][$value->uid] =  array('#value' =>$value->uid );
+				$form['most_focus']['name'][$value->uid] =  array('#value' =>$value->name );
+				$form['most_focus']['picture'][$value->uid] =  array('#value' =>$value->picture );
+				
+		}
+	//最新加入的卖家
+	$sql = 'select u.name,u.uid,u.picture from {users} u 
+					INNER JOIN {users_roles} users_roles 
+					ON u.uid = users_roles.uid  
+					WHERE  (users_roles.rid = 3) AND u.status=1  AND u.picture<>""  ORDER BY u.created DESC limit 0,6';//
+	$result = db_query($sql);
+	while($value = db_fetch_object($result)){
+				$form['new_seller']['option'][$value->uid] = array('#type' => 'checkbox');
+				$form['new_seller']['uid'][$value->uid] =  array('#value' =>$value->uid );
+				$form['new_seller']['name'][$value->uid] =  array('#value' =>$value->name );
+				$form['new_seller']['picture'][$value->uid] =  array('#value' =>$value->picture );
+		}
+ 	$form['options']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => '确定',
+    '#submit' => array('sina_vp_recommend_submit'),
+  );
+	$form['options']['skip'] = array(
+      '#type' => 'button', 
+      '#value' => '跳过', 
+	);
+	$form['select_all']=array(
+		'#type'=>'markup',
+		'#value'=>'<span calss="select-all4vp"><input id="select-all4vp" type="checkbox" class="form-checkbox" title="选择所有">全选</span>',
+		
+	);
+ 	$form['#theme'] = 'vp_recommend';
+	return $form;
+ 
+}
+
+function vp_recommend_submit_user($form, &$form_state) {
+	global $user;
+	if($form_state['submitted']){
+		foreach ($form_state['values'] as $requestee_uid => $value) {
+      if($value==1){
+      	user_relationships_request_relationship($user->uid, $requestee_uid, $type = 2, $approved = FALSE);      	
+			}
+    }
+		drupal_set_message(t('已成功关注他们！'));
+	}
+  $form_state['values']['#redirect'] = 'UCenter';//$form_state['redirect'] = 'UCenter';
+  return;
 }

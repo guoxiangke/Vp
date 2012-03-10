@@ -98,7 +98,7 @@ function sina_vp_nodeapi(&$node, $op){
 						if ($result->code == 200) {
 							drupal_set_message($message = '同步删除成功！', $type = 'status', $repeat = TRUE);
 							//if(function_exists(dpm)) dpm();				$data=json_decode($result->data);.$data->error
-						} else {						
+						} else {					
 							drupal_set_message('同步删除失败！', $type = 'warning', $repeat = TRUE);
 							return false;
 						}	      
@@ -140,7 +140,7 @@ function sina_vp_nodeapi(&$node, $op){
 		      	}
 	        break;
 					case 'view':
-	          if($user->uid <> $node->uid&&$user->uid<>1){	          	
+	          if($user->uid <> $node->uid&&$user->uid<>1){        	
 	          	drupal_set_message($message = '刚才的页面,<您>无权查看！', $type = 'warning', $repeat = TRUE);
 	          	drupal_goto('node');
 	          }
@@ -216,9 +216,9 @@ function sina_vp_access($op, $node, $account) {
 } */
 function sina_vp_init(){
 	// popups_add_popups(array('#mylink2=>array('reloadWhenDone'=>TRUE))));
-	 popups_add_popups(); 
+	// popups_add_popups(); 
 	 //popups_add_popups(array('.login_link'=>array('updateMethod'=>'reload')));
-	 popups_add_popups(array('#login_link_8' => array('reloadWhenDone' => TRUE),'updateMethod'=>'reload','updateSource'=>'final')); 
+	// popups_add_popups(array('#login_link_8' => array('reloadWhenDone' => TRUE),'updateMethod'=>'reload','updateSource'=>'final')); 
   //drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/sina.user.page.css');
 	
 	//drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/highslide.css');
@@ -275,7 +275,7 @@ function sina_vp_menu() {
     'type' => MENU_CALLBACK,
   );
   $items['vp/comment_ajax/%node'] = array(//评论
-    'page callback' => 'comment_render_4vp',
+    'page callback' => comment_render_4vp,
     'page arguments' => array(2),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
@@ -289,7 +289,7 @@ function sina_vp_menu() {
 			$vid = $key;
 		}
 	}
-	$Seller_tid = taxonomy_get_term_by_name(t('Seller'));
+	$Seller_tid = taxonomy_get_term_by_name('Seller');
 	$parent = $Seller_tid['0']->tid; //22
 	$Seller_taxonomy_tree=taxonomy_get_tree($vid, $parent, $depth = -1, $max_depth = NULL);
 	foreach($Seller_taxonomy_tree as $term){
@@ -494,17 +494,56 @@ function sina_vp_menu() {
 		'type' => MENU_NORMAL_ITEM,
 		'menu_name' => 'primary-links',
   );
+	$items['VCenter/Sub_most'] = array(//Subscribe to a maximum of 订阅最多
+    'title' => t('微铺街'),
+    'page callback' => 'sina_VCenter_page',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '店铺列表',
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -10,
+		'type' => MENU_CALLBACK,		
+  );
+	$items['VCenter/New'] = array(//最新加入
+    'title' => t('微铺街'),
+    'page callback' => 'sina_VCenter_page',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '店铺列表',
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -10,
+		'type' => MENU_CALLBACK,		
+  );
+  	$items['VCenter/Active'] = array(//最新更新
+    'title' => t('微铺街'),
+    'page callback' => 'sina_VCenter_page',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '店铺列表',
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -10,
+		'type' => MENU_CALLBACK,		
+  );
 	//新品展示页
-	$items['News'] = array(
+	$items['plaza'] = array(
     'title' => t('新品'),
-    'page callback' => 'sina_vp_Activity',
+    'page callback' => 'sina_vp_plaza',
     'access callback' => TRUE,
     'description' => '所有的活动',
     'file' => 'sina_vp.pages.inc',
     'weight' => -11,
     'menu_name' => 'primary-links',
   );
-	$items['News/%user'] = array(//%user_uid_optional
+	$items['plaza/News'] = array(
+    'title' => t('新品'),
+    'page callback' => 'sina_vp_plaza',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'description' => '所有的活动',
+    'file' => 'sina_vp.pages.inc',
+    'weight' => -11,    
+  );
+	$items['plaza/News/%user'] = array(//%user_uid_optional
     'title' => t('谁的更多新品'),
     'title callback'=>'whoisActivity',
     'title arguments'=> array(0,1),
@@ -512,7 +551,7 @@ function sina_vp_menu() {
     'description' => '谁的新品',
   );	
   //Activity 活动更多。。。Activity/uid
-	$items['Activity'] = array(
+	$items['plaza/Activity'] = array(
     'title' => t('活动'),
     'page callback' => 'sina_vp_Activity',
     'access callback' => TRUE,
@@ -521,7 +560,7 @@ function sina_vp_menu() {
     'weight' => -12,
     'menu_name' => 'primary-links',
   );
-	$items['Activity/%user'] = array(//%user_uid_optional
+	$items['plaza/Activity/%user'] = array(//%user_uid_optional
     'title' => t('谁的更多活动'),
     'title callback'=>'whoisActivity',
     'title arguments'=>  array(0,1),
@@ -529,7 +568,7 @@ function sina_vp_menu() {
     'description' => '谁的更多活动',
   );
 	//爆款展示页
-	$items['Special'] = array(
+	$items['plaza/Special'] = array(
     'title' => t('爆款'),
     'page callback' => 'sina_vp_Activity',
     'access callback' => TRUE,
@@ -538,7 +577,7 @@ function sina_vp_menu() {
     'weight' => -13,
     'menu_name' => 'primary-links',
   );
-	$items['Special/%user'] = array(//%user_uid_optional
+	$items['plaza/Special/%user'] = array(//%user_uid_optional
     'title' => t('谁的更多爆款'),
     'title callback'=>'whoisActivity',
     'title arguments'=> array(0,1),
@@ -546,7 +585,7 @@ function sina_vp_menu() {
     'description' => '谁的爆款',
   );
 		//特卖展示页
-	$items['Sale'] = array(
+	$items['plaza/Sale'] = array(
     'title' => t('特卖'),
     'page callback' => 'sina_vp_Activity',
     'access callback' => TRUE,
@@ -555,7 +594,7 @@ function sina_vp_menu() {
     'weight' => -14,
     'menu_name' => 'primary-links',
   );
-	$items['Sell/%user'] = array(//%user_uid_optional
+	$items['plaza/Sell/%user'] = array(//%user_uid_optional
     'title' => t('谁的更多特卖'),
     'title callback'=>'whoisActivity',
     'title arguments'=> array(0,1),
@@ -564,7 +603,7 @@ function sina_vp_menu() {
   );
 
 //某卖家的真人秀展示页
-	$items['Show'] = array(
+	$items['plaza/Show'] = array(
     'title' => t('真人秀'),
     'page callback' => 'sina_vp_Activity',
     'access callback' => TRUE,
@@ -573,7 +612,7 @@ function sina_vp_menu() {
     'weight' => -20,
     'menu_name' => 'primary-links',
   );
-	$items['Show/%user'] = array(//%user_uid_optional
+	$items['plaza/Show/%user'] = array(//%user_uid_optional
     'title' => t('谁的更多真人秀'),
     'title callback'=>'whoisActivity',
     'title arguments'=> array(0,1),
@@ -581,7 +620,7 @@ function sina_vp_menu() {
     'description' => '谁的真人秀',
   );
 //某卖家的转让潮展示页
-	$items['Transfer'] = array(
+	$items['plaza/Transfer'] = array(
     'title' => t('转让潮'),
     'page callback' => 'sina_vp_Activity',
     'access callback' => TRUE,
@@ -590,7 +629,7 @@ function sina_vp_menu() {
     'weight' => -21,
     'menu_name' => 'primary-links',
   );
-	$items['Transfer/%user'] = array(//%user_uid_optional
+	$items['plaza/Transfer/%user'] = array(//%user_uid_optional
     'title' => t('谁的更多转让潮'),
     'title callback'=>'whoisActivity',
     'title arguments'=> array(0,1),
@@ -605,15 +644,6 @@ function sina_vp_menu() {
     'access callback'  => 'privatemsg_view_access4vp',
     'type'             => MENU_LOCAL_TASK,
     'weight'           => -5,
-  );
-	//推荐关注页
-	$items['guide_recommend'] = array( 
-    'title' => t('为你推荐'),
-    'page callback' => 'drupal_get_form',
-    'page arguments'   => array('sina_vp_recommend'),
-    'access callback' => TRUE,
-    'file' => 'sina_vp.pages.inc',
-    'type' => MENU_CALLBACK,
   );
 
 	return $items;
@@ -907,11 +937,16 @@ function sina_vp_form_alter(&$form, &$form_state, $form_id) {
 		$form['title']['#autocomplete_path']='user/autocomplete';
 		$form['flag']['#access']=FALSE;
 		$form['body_field']['#access']=FALSE;				
-		$form['taxonomy']['#access']=FALSE; // 关于分类 还需要做autotag
-	  $form['taxonomy']['2']['#disabled']=TRUE;
+		//$form['taxonomy']['#access']=FALSE; // 关于分类 还需要做autotag
+	  //$form['taxonomy']['2']['#disabled']=TRUE;
+	  $form['taxonomy']['tags']['1']['#access']=FALSE;
 		$form['#validate'][] = 'weibo_node_form_tags_validate';//话题##
 		$form['#validate'][] = 'weibo_node_form_maxlength_validate';		
 		$form['#validate'][]= 'weibo_node_form_img_validate';//微博图片
+		
+		
+	
+			
 	}
 	if($form['sina_open'] && $form_id == 'weibo_node_form'){
 		$form['add_option']=array(
@@ -1228,7 +1263,7 @@ function sina_vp_link($type, $node = NULL, $teaser = FALSE) {
 			    'attributes' => array('title' => t('发布'.$term->name)),
 	  		);
 			}
-			$links['link_6']['title'] = '秀一下';
+			//$links['link_6']['title'] = '秀一下';
 			if($links['comment_add']){$links['comment_add']['title'] = '评论';}			 
 		}
   }
@@ -1390,7 +1425,7 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 				  drupal_set_message('同步失败，请检查您的网络！', 'error');
 				  //return false;
 				}
-				//if(function_exists(dpm)) dpm($result,'图片微博返回数据');
+				if(function_exists(dpm)) dpm($result,'图片微博返回数据');
 				_sina_vp_db_write(json_encode($result),$node,$tid,$nid);	
 			}else{
 				_sina_vp_db_write('',$node,$tid,$nid);
@@ -1414,9 +1449,9 @@ function sina_vp_time_format($created_at){
 		return '今天 '.date("H:i",$created_at);
 	}elseif(date("Y")==date("Y",$created_at)){
 		//return date("<p>m月d日</p><p>H:i</p>",$created_at);
-		return 	'<p>'.date('m月d日',$created_at).'</p>'.'<p>'.date('H:i',$created_at).'</p>';
+		return 	date('m月d日',$created_at).date('H:i',$created_at);
 	}else{
-		return 	'<p>'.date('Y-m-d',$created_at).'</p>'.'<p>'.date('H:i',$created_at).'</p>';
+		return 	date('Y-m-d',$created_at).date('H:i',$created_at);
 	}
 }
 /**
@@ -1495,9 +1530,6 @@ function node_link_alter($type, $node = NULL, $teaser = FALSE) {
 function sina_vp_theme() {
   return array(
   	'weibo_page_default' => array(
-    	'arguments' => array('form' => NULL)
-    ),
-    'sina_vp_recommend' => array(
     	'arguments' => array('form' => NULL)
     ),
   );
@@ -1581,9 +1613,10 @@ function sina_vp_user($op, &$edit, &$account, $category = NULL) {
 				$user->picture = "sites/default/files/$user_picture_path/picture-$user->uid.jpg";
 				$handle = fopen($user->picture, "w+");
 				fwrite ( $handle , $string );
-				drupal_write_record('users', $user, 'uid');
+        drupal_write_record('users', $user, 'uid');
 			}
 			if(!$user->signature &&($params['user_id'] = sina_vp_get_sina_uid($account->uid))){
+				//$params['user_id'] = sina_vp_get_sina_uid($account->uid);
 				//$params['user_id'] = sina_vp_get_sina_uid($account->uid);
 				//按用户ID或昵称返回用户资料以及用户的最新发布的一条微博消息。
 				$request_url = 'http://api.t.sina.com.cn/users/show.json';
@@ -1591,7 +1624,7 @@ function sina_vp_user($op, &$edit, &$account, $category = NULL) {
 				
 				if ($result->code == 200) {					        
 	        $user->signature = json_decode($result->data)->description;
-	      } else {
+	      }else {
 	        drupal_set_message('个性签名获取失败', 'error');
 	      }
 				drupal_write_record('users', $user, 'uid');
@@ -1649,16 +1682,15 @@ function sina_vp_user($op, &$edit, &$account, $category = NULL) {
 		case 'register':
 		// Add a fieldset containing radio buttons to the
 		// user registration form.
-			$fields['legal_agreement'] = array(
-			'#type' => 'fieldset',
-			'#title' => t('注册条款')//Legal Agreement
-			);
+			 
 			$fields['legal_agreement']['decision'] = array(
 			'#type' => 'checkbox',			
 			'#required' => TRUE,
 			'#title' => t('我同意《'.l('微铺街管理协议','#').'》.'),
 			'#default_value' => 1,
+			
 			);
+			$fields['legal_agreement']['#weight']= 99;
 			return $fields;
 		 
 		// Field values for registration are being checked.
@@ -1988,7 +2020,19 @@ function sina_vp_t_get_info($ac=NULL) {
   }	
 	return $return;
 }
-
+/**
+ * 话题与@内容处理
+ * task_id = 27
+ */
+function sina_vp_content_process($body){
+	$tag_pattern = "/\#([^\#|.]+)\#/";
+	preg_match_all($tag_pattern, $body, $tagsarr);
+	$tags = implode(',',$tagsarr[1]);
+	$user_pattern = "/\@([a-zA-z0-9_]+)/";
+	$body = preg_replace($user_pattern, '<a href="'.$_SERVER["HTTP_REFERER"].'/${1}">@${1}</a>', $body );
+	$body = preg_replace($tag_pattern, '<a href="'.$_SERVER["HTTP_REFERER"].'/search?q=#${1}">#${1}#</a>', $body);
+	return $body;
+}
 /**
  * @} End of "sina.module".
  */

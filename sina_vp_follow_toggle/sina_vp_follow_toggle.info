@@ -1,6 +1,5 @@
-name = follow_toggle
-description = 粉丝toggle操作.
+name = 粉丝toggle操作
+description = sina_follow_toggle
 core = 6.x
 package = A-DEV
-dependencies[] = sina_vp
 dependencies[] = user_relationships_api

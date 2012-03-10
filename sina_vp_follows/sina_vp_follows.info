@@ -2,5 +2,5 @@ name = sina_vp_follows
 description = 用户关系修改 关注 粉丝.
 core = 6.x
 package = A-DEV
-dependencies[] = sina_vp
+//dependencies[] = sina_vp
 //dependencies[] = sina_open

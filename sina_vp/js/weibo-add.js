@@ -3,7 +3,7 @@
 Drupal.behaviors.sina = function (context) {
 	
 	
-	    $('.filefield-upload input.form-submit').css("visibility", "hidden");
+	   // $('.filefield-upload input.form-submit').css("visibility", "hidden");
 	    //$('.filefield-upload input.form-file').css("visibility", "hidden");
 	    $('.filefield-upload input.form-file').change(function() {
 	        var show = $(this).parent().find('input.form-submit').mousedown();

@@ -1,0 +1,46 @@
+
+.image_box{
+			background-color:rgb(233,233,233);
+			color:#333;
+			cursor:pointer;
+			float:left;
+			height:150px;
+			line-height:1.231;
+			margin-bottom:1px;
+			margin-left:0px;
+			margin-right:1px;
+			margin-top:0px;
+			opacity:1;
+			overflow:hidden;
+			padding-bottom:0px;
+			padding-left:0px;
+			padding-right:0px;
+			padding-top:0px;
+			position:relative;
+			width:150px;
+		}
+	.thumb-image{
+
+		color:#333;
+		cursor:pointer;
+		line-height:1.231;
+		margin-top:0px;
+		margin-left:0px;
+	}
+	.normal-image-hidden{
+		color:#333;
+		cursor:pointer;
+		display:none;
+		line-height:1.231;
+	}
+	.status-box{
+		width:516px;
+	}
+	.hidden{
+		clear:both;
+	}
+	
+	
+	.normal-display{
+		clear:both;
+	}

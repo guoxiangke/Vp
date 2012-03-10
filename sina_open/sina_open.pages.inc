@@ -52,7 +52,13 @@ function sina_open_page_t_login() {
  */
 function _sina_open_t_login($tok = NULL) {
   global $user;
-  
+  //dale begin
+  		unset($_SESSION['sina_account']);
+			unset($_SESSION['sina_user_info']);
+			unset($_SESSION['roles']);
+			unset($_SESSION['reg_code']);
+			unset($_SESSION['sina_tok']);
+  //dale end
   $values = array();
   if (isset($tok)) {
     $values['oauth_access_token_key'] = $tok->key;
@@ -64,8 +70,7 @@ function _sina_open_t_login($tok = NULL) {
   
   if ($result = sina_open_t_set_request('http://api.t.sina.com.cn/account/verify_credentials.json', $values)) {
     if ($result->code == 200) {
-      if ($json = json_decode($result->data)) {
-        
+      if ($json = json_decode($result->data)) {        
         $authname = $json->name;
         $sina_uid = $json->id;
         
@@ -73,8 +78,14 @@ function _sina_open_t_login($tok = NULL) {
         
         if ($ac = db_fetch_array($result)) {
           $account = user_load($ac);
-        }
-        
+        }        
+				//dpm($account);
+				watchdog('$account', '<pre>'.print_r($account->status,true));
+				watchdog('$account', '<pre>'.print_r($json,true));
+				//如果卖家用户注册后处于block状态，则跳转到提示under block页面
+	        if (isset($account->uid)){	        	
+						watchdog('$accoun2t', $account->status);
+	        }
         if (isset($account->uid)) {
           // 该微博帐号已经存在
           if ($user->uid) {
@@ -84,7 +95,10 @@ function _sina_open_t_login($tok = NULL) {
               drupal_goto('user/'.$user->uid);
             }
             
-          } else {
+          } elseif(!$account->status){
+        		drupal_set_message('对不起，您的账户还在管理员审核当中，暂时还不能登录！','status');
+						drupal_goto('register_success');
+        	}else {
             user_external_login($account, 'sina_open');
           }
           
@@ -130,7 +144,8 @@ function _sina_open_t_login($tok = NULL) {
             'status' => variable_get('user_register', 1) == 1,
             'auth_sina_open' => $new_name
           );
-          
+          //dale 登录跳转 分角色
+          /*
           if (!$account = user_save('', $ac)) {
             drupal_set_message('无法注册帐号', 'error');
             drupal_goto('user/register');
@@ -140,6 +155,12 @@ function _sina_open_t_login($tok = NULL) {
           $account->uid, $sina_uid, $authname, serialize($tok));
           drupal_set_message('已为你成功创建帐号，随机密码：'.$pass.'，如果你需要从本站直接登录，请记住此密码或'.l('立即修改', 'user/'.$account->uid.'/edit'));
           user_external_login($account);
+					*/
+					$_SESSION['sina_account']=$ac;
+					$_SESSION['sina_user_info']=$json;
+					$_SESSION['sina_tok']=$tok;
+					
+					drupal_goto('enter_regcode');
         }
         
         if (isset($_REQUEST['redirect']) && $_REQUEST['redirect']) {

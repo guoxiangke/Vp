@@ -1,0 +1,77 @@
+<?php
+/**
+ * @author dale
+ * @version $Id$
+ * @copyright dale
+ * @package sina
+ */
+
+/**
+ * 执行一个 http 请求
+ * 		$params['id'] = $mid;//3400244576516952
+		$params['comment'] = urlencode($text. $url);
+		$params['without_mention'] = 0;
+		$params['comment_ori'] = 1;
+		if($t_set_request&&$mid){			
+			$result = sina_open_t_set_request($request_url,$params);
+			$data = json_decode($result->data);
+			if ($result->code == 200) {
+				drupal_set_message('评论已成功同步到新浪微博!');	
+			} else {
+				drupal_set_message('评论失败，新浪微博返回结果： '.$data->error);
+			}	
+		}
+ * //https://api.weibo.com/oauth2/access_token
+ * ?client_id=YOUR_CLIENT_ID
+ * &client_secret=YOUR_CLIENT_SECRET
+ * &grant_type=authorization_code
+ * &redirect_uri=YOUR_REGISTERED_REDIRECT_URI&code=CODE
+ * 
+ */
+function weibo_init(){
+	//$client_id = 2539040100;
+	//$client_secret = 'f6de9975387886fc88a509e9dc13dc33';
+	define( "WB_AKEY" , '2539040100' );
+	define( "WB_SKEY" , 'f6de9975387886fc88a509e9dc13dc33' );
+	define( "WB_CALLBACK_URL" , 'http://dev.weipujie.com/test/oauth2.php' );
+}
+/**
+ * @Implement of hook_user()
+ */
+function weibo_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'load': // case 'login':
+      $result = db_query('SELECT * FROM {sina_open_user} WHERE uid = %d', $account->uid);
+      if ($o = db_fetch_object($result)) {
+        if ($o->token) {
+          $o->token = unserialize($o->token);
+        }
+        
+        if (empty($o->sina_uid)) {
+          sina_open_is_token(true);
+        }
+        
+        $account->sina_open_t = $o;
+      }
+    break;
+    case 'delete':
+      db_query('DELETE FROM {sina_open_user} WHERE uid = %d', $account->uid);
+    
+  }
+}
+function weibo_set_request($http_url, array $request = array(), array $headers = array(), $method = 'POST') {
+  if (!isset($headers['User-Agent'])) {
+    $headers['User-Agent'] = 'Sae T OAuth v0.2.0-beta2';
+  }
+  
+  if (!isset($headers['Content-Type'])) {
+    $headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=utf-8';
+  }
+  
+	foreach ($request as $key => $value) {
+		$request_string[] = $key.'='.$value;
+	}
+  $request_string=implode('&', $request_string);
+  
+  return drupal_http_request($http_url, $headers, $method, $request_string);
+}

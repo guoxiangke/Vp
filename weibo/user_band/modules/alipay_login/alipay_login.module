@@ -1,0 +1,108 @@
+<?php
+// $Id: alipay_login.info,v 0.1 20110504 Felix $
+
+/**
+ * @file
+ * 实现支付宝用户共享登录
+ */
+
+/**
+ * Implementation of hook_menu.
+ */
+function alipay_login_menu() {
+  
+  $items['alipay/login'] = array(
+    'description' => '支付宝用户登录或者绑定',
+    'page callback' => 'alipay_login_page_login',
+    'access callback' => 'user_is_anonymous',
+    'type' => MENU_CALLBACK,
+    'file' => 'alipay_login.pages.inc',
+  );
+  $items['alipay/callback'] = array(
+    'title' => '支付宝共享登录页面跳转同步通知路径',
+    'page callback' => 'alipay_login_page_callback',
+    'access callback' => 'user_is_anonymous',
+    'type' => MENU_CALLBACK,
+    'file' => 'alipay_login.pages.inc',
+  );
+  $items['alipay/address'] = array(
+    'description' => '支付宝用户物流地址',
+    'page callback' => 'alipay_login_user_address',
+    'access callback' => 'user_is_anonymous',
+    'type' => MENU_CALLBACK,
+    'file' => 'alipay_login.pages.inc',
+  );
+  $items['alipay/address/callback'] = array(
+    'title' => '支付宝用户物流地址跳转同步通知路径',
+    'page callback' => 'alipay_login_page_address_callback',
+    'access callback' => 'user_is_anonymous',
+    'type' => MENU_CALLBACK,
+    'file' => 'alipay_login.pages.inc',
+  );
+  $items['admin/settings/band/alipay'] = array(
+    'title' => '支付宝共享登录',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('alipay_login_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'alipay_login.admin.inc',
+  );
+  
+  return $items;
+}
+
+function alipay_login_get_config($op='login'){
+	$alipay_config['partner'] = variable_get('alipay_login_partner', NULL);
+	$alipay_config['key'] = variable_get('alipay_login_key', NULL);
+	$alipay_config['sign_type'] = variable_get('alipay_login_sign_type', 'MD5');
+	$alipay_config['input_charset'] = variable_get('alipay_login_input_charset', 'utf-8');
+	$alipay_config['transport'] = variable_get('alipay_login_transport', 'http');
+	if($op == 'login'){
+		$alipay_config['return_url'] = 'http://'.$_SERVER['HTTP_HOST'].'/alipay/callback';
+	}elseif($op == 'address'){
+		$alipay_config['return_url'] = 'http://'.$_SERVER['HTTP_HOST'].'/alipay/address/callback';
+	}
+	return $alipay_config;
+}
+
+/**
+ * 使用支付宝帐号登录或绑定帐号的权限
+ */
+function alipay_login_is_access() {
+  global $user;
+  return $user->uid > 0 || variable_get('alipay_login_is_login', 1);
+}
+
+/**
+ * Implementation of hook_form_alter
+ */
+function alipay_login_form_alter(&$form, $form_state, $form_id) {
+  if (variable_get('alipay_login_is_login', 1) && ($form_id == 'user_login_block' || $form_id == 'user_login')) {
+    $form['alipay_login_button'] = array(
+      '#type' => 'item',
+      '#value' => alipay_login_render_button(),
+      '#weight' => 12,
+    );
+  }
+  return $form;
+}
+
+function alipay_login_render_button(){
+	$html = '<a href="/alipay/login" alt="使用支付宝帐号登录"><img src="/sites/all/modules/user_band/images/alipay_login.png"></a>';
+	return $html;
+}
+
+/**
+ * @Implement of hook_user()
+ */
+function alipay_login_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'delete':
+      db_query("DELETE FROM {user_band_user} WHERE uid = %d AND thirdpart_type = 'alipay'", $account->uid);
+    break;
+    
+  }
+}
+
+
+
+

@@ -178,7 +178,7 @@ function sina_open_comment(&$comment, $op) {
  * @Implement of hook_user()
  */
 function sina_open_user($op, &$edit, &$account, $category = NULL) {
-  switch ($op) {
+  switch ($op) { 
     case 'load': // case 'login':
       $result = db_query('SELECT * FROM {sina_open_user} WHERE uid = %d', $account->uid);
       if ($o = db_fetch_object($result)) {

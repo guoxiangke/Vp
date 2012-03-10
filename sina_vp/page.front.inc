@@ -8,10 +8,7 @@ function sina_vp_front_page()
   { 
   	return '';
   }else{
-    $output = ' <div class="ad">
-    <a href="javascript:void(0);" class="ups login_link"> 
-    <img src="'.drupal_get_path('theme', 'vp').'/images/ad01.jpg" width="628" height="120" />
-    </a></div>
+    $output = '<div class="innav-pic"><a class="login_link" href="#"><img src="'.drupal_get_path('theme', 'vpj').'/images/1.jpg"></a></div>
     <div class="wblist pad10" id="outCont">';
    
 			
@@ -44,7 +41,8 @@ function sina_vp_front_page()
 			while($value = db_fetch_array($result)){
 				 $show_nid[]=$value['nid'];
 			}
-		drupal_add_js(drupal_get_path('theme', 'vp').'/page-front.js');
+		drupal_add_js(drupal_get_path('theme', 'vpj').'/page-front.js');
+		drupal_add_css(drupal_get_path('theme', 'vpj').'/page-front.css');
     $output .= '<ul id="sliderlck" class="sliderlck">';
 		if($show_nid)
 			foreach($show_nid as $nid) {
@@ -57,10 +55,33 @@ function sina_vp_front_page()
 						$taxonomy_id = 		$obj->tid;	
 					}
 		}
-		$output .= '<li style="opacity: 0.54;">
-      <div class="wb_01 bor_top">
-        <div class="fb_time">'.sina_vp_time_format($node->created).'</div>';
-    $output .='
+		$output .= '<li >
+      <div class="vp-conetnt">
+					<div class="vp-conetnt-left">
+						<div class="vp-user-pic">
+							'.
+            l(theme('imagecache', 'small_picture', $account->picture, $account->name, $account->name, array('class'=>'front-user-picture'))
+            ,'#'
+            ,array('html'=>'true','attributes'=>array('class'=>'login_link')))
+            .'
+						</div>
+					</div>
+					<div class="vp-conetnt-right">
+						<div class="content-info-top">
+							<div class="content-user vp-float">
+								<span class="username">'.l($account->name,'#',array('attributes'=>array('class'=>'login_link'))).'</span>
+								<span class="vp-term">['.$taxonomy_name.']</span>
+								<span class="vp-front-time">'.sina_vp_time_format($node->created).'</span>
+							</div>        
+						</div>
+						<div class="vp-context">
+							<div class="vp-context-body">'.$node->title.'</div>						
+							<div class="clear"></div>					
+						</div>                
+					</div>
+					<div class="clear"></div>
+				</div>'; 
+    $output2 .='
         <div class="fb_nr">
           <div class="fb_yh">
           	<a href="javascript:void(0);" class="login_link">
@@ -81,16 +102,16 @@ new sliderlck({id:"sliderlck"})
 </script>';
        $output .= '</div>';
 		//登录弹出框
-		//drupal_add_css(drupal_get_path('theme', 'vp').'/dialog.css');
-		//drupal_add_js(drupal_get_path('theme', 'vp').'/dialog.js');
 		drupal_add_js(drupal_get_path('module', 'sina_vp_theme').'/plugins/jquery-1.7.1.min.js');
 		drupal_add_css(drupal_get_path('module', 'sina_vp_theme').'/plugins/bootstrap/css/bootstrap.css');
 		drupal_add_js(drupal_get_path('module', 'sina_vp_theme').'/plugins/bootstrap/js/bootstrap-modal.js');
-		drupal_add_js(drupal_get_path('module', 'sina_vp_theme').'/plugins/bootstrap/js/bootstrap-transtion.js');
+	  drupal_add_js(drupal_get_path('module', 'sina_vp_theme').'/plugins/bootstrap/js/bootstrap-transtion.js');
+		//滚动代码
+		
 		//drupal_add_css(drupal_get_path('module', 'sina_vp_theme').'/plugins/twitter/dialog.css');
 		//jquery_ui_add('ui.dialog'); 
     //drupal_add_css("sites/all/libraries/jquery.ui/themes/base/ui.all.css");
-    $output .= '<div class="modal hide fade" id="loginModal" style="display: none;">
+    $output .= '<div class="modal fade" id="loginModal" style="display: none;">
             <div class="modal-header">
               <a data-dismiss="modal" class="close">X</a>
               <h3>请您登录</h3>

@@ -7,21 +7,7 @@ function sina_vp_mobile_menu(){
     'type'             => MENU_CALLBACK,
     'access callback' => TRUE,
   );
-	$items['mobile/feedback'] = array(
-    'title'            => '用户反馈',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('sina_vp_mobile_feedback'),
-    'type'             => MENU_CALLBACK,
-    'access callback' => 'user_access',
-    'access arguments' => array('view feedback'),
-  );
 	return $items;
-}
-
-function sina_vp_mobile_perm(){
-  return array(
-		'view feedback', //查看客户端用户反馈
-	);
 }
 function sina_vp_mobile_init(){
 	//$GLOBALS['MOBILE_MD5'] = '';
@@ -226,9 +212,9 @@ function _sina_vp_mobile(){
 			$output['timestamp']=time();
 			$content = $_REQUEST['content'];//建议内容
 			$passport = $_REQUEST['passport'];//邮箱
-			db_query("INSERT INTO {sina_vp_mobile_feedback}(`mobile_id`,`content` ,`passport` ,`timestamp`)
-						VALUES ('%d','%s','%s','%d')",$mobile_id,$content,$passport,time());	
-			$output['return']='success';
+			db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
+						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);	
+			//$output['return']=sina_vp_mobile_feedback_record();
 			break;
 		case 'get_user':
 			$output['errorCode']='0';
@@ -256,9 +242,9 @@ function _sina_vp_mobile(){
 
 	db_query("INSERT INTO {sina_vp_mobile_log}(`mobile_id`,`timestamp` ,`action` ,`error_code`)
 						VALUES ('%s','%s','%s','%s')",$mobile_id,time(),$action,$error_code);	
-	//return drupal_json($output);
-	dpm($output);
-	return $output;
+	return drupal_json($output);
+	//dpm($output);
+	//return $output;
 }
 function sina_vp_mobile_get_front_page($uid=null){
 	$account = user_load($uid);
@@ -603,7 +589,7 @@ function sina_vp_mobile_get_user($uid){ //必须有uid，下一步做登录时�
 		'profile_province'=>$account->profile_province,	//省 从新浪抓取
 		'profile_city'=>$account->profile_city,		//市 从新浪抓取
 		'loginhistory_count'=>$account->loginhistory_count,//登录次数
-		'roles'=>$roles, //角色 Buyer/Saler null未正确获得角色认证。
+		'$roles'=>$roles, //角色 Buyer/Saler null未正确获得角色认证。
 		//订阅   user_relationships_load(array("requester_id" => $account->uid,"rtid" => $rtid=2),array("count" => TRUE));
 		//关注  user_relationships_load(array("requester_id" => $account->uid,"rtid" => $rtid=1),array("count" => TRUE));
 		//粉丝 user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE));
@@ -616,54 +602,4 @@ function sina_vp_mobile_get_user($uid){ //必须有uid，下一步做登录时�
 	);
 
 	return $output; 
-}
-
-
-/**
- * Menu callback: administer permissions.
- *
- * @ingroup forms
- * @see user_admin_perm_submit()
- * @see theme_user_admin_perm()
- */
-function sina_vp_mobile_feedback($form_state, $rid = NULL) {//message id
-  if (is_numeric($rid)) {
-    $result = db_query('SELECT * FROM {sina_vp_mobile_feedback} r  WHERE r.rid = %d', $rid);
-  }
-  else {
-    $result = db_query('SELECT * FROM {sina_vp_mobile_feedback} WHERE 1 ORDER BY id desc');
-  }
-  while ($feedback = db_fetch_object($result)) {
-    $form['feedback'][$feedback->id]['mobile_id'] = array('#value' => $feedback->mobile_id);
-		$form['feedback'][$feedback->id]['passport'] = array('#value' => $feedback->passport);
-		$form['feedback'][$feedback->id]['content']= array('#value' => $feedback->content);
-		$form['feedback'][$feedback->id]['timestamp'] = array('#value' => $feedback->timestamp);
-  }
-  return $form; 
-}
-function sina_vp_mobile_theme() {
-  return array(
-  	'sina_vp_mobile_feedback' => array(
-    	'arguments' => array('form' => NULL)
-    ),
-  );
-}
-/**
- * Theme the administer permissions page.
- *
- * @ingroup themeable
- */
-function theme_sina_vp_mobile_feedback($form) {
-  foreach (element_children($form['feedback']) as $key) {
-    // Don't take form control structures
-    $rows[]=array($key,$form['feedback'][$key]['mobile_id']['#value'],$form['feedback'][$key]['passport']['#value'],$form['feedback'][$key]['content']['#value'],date("Y-m-d H:i:s",$form['feedback'][$key]['timestamp']['#value']));
-    drupal_render($form['feedback'][$key]['mobile_id']);
-    drupal_render($form['feedback'][$key]['passport']);
-    drupal_render($form['feedback'][$key]['content']);
-    drupal_render($form['feedback'][$key]['timestamp']);
-  }
-  $header  = array('id','mobile_id','passport','content','时间');
-  $output = theme('table', $header, $rows, array('id' => 'mobile_feedback_table'));
-  $output .= drupal_render($form);
-  return $output;
 }
