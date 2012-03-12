@@ -116,7 +116,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		$form['links'] = array('#value' => theme('item_list', $items));
 		$form['vpj_register_links'] = array(
 			"#type" =>'markup',
-      '#value' => '<input id="edit-vpj-register-links" class="form-submit btn-large btn" type="button" value="立即注册微铺街" name="op">',
+      '#value' => '<a href="enter_regcode"><input id="edit-vpj-register-links" class="form-submit btn-large btn" type="button" value="立即注册微铺街" name="op"></a>',
       '#prefix' => '<div class="vp-login">',
       '#suffix' => '</div>',
       '#weight' => -31,
@@ -587,7 +587,9 @@ function vp_user_register_submit($form, &$form_state) {
   }
 
   // Mail the user.
-  _logintoboggan_mail_notify($mailkey, $account, $login_url);
+  if($_SESSION['roles']<>'Buyer'){ //买家不发邮件。
+ 	 _logintoboggan_mail_notify($mailkey, $account, $login_url);  	
+  }
 
   drupal_set_message($message);
 	//注册码处理。
@@ -626,8 +628,19 @@ function vp_user_register_submit($form, &$form_state) {
  	
  	//跳转处理。
  	//用户注册后的登录处理，如果是卖家-->block24小时，买家直接登录。
+
 	if($_SESSION['roles']=='Buyer'){
-		drupal_goto('register_success'); 		
+		unset($_SESSION['messages']);
+		//user_external_login($account);
+	  global $user;
+		$user = $account;
+		drupal_goto('vp_recommend');//卖家推荐页
+			unset($_SESSION['sina_account']);
+			unset($_SESSION['sina_user_info']);
+			unset($_SESSION['roles']);
+			unset($_SESSION['reg_code']);
+			unset($_SESSION['sina_tok']);
+			dpm('drupal_goto()以后，下面的代码还会执行吗？1');
 	  // where do we need to redirect after registration?
 	  $redirect = _logintoboggan_process_redirect(variable_get('logintoboggan_redirect_on_register', ''), $account);
 	
@@ -643,11 +656,6 @@ function vp_user_register_submit($form, &$form_state) {
 		unset($_SESSION['messages']);
 		drupal_goto('register_success'); 
 	}
-			unset($_SESSION['sina_account']);
-			unset($_SESSION['sina_user_info']);
-			unset($_SESSION['roles']);
-			unset($_SESSION['reg_code']);
-			unset($_SESSION['sina_tok']);
 }
 /*
  * 新注册用户推荐卖家 页面

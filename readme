@@ -5,3 +5,5 @@ VP
 1.2 评论框的位置
 	$output = comment_form_box(array('nid' => $nid), t('点评')).$output;
 
+16:47 2012/3/10 
+开启cck Link模块，增加发布节点淘宝链接。
