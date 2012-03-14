@@ -128,9 +128,9 @@ function fasttoggle_user_option($requestee, $option, $rid=null) {
 		        drupal_set_header('Content-Type: text/javascript; charset=utf-8');
 							switch ($options[$option]['1']) {
 								case 'focus':
-									$title='订阅';
+									$title='+订阅';
 								case 'unfocus':
-									$title='取消订阅';
+									$title='已订阅';
 									break;
 								case 'unfollow':
 									$title='已关注';
@@ -166,9 +166,9 @@ function fasttoggle_user_option($requestee, $option, $rid=null) {
 			        drupal_set_header('Content-Type: text/javascript; charset=utf-8');
 							switch ($options[$option]['0']) {
 								case 'focus':
-									$title='订阅';
+									$title='+订阅';
 								case 'unfocus':
-									$title='订阅';
+									$title='+订阅';
 									break;
 								case 'unfollow':
 									$title='已关注';

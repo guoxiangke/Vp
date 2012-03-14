@@ -47,11 +47,11 @@ function fasttoggle2($title, $callback, $html = TRUE, $token = '', $class = '',$
 	//user_relationships_load(array("requester_id" => $follow_uid=4,"rtid" => $rtid=2),array("count" => TRUE));
 	switch ($title) {
 		case 'focus':
-			$title='订阅';
+			$title='+订阅';
 			//$alt='订阅Ta的店铺';
 			break;
 		case 'unfocus':
-			$title='取消订阅';
+			$title='已订阅';
 			//$alt='取消订阅';
 			break;
 		case 'unfollow':

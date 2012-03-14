@@ -102,10 +102,10 @@ new sliderlck({id:"sliderlck"})
 </script>';
        $output .= '</div>';
 		//登录弹出框
-		drupal_add_js(drupal_get_path('module', 'sina_vp_theme').'/plugins/jquery-1.7.1.min.js');
-		drupal_add_css(drupal_get_path('module', 'sina_vp_theme').'/plugins/bootstrap/css/bootstrap.css');
-		drupal_add_js(drupal_get_path('module', 'sina_vp_theme').'/plugins/bootstrap/js/bootstrap-modal.js');
-	  drupal_add_js(drupal_get_path('module', 'sina_vp_theme').'/plugins/bootstrap/js/bootstrap-transtion.js');
+		//drupal_add_js(drupal_get_path('module', 'sina_vp_theme').'/plugins/jquery-1.7.1.min.js');
+		//drupal_add_css(drupal_get_path('module', 'sina_vp_theme').'/plugins/bootstrap/css/bootstrap.css');
+		//drupal_add_js(drupal_get_path('module', 'sina_vp_theme').'/plugins/bootstrap/js/bootstrap-modal.js');
+	  //drupal_add_js(drupal_get_path('module', 'sina_vp_theme').'/plugins/bootstrap/js/bootstrap-transtion.js');
 		//滚动代码
 		
 		//drupal_add_css(drupal_get_path('module', 'sina_vp_theme').'/plugins/twitter/dialog.css');

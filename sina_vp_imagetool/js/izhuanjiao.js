@@ -111,5 +111,66 @@
 				}
 			 
 			})
+
+		// ajax dale 
+		var curr_p_type = 'Activity';//第一个显示的是真人秀。
+				$('.gcvp-nav').click(function(){
+					var curr_p_type = $('.showed').attr('p-type');
+					//var p_type = $(this).attr('p-type');
+					var fc = $('.gcvp-body-right');
+					//if(fc)
+					$.ajax({
+						url:  $(this).children('a').attr("href")+'/json',
+						type: 'POST',
+						data: '',
+						dataType: 'json',
+					  success: function(json) {
+					  	fc.children('.gcbody-right-content').addClass(curr_p_type).addClass('posted').fadeOut();
+					  	fc.append(json.data).fadeIn();
+					  	//c.html(fc.html()).addClass('vp_comment').removeClass('vp_share');
+					  	//var form = c.find('form')
+					  },
+					  error: function(XMLHttpRequest, textStatus, errorThrown){
+							alert('发生错误，请联系管理员');
+						}
+					});
+				});	
+
+		//左部效果
+		$('.gcvp-nav').css('cursor','pointer');
+		$('.gcvp-sidebar').ready(function(){
+			$('.gcvp-subnav').css('display','none');
+			$('.gcvp-subnav:first').show();
+			$('.gcvp-nav:first').css('background-color','#a1a1a1');
+			$('.gcvp-nav:first').css('color','#FFFFFF');
+			$('.gcvp-nav:first').addClass('showed');
+			$('.gcvp-subnav p').css('cursor','pointer');
+		})
+		$('.gcvp-nav').click(function(){
+			
+			if($(this).hasClass('showed')){
+				
+			}else{
+				$('.showed').css('background-color','#F0F0F0');
+				$('.showed').next().hide('200');
+				$('.showed').css('color','#A1A1A1');
+				$('.showed').removeClass('showed');
+				$(this).addClass('showed');
+				$(this).css('background-color','#A1A1A1').css('color','#FFFFFF');
+				$(this).next().find('p:first').css('color','rgb(0, 203, 255)');
+				$(this).next().show('200');
+			}
+			
+		})
+		//link-Color:#00CBFF rgb(0,203,255)
+		//selected-color:#999999 rgb(153,153,153);
+		$('.gcvp-subnav p').click(function(){
+				var myColor=$(this).css('color');
+				if(myColor=="rgb(153, 153, 153)"){
+					$(this).parents().find('.gcvp-subnav p').css('color','rgb(153, 153, 153)');
+					$(this).css('color','rgb(0, 203, 255)');
+				}
+		})
+
 		
 })

@@ -142,7 +142,8 @@ function _sina_open_t_login($tok = NULL) {
             'pass' => $pass,
             'picture' => $json->profile_image_url,
             'status' => variable_get('user_register', 1) == 1,
-            'auth_sina_open' => $new_name
+            'auth_sina_open' => $new_name,
+            'signature' =>$json->description,
           );
           //dale 登录跳转 分角色
           /*

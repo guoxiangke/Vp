@@ -551,6 +551,16 @@ function sina_vp_menu() {
 	    'description' => '各种广场频道',
 	    'file' => 'sina_vp.pages.inc',
 	  );
+		$items["plaza/$type/json"] = array(
+	    'title callback'  => 'plaza_title_callback',
+    	'title arguments'  => array(1),
+	    'page callback' => 'sina_vp_plaza',
+	    'page arguments' => array(1,'all',null,2),
+	    'access callback' => TRUE,
+	    'description' => '各种广场频道',
+	    'file' => 'sina_vp.pages.inc',
+	    'type' => MENU_CALLBACK,		
+	  );
 		foreach ($plaza_child_types as $child_types) {
 			$items['plaza/$type/$child_types/%user_uid_optional'] = array(//%user_uid_optional
 		    'title callback'  => 'plaza_title_callback',
@@ -560,7 +570,17 @@ function sina_vp_menu() {
 		    'access callback' => TRUE,
 		    'description' => '所有的活动',
 		    'file' => 'sina_vp.pages.inc',
-		  );			
+		  );
+			$items["plaza/$type/$child_types/json"] = array(
+	    'title callback'  => 'plaza_title_callback',
+    	'title arguments'  => array(1),
+	    'page callback' => 'sina_vp_plaza',
+	    'page arguments' => array(1,2,null,3),
+	    'access callback' => TRUE,
+	    'description' => '各种广场频道',
+	    'file' => 'sina_vp.pages.inc',
+	    'type' => MENU_CALLBACK,		
+	  );	
 		}
 	}
 	$items['messages/view_vp/%privatemsg_thread'] = array(
@@ -1046,7 +1066,7 @@ function pm_send_submit_4vp($form, &$form_state) {
 function weibo_node_form_img_validate($form, &$form_state) {//need_pic_form_validate
 	 if (!$form_state['values']['field_weibo_image']['0']['fid'] && arg(0)!=forward ) {
 	 //0  转发分享的时候，不需要图片
-    form_set_error('field_weibo_image', t('亲，需要上传图片哦～'));
+    form_set_error('field_weibo_image', '亲，需要上传图片哦～');
   }
 }
 /**

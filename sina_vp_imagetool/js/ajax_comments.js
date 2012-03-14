@@ -40,7 +40,7 @@
 										  	console.log(XMLHttpRequest);
 										  	console.log(textStatus);
 										  	console.log(errorThrown);						
-												alert('发生错误，121');
+												alert('发生错误，1211111');
 											}
 										});
 						  		}	   

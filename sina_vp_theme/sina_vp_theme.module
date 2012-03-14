@@ -130,8 +130,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		$form['name']['#prefix'] ='<div id="email_click">';
 		$form['name']['#suffix'] ='</div>';
 		$form['pass']['#prefix'] ='<div id="pass_click">';
-		$form['pass']['#suffix'] ='</div>';
-		
+		$form['pass']['#suffix'] ='</div>';		
 	}
 	
 	if($form_id == 'user_login'){
@@ -141,6 +140,8 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 	if($form_id == 'user_register'){
 		//$form['Personal information']['#access']=FALSE;
 		$form['account']['name']['#description']=FALSE;
+		$form['account']['name']['#maxlength']=14;//不超过7个汉字。
+		$form['#validate'][]='sina_vp_theme_u_register_validate';
 		$form['account']['mail']['#description']=FALSE;
 		$form['account']['pass']['#description']=FALSE;		
 			
@@ -154,9 +155,16 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 			$form['regcode']['#access']=FALSE;	
 			$form['regcode']['regcode_code']['#default_value']=$_SESSION['reg_code'];
 		}
-		if($_SESSION['roles']!='Seller'){
-			$form['vp_contact']['#access']=FALSE;		
+		if($_SESSION['roles']=='Seller'){
+			$form['account']['name']['#title']='店铺名';		
+		}else{
+			$form['vp_contact']['#access']=FALSE;
+			if($_SESSION['roles']=='Buyer'){
+				$form['account']['name']['#title']='昵称';		
+			}
 		}
+
+
 		if(isset($form['Personal information'])){
 			$form['Personal information']['profile_sex']['#type'] = 'radios';
 			unset($form['Personal information']['profile_sex']['#options'][0]);// = 'Not specified';			
@@ -184,9 +192,26 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 			}
 			//$_SESSION['sina_account']=$ac;
 			//$_SESSION['sina_user_info']=$json;
-			if($sina_user_info=$_SESSION['sina_user_info']){					
-					$form['Personal information']['profile_province']['#default_value']=$sina_user_info->province;
-					$form['Personal information']['profile_city']['#default_value']=$sina_user_info->city;
+			if($sina_user_info=$_SESSION['sina_user_info']){
+				//新浪省市级默认值。
+				$request_url = 'http://api.t.sina.com.cn/provinces.json';
+				$result = sina_open_t_set_request($request_url);
+				if ($result->code == 200) {					        
+	       $data = json_decode($result->data);
+	      }
+				
+				foreach ($data->provinces as $province) {
+					if($province->id==$sina_user_info->province){
+						$form['Personal information']['profile_province']['#default_value']=$province->name;
+						foreach ($province->citys as $city) {
+							foreach ($city as $key => $value) {
+								if($sina_user_info->city==$key)
+								$form['Personal information']['profile_city']['#default_value']=$value;					
+							}
+						}
+					}
+					break;
+				}
 					if($sina_user_info->gender=='m'){
 						$form['Personal information']['profile_sex']['#default_value']='男';	
 					}elseif($sina_user_info->gender=='f'){
@@ -204,14 +229,19 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		$form['account']['pass']['#description']=FALSE;	
 		$form['locale']['#access']=FALSE;
 		$form['signature_settings']['signature_format']['#access']=FALSE;
-		$form['signature_settings']['signature']['#description']='您在本站的个性签名，不影响您的新浪微博签名。0/140';
+		$form['signature_settings']['signature']['#description']='您在本站的个性签名，不影响您的新浪微博签名。0/70';
 		$form['signature_settings']['signature']['#cols']=20;	 
 		$form['signature_settings']['signature']['#rows']=4;
 		global $user;
+		if( in_array('Seller', $user->roles) ){
+			$form['signature_settings']['signature']['#title']='店铺说明';
+		}
 		$mail=$form['account']['mail']['#default_value'];
-		if($mail==$user->init||preg_match('/@weipujie.com/', $mail)){
+		if (!valid_email_address ( $mail )){
+		//if($mail==$user->init||preg_match('/@weipujie.com/', $mail)){
 			$form['account']['mail']['#default_value']='请在这里输入您的邮箱';
 		}
+
 		//////////////////////////
 		//user_profile_form 如果已经输入邀请了，修改资料里不显示该项。
 		if(regcode_user_load()){$form['regcode'] ['#access']=FALSE;}
@@ -330,8 +360,25 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 			//watchdog('$type', '<pre>'.print_r($form,TRUE));
 		}
 	}
+	
 }
 
+function sina_vp_theme_u_register_validate($form, &$form_state)
+{
+    // 将字符串分解为单元
+    preg_match_all('/./us', $form_state['values']['name'], $match);
+    // 返回单元个数
+		if(strlen($form_state['values']['name'])==14&&count($match[0])==14){
+			$flag = true;
+		}elseif(strlen($form_state['values']['name'])>14&&count($match[0])<=7){
+			//说明有汉字，
+			$flag = true;
+		}elseif(count($match[0])>7&&strlen($form_state['values']['name'])<14){
+			$flag = true;
+		}else{
+			form_set_error('name', '用户名应不超过7个汉字或14个英文字符');
+		}
+}
 function regcode_voucher_submit2($form, $form_state) {
 	  $edit    = $form_state['values'];
   $account = $GLOBALS['user'];
@@ -374,7 +421,7 @@ function sina_vp_theme_init(){
 	drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/gotop.css');
 	drupal_add_js(drupal_get_path('module', 'sina_vp') .'/js/gotop.js');
 	drupal_add_js(drupal_get_path('module', 'sina_vp_theme') .'/sina_vp_theme.js');
-	
+	jquery_ui_add('ui.dialog'); 
 	
 }
 /**
@@ -633,14 +680,31 @@ function vp_user_register_submit($form, &$form_state) {
 		unset($_SESSION['messages']);
 		//user_external_login($account);
 	  global $user;
+		//sina_vp_user($op, &$edit, &$account, $category = NULL)				
 		$user = $account;
-		drupal_goto('vp_recommend');//卖家推荐页
+		$edit = array(); //回调HOOK_user 处理第一次登陆 抓取头像。
+		//module_invoke('sina_vp','user','login',&$edit,&$user);
+		//登录获取用户头像 begin
+			$pattern = "/^http\:\/\//";
+			$subject = $user->picture;
+			if(preg_match($pattern, $subject)){
+				$pattern="/\/50\//";
+				$user->picture = preg_replace($pattern, "/180/", $user->picture);	
+				$string = file_get_contents($user->picture);
+				$user_picture_path = variable_get('user_picture_path', '');
+				$user->picture = "sites/default/files/$user_picture_path/picture-$user->uid.jpg";
+				$handle = fopen($user->picture, "w+");
+				fwrite ( $handle , $string );
+        drupal_write_record('users', $user, 'uid');
+			}
+		//end
 			unset($_SESSION['sina_account']);
 			unset($_SESSION['sina_user_info']);
 			unset($_SESSION['roles']);
 			unset($_SESSION['reg_code']);
 			unset($_SESSION['sina_tok']);
-			dpm('drupal_goto()以后，下面的代码还会执行吗？1');
+		drupal_goto('vp_recommend');//卖家推荐页
+		
 	  // where do we need to redirect after registration?
 	  $redirect = _logintoboggan_process_redirect(variable_get('logintoboggan_redirect_on_register', ''), $account);
 	
