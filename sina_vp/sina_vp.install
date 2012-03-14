@@ -16,7 +16,21 @@ function sina_vp_uninstall()
 {
     drupal_uninstall_schema('sina_vp');
 }
-
+/**
+ * @Implement of hook_update_x()
+ */
+function sina_vp_update_1() {
+  $ret = array();
+  
+  $z_uid = array(
+    'type' => 'int',
+    'default' => '',
+    'description' => '被转节点的uid',
+  );
+  db_add_field($ret, 'sina_vp_weibo2node', 'z_uid', $z_uid);
+  
+  return $ret;
+}
 /*
  * Implementation of hook_schema().
  * Define the current version of the database schema. 
@@ -83,7 +97,11 @@ function sina_vp_schema()
           'default' => '0',
           'not null' => TRUE,
         ), 
-				
+				'z_uid' => array(
+          'description' => t('被转节点的uid'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
       ),
       'primary key' => array('id'),
       'indexes' => array(

@@ -613,40 +613,6 @@ function sina_VCenter_page($type = 'all') {
 	//$items['VCenter/Sub_most'] = array(//Subscribe to a maximum of 订阅最多
 	//$items['VCenter/New'] = array(//最新加入
 	//$items['VCenter/Active'] = array(//最新更新
-	?><script language="javascript"> 
-$(document).ready(function(){
-	$('.dpdianpu-xx input').css('visibility','hidden');
-	$(' .selected_signo').css('position','absolute');
-	$(' .selected_signo').css('visibility','hidden');
-	$('.dpdianpu-pic').css('cursor','pointer');
-	//$('input').css('visibility','visible');
-	//单个选择
-	$('.dpdianpu-pic').click(function(){
-		var flag=$(this).parent().find('input').attr('checked');
-		if(flag==true){
-			$(this).parent().find('input').removeAttr('checked');
-			$(this).parent().find('.selected_signo').css('visibility','hidden');		
-		}else if(flag==false){
-			$(this).parent().find('input').attr('checked','checked');
-			$(this).parent().find('.selected_signo').css('visibility','visible');				
-		}
-
-
-	})
-	//区域全选
-	$('.dpfxk').click(function(){
-		if($(this).attr('checked')==true){
-			$(this).parent().parent().parent().find('.dpdianpu-xx input').attr('checked','checked');
-			$(this).parent().parent().parent().find('.dpdianpu-xx .selected_signo').css('visibility','visible');
-		}else{
-			$(this).parent().parent().parent().find('.dpdianpu-xx input').removeAttr('checked');
-			$(this).parent().parent().parent().find('.dpdianpu-xx .selected_signo').css('visibility','hidden');
-		}
-	})
-})
-</script>
-	<?php
-
 	switch ($type) {
 		case 'Sub_most':	//订阅最多
 			//订阅最多
@@ -675,7 +641,7 @@ $(document).ready(function(){
 									<div class="dpdianpu-xx">
 										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
 										<p class="dpdpgg">'.truncate_utf8($account->signature, 55, $wordsafe = false, $dots = TRUE).'</p>
-										<input type="checkbox" checked="checked"/><a class="selected_signo">√</a>
+										<input type="checkbox" checked="checked"/>
 									</div>
 									<div class="dpdianpu-dy">
 										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
@@ -1121,7 +1087,6 @@ function sina_VpCenter_page($tid = NULL) {
 	 * */
   return $output;
 }
-
 /**
  * 买家中心，根据角色Seller Buyer而定.
  * copy form sina_vp_center_page_default() sina_vp_Comments_page
@@ -1137,7 +1102,7 @@ function sina_UCenter_page($tid = NULL,$uid=NUll) {
 		$bfw_user=user_load($uid);//被访问的user bfw
 		drupal_set_title($bfw_user->name.'的微铺个人中心');
 		if($bfw_user->uid){$account = $bfw_user;}else{return '您访问的用户不存在';}
-		//if(in_array('Seller',$bfw_user->roles)){return '';}//访问卖家信息，不需要下面的操作了～
+		if(in_array('Seller',$bfw_user->roles)){return '';}//访问卖家信息，不需要下面的操作了～
 	}
 	$array=user_relationships_load(array("user" => $account->uid),array("sort" => 'requestee_id'));
 	//$follows_uid ="'1'"; 
@@ -1183,6 +1148,7 @@ function sina_UCenter_page($tid = NULL,$uid=NUll) {
     $output .= node_view(node_load($node->nid), 1);
     $num_rows = TRUE;
   }
+
   if ($num_rows) {
     $feed_url = url('rss.xml', array('absolute' => TRUE));
     drupal_add_feed($feed_url, variable_get('site_name', 'Drupal') .' '. t('RSS'));
@@ -1194,7 +1160,7 @@ function sina_UCenter_page($tid = NULL,$uid=NUll) {
 			$default_message .= '<ol>';	
 			foreach($weibo_type_array as $type){
 		    $default_message .= '<li>'. t('<strong>发布<a href="@VpCenter">'.t($type).'</a>信息</strong>', array('@VpCenter' => url($type))) .'</li>';
-		  }
+		    }
 			$default_message .= '</ol>';  			
 		 }elseif(in_array('Buyer',$user->roles)){			//if(in_array('Buyer',$user->roles))
 	  	//一键关注js css
@@ -1215,7 +1181,7 @@ function sina_UCenter_page($tid = NULL,$uid=NUll) {
 																	</div>	         
 													      </div></div>
 													  </div> </div>';
-				//$default_message.='<div id="sina_vp_recommend" >'.drupal_get_form('sina_vp_recommend').'</div>';
+				$default_message.='<div id="sina_vp_recommend" >'.drupal_get_form('sina_vp_recommend').'</div>';
 			}else{
 				$default_message = '暂无信息！';
 			}							
@@ -1224,117 +1190,8 @@ function sina_UCenter_page($tid = NULL,$uid=NUll) {
 			drupal_set_message('权限不够!请输入邀请码获取买家或卖家角色才能正常浏览！如果已经输入邀请码，请忽略此提醒...','warning');
 			//drupal_goto('user/'.$user->uid.'/apply_for_role');
 		}
-   // $output = '<div id="first-time">'. $default_message .'</div>';
+    $output = '<div id="first-time">'. $default_message .'</div>';
   }
-  
-  	
-
-  if(isset($tid)){
-  	$term_name = taxonomy_get_term($tid)->name;		
-		if(user_access("add new Seller info")){
-			//$output ="<p>点击<a href='?q=new/$tid'>这里</a>发布#".t($term_name)."#信息</p>".$output;
-		}
-  }
-	if(is_null($tid)|| $tid=='Show' ||$tid=='Transfer' ){
-		 return $output;		  		
-	}
-  return $output;
-}
-/**
- * 卖家中心底部 sina_UCenter_page
- * 所有对卖家的转发 分享 显示在该页面。
- */
-function sina_UCenter_saler_page($tid = NULL,$uid=NUll) {
-	global $user;//买家个人访问的自己的页面
-	
-	$account = $user;
-	if(is_numeric($uid)){//其他人访问的买家页面  
-		$bfw_user=user_load($uid);//被访问的user bfw
-		drupal_set_title($bfw_user->name.'的微铺个人中心');
-		if($bfw_user->uid){$account = $bfw_user;}else{return '您访问的用户不存在';}
-		//if(in_array('Seller',$bfw_user->roles)){return '';}//访问卖家信息，不需要下面的操作了～
-	}
-	$array=user_relationships_load(array("user" => $account->uid),array("sort" => 'requestee_id'));
-	//$follows_uid ="'1'"; 
-	foreach($array as $key=>$value){
-		$follows_uid[] =$key; //取得粉丝用户uid
-	}
-	if(!count($array)){
-		//$follows_uid[] ='1';//没有任何订阅时，默认推送管理员的信息 more....
-	}
-	$follows_uid[] =$account->uid; //他自己的微博
-	$follows_uid = array_unique($follows_uid);
-	$follows_uid = implode(",",$follows_uid);
-
-		$sql = 'SELECT n.nid, n.sticky, n.created FROM {node} n ';
-		$sql_where = ' WHERE n.type in ("weibo") AND n.promote = 1 AND n.status = 1 ';
-		$sql_where_add = ' AND n.uid in('.$follows_uid.') ';
-		$sql_order = ' ORDER BY n.sticky DESC, n.created DESC ';
-  { //tid 0-6 all
- 		if(is_null($tid)||$tid=='0'){ $tid='(1,2,3,4,5,6)';}else{$tid='('.$tid.')';}
-  	
-		$sql = "SELECT n.nid, n.sticky, n.created FROM node n
-						INNER JOIN term_node term_node ON n.vid = term_node.vid
-						LEFT JOIN sina_vp_weibo2node sina_vp ON sina_vp.nid = n.nid
-						WHERE n.type IN ('weibo') AND n.status =1 
-						AND (term_node.tid IN $tid)
-						AND (sina_vp.zid <>0) AND (sina_vp.z_uid =$bfw_user->uid)
-						ORDER BY n.created DESC "; //所有的转发，分享 
-  }
-  $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 5));//
-
-  $output = '';
-  $num_rows = FALSE;
-  while ($node = db_fetch_object($result)) {
-    $output .= node_view(node_load($node->nid), 1);
-    $num_rows = TRUE;
-  }
-  if ($num_rows) {
-    $feed_url = url('rss.xml', array('absolute' => TRUE));
-    drupal_add_feed($feed_url, variable_get('site_name', 'Drupal') .' '. t('RSS'));
-    $output .= theme('pager', NULL, variable_get('default_nodes_main', 10));
-  }else {
-  	if(in_array('Seller',$user->roles)){		
-	    $default_message = t('<h1 class="title">作为一个有身份的卖家是不会偷懒的！</h1><p>Please follow these steps to set up and start using your website:</p>');
-	    $weibo_type_array=array('Product','Activity','Special','Sale');//,'Transfer','Show'
-			$default_message .= '<ol>';	
-			foreach($weibo_type_array as $type){
-		    $default_message .= '<li>'. t('<strong>发布<a href="@VpCenter">'.t($type).'</a>信息</strong>', array('@VpCenter' => url($type))) .'</li>';
-		  }
-			$default_message .= '</ol>';  			
-		 }elseif(in_array('Buyer',$user->roles)){			//if(in_array('Buyer',$user->roles))
-	  	//一键关注js css
-	  	if(arg(1)==0){
-				$default_message = '<div class="wb_02 bor_top" id="node-275">
-													  <div class="fb_time">
-													     <p>15秒前</p></div>
-													  <div class="fb_nr2">
-													    <div class="fb_yh"><a href="/?q=UCenter/0/1">微铺街</a> <cite>[提醒]</cite></div>
-													    <div class="wb_nr">
-													      <div class="userPic"><a href="/?q=UCenter/0/1"> <img width="50" height="50" src="sites/default/files/users/picture-3.jpg"></a></div>
-													      <div class="msgBox2">
-													        <div class="msgCnt">
-													        	<h4>欢迎您来到微铺街，您订阅的用户信息少的可怜，我们推荐您<a href="javascript:void(0)" class="focus_recommend">一键关注</a>更多街友！        	</h2>
-													        	
-													             <span><button class="btn success focus_recommend">一键关注</button></span>
-													            
-																	</div>	         
-													      </div></div>
-													  </div> </div>';
-				//$default_message.='<div id="sina_vp_recommend" >'.drupal_get_form('sina_vp_recommend').'</div>';
-			}else{
-				$default_message = '暂无信息！';
-			}							
-		}
-	if(!regcode_user_load()){
-			drupal_set_message('权限不够!请输入邀请码获取买家或卖家角色才能正常浏览！如果已经输入邀请码，请忽略此提醒...','warning');
-			//drupal_goto('user/'.$user->uid.'/apply_for_role');
-		}
-   // $output = '<div id="first-time">'. $default_message .'</div>';
-  }
-  
-  	
-
   if(isset($tid)){
   	$term_name = taxonomy_get_term($tid)->name;		
 		if(user_access("add new Seller info")){
@@ -1623,7 +1480,7 @@ function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null){
 										ORDER BY node_created DESC";
 									}
 								}//$plaza_title = '最近更新';	
-								$results = pager_query($sql,6);
+								$results = pager_query($sql,2);
 								$output = plaza_output($results,$child_type,$plaza_type,'最近更新');
 							break;
 						case 'most_comments':	
@@ -1699,7 +1556,7 @@ function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null){
 										ORDER BY counts1 desc ,node_created DESC";
 									}
 								}//$plaza_title = '喜欢最多';	
-								$results = pager_query($sql,6);	
+								$results = pager_query($sql,2);	
 								$output = plaza_output($results,$child_type,$plaza_type,'喜欢最多');
 							break;
 						default: //三个sql

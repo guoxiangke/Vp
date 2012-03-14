@@ -116,7 +116,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		$form['links'] = array('#value' => theme('item_list', $items));
 		$form['vpj_register_links'] = array(
 			"#type" =>'markup',
-      '#value' => '<a href="enter_regcode"><input id="edit-vpj-register-links" class="form-submit btn-large btn" type="button" value="立即注册微铺街" name="op"></a>',
+      '#value' => '<a href="'.url('enter_regcode').'"><input id="edit-vpj-register-links" class="form-submit btn-large btn" type="button" value="立即注册微铺街" name="op"></a>',
       '#prefix' => '<div class="vp-login">',
       '#suffix' => '</div>',
       '#weight' => -31,

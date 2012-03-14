@@ -104,6 +104,81 @@ function sina_vp_imagetool_imagecache_default_presets(){
       ),
     ),
   );
+	$presets['150x150'] = array ( //头像
+    'presetname' => '150x150',
+    'actions' => array (
+      0 => array (
+        'weight' => '0',
+        'module' => 'imagecache',
+        'action' => 'imagecache_scale',
+        'data' => array (
+          'width' => '150',
+          'height' => '150',
+        ),
+      ), 
+      1 => array (//radius: 0.5, sigma: 0.5, amount: 100, threshold: 0.05
+        'weight' => '1',
+        'module' => 'imagecache',
+        'action' => 'imagecache_sharpen',
+        'data' => array (
+          'radius' => '0.5',
+          'sigma' => '0.5',
+          'amount' => '100',
+          'threshold' => '00.5',
+        ),
+      ),
+    ),
+  );
+	$presets['100x100'] = array ( //头像
+    'presetname' => '100x100',
+    'actions' => array (
+      0 => array (
+        'weight' => '0',
+        'module' => 'imagecache',
+        'action' => 'imagecache_scale',
+        'data' => array (
+          'width' => '100',
+          'height' => '100',
+        ),
+      ), 
+      1 => array (//radius: 0.5, sigma: 0.5, amount: 100, threshold: 0.05
+        'weight' => '1',
+        'module' => 'imagecache',
+        'action' => 'imagecache_sharpen',
+        'data' => array (
+          'radius' => '0.5',
+          'sigma' => '0.5',
+          'amount' => '100',
+          'threshold' => '00.5',
+        ),
+      ),
+    ),
+  );
+	$presets['w100'] = array ( //头像
+    'presetname' => 'w100',
+    'actions' => array (
+      0 => array (
+        'weight' => '0',
+        'module' => 'imagecache',
+        'action' => 'imagecache_scale',
+        'data' => array (
+          'width' => '100',
+          'height' => '100%',
+        ),
+      ), 
+      1 => array (//radius: 0.5, sigma: 0.5, amount: 100, threshold: 0.05
+        'weight' => '1',
+        'module' => 'imagecache',
+        'action' => 'imagecache_sharpen',
+        'data' => array (
+          'radius' => '0.5',
+          'sigma' => '0.5',
+          'amount' => '100',
+          'threshold' => '00.5',
+        ),
+      ),
+    ),
+  );
 	$presets['w150'] = array (
     'presetname' => 'w150',
     'actions' => array (

@@ -36,9 +36,19 @@ function page_register_success(){
 function page_enter_regcode(){
 	if($_SESSION['roles']&&$_SESSION['reg_code'])	drupal_goto('choose_a_role');
 	return $output = '<div  id="regcode-voucher-show">
-				<form action="choose_a_role" method="get">
 				<input type="text" maxlength="20" name="regcode" id="regcode" size="15" value="" class="form-text required" placeholder=" 邀请码"/>
-				<input  type="submit"  value="确定" />
+				<input  type="button"  class="sub_here" value="确定" />
+				<script>
+					$().ready(function(){
+						var url="'.url('choose_a_role').'&regcode=";
+						$(".sub_here").click(function(){
+							var values=$(".form-text").val();
+							url+=values;
+							window.location=url;
+						})
+
+					})
+				</script>
 				</form>
 				</div>';
 }
@@ -62,8 +72,8 @@ function page_choose_a_role(){
 					<div class="sfxzselectsf">
 					    <div class="sfxzsftitle">欢迎进入微铺街，接下来请选择您的身份，开启您的微铺街旅程</div>
 						<div class="sfxzsltbnt">
-						<a href="user/register/Buyer" class="sfxzbuybtn">我是买家</a>
-						<a href="user/register/Sale" class="sfxzsellbtn">我是卖家</a></div>
+						<a href="'.url('user/register/Buyer').'" class="sfxzbuybtn">我是买家</a>
+						<a href="'.url('user/register/Sale').'" class="sfxzsellbtn">我是卖家</a></div>
 					</div>
 			  </div>
 				<div class="clear"></div>';

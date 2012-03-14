@@ -344,9 +344,9 @@ function sina_vp_menu() {
 	$items['UCenter'] = array(
     'title' => t('我的微铺街'),
     'page callback' => 'sina_UCenter_page',
+    'file' => 'sina_vp.pages.inc',
     'access callback' => TRUE,
     'description' => '我的微铺街',
-    'file' => 'sina_vp.pages.inc',
     'weight' => -15,
 		'type' => MENU_NORMAL_ITEM,
   );
@@ -359,9 +359,9 @@ function sina_vp_menu() {
 		$items["UCenter/$term->tid"] = array(
     'title' => $term->name,
     'page callback' => 'sina_UCenter_page',
+    'file' => 'sina_vp.pages.inc',
     'page arguments' => array(1),
     'access callback' => TRUE,
-    'file' => 'sina_vp.pages.inc',
     'weight' => $term->weight,
     'description' => '我关注的'.$term->name,
 		'type' => MENU_NORMAL_ITEM|MENU_LOCAL_TASK,
@@ -369,9 +369,9 @@ function sina_vp_menu() {
 	 $items["UCenter/$term->tid/%"] = array(
     'title' =>  $term->name,
     'page callback' => 'sina_UCenter_page',
+    'file' => 'sina_vp.pages.inc',
     'page arguments' => array(1,2),   
     'access callback' => TRUE,
-    'file' => 'sina_vp.pages.inc',
     'weight' => $term->weight,
     'description' => '我关注的'.$term->name,
 		'type' => MENU_LOCAL_TASK,
@@ -381,18 +381,18 @@ function sina_vp_menu() {
     'title' => t('微铺街'),
     'access callback' => TRUE,
     'page callback' => 'sina_UCenter_page',
-    'page arguments' => array(1,2),    
     'file' => 'sina_vp.pages.inc',
+    'page arguments' => array(1,2), 
 		'type' => MENU_LOCAL_TASK,
   );
 	foreach($Buyer_taxonomy_tree as $term){
 		$items["UCenter/$term->tid"] = array(//my转让潮 my真人秀
     'title' => 'my'.$term->name,
     'page callback' => 'sina_UCenter_page',
+    'file' => 'sina_vp.pages.inc',
     'page arguments' => array(1),    
     //'access arguments' => array('add new Buyer info'),
     'access callback' => TRUE,
-    'file' => 'sina_vp.pages.inc',
     'weight' => $term->weight+20,
 		'description' => '我关注的'.$term->name,
 		'type' => MENU_NORMAL_ITEM|MENU_LOCAL_TASK,
@@ -528,6 +528,7 @@ function sina_vp_menu() {
 	$items['plaza'] = array(
     'title' => '广场',
     'page callback' => 'sina_vp_plaza',
+     'page arguments' => array('Show'),
     'access callback' => TRUE,
     'description' => '所有的活动',
     'file' => 'sina_vp.pages.inc',
@@ -832,11 +833,12 @@ function _sina_vp_db_write($data,$node,$tid=NUll,$zid=NULL){
 				$is_zf_sql = "SELECT zid zid FROM  {sina_vp_weibo2node} WHERE  `nid` =$zid AND  `cid` =0 AND  `zid` <>0 ";
 				$is_zf = db_result(db_query($is_zf_sql));
 				$zid=$is_zf?$is_zf:$zid;
+				$z_uid = db_result(db_query("SELECT uid uid FROM  {node} WHERE  `nid` =$zid")); //dale 添加被转发节点的uid。20120313
 		}
 		db_query("INSERT INTO {sina_vp_weibo2node}
-						(`nid` ,`uid` ,`cid`,`wid` ,`data`,`created_at`,`sina_vp_type`,`zid`)
-						VALUES ('%d','%d','%d','%d','%s','%d','%d','%d')"
-						,$nid,$user->uid,$cid,$wid,$datas,$created_at,$tid,$zid);
+						(`nid` ,`uid` ,`cid`,`wid` ,`data`,`created_at`,`sina_vp_type`,`zid`,`z_uid`)
+						VALUES ('%d','%d','%d','%d','%s','%d','%d','%d','%d')"
+						,$nid,$user->uid,$cid,$wid,$datas,$created_at,$tid,$zid,$z_uid);
 						//more... 是否需要分2个表 nid zid
 		
 }
@@ -1985,6 +1987,8 @@ function sina_vp_content_process($body){
 	$body = preg_replace($tag_pattern, '<a href="'.$_SERVER["HTTP_REFERER"].'/search?q=#${1}">#${1}#</a>', $body);
 	return $body;
 }
+
+
 /**
  * @} End of "sina.module".
  */
