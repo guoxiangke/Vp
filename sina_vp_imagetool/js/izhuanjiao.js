@@ -112,30 +112,35 @@
 			 
 			})
 
-		// ajax dale 
+		// ajax plaza begin by dale 
 		var curr_p_type = 'Activity';//第一个显示的是真人秀。
 				$('.gcvp-nav').click(function(){
 					var curr_p_type = $('.showed').attr('p-type');
-					//var p_type = $(this).attr('p-type');
+					var p_type = $(this).attr('p-type');
 					var fc = $('.gcvp-body-right');
-					//if(fc)
-					$.ajax({
-						url:  $(this).children('a').attr("href")+'/json',
-						type: 'POST',
-						data: '',
-						dataType: 'json',
-					  success: function(json) {
-					  	fc.children('.gcbody-right-content').addClass(curr_p_type).addClass('posted').fadeOut();
-					  	fc.append(json.data).fadeIn();
-					  	//c.html(fc.html()).addClass('vp_comment').removeClass('vp_share');
-					  	//var form = c.find('form')
-					  },
-					  error: function(XMLHttpRequest, textStatus, errorThrown){
-							alert('发生错误，请联系管理员');
-						}
-					});
+					if(fc.find('.posted').hasClass('.'+p_type)){ //当已经post以后，就不ajax了
+						console.log(fc.find('.posted').find('.'+p_type));
+					}
+					{
+						$.ajax({
+							url:  $(this).children('a').attr("href")+'/json',
+							type: 'POST',
+							data: '',
+							dataType: 'json',
+						  success: function(json) {
+						  	fc.children('.gcbody-right-content').not('.posted').addClass(curr_p_type).addClass('posted').fadeOut();
+						  	fc.append(json.data).fadeIn();
+						  	//c.html(fc.html()).addClass('vp_comment').removeClass('vp_share');
+						  	//var form = c.find('form')
+						  },
+						  error: function(XMLHttpRequest, textStatus, errorThrown){
+								alert('发生错误，请联系管理员');
+							}
+						});
+					}
+					
 				});	
-
+		//end
 		//左部效果
 		$('.gcvp-nav').css('cursor','pointer');
 		$('.gcvp-sidebar').ready(function(){
@@ -171,6 +176,53 @@
 					$(this).css('color','rgb(0, 203, 255)');
 				}
 		})
-
 		
+		//ajax_comment_divDialog_demo
+		$('.gcfudiv').hide();
+		$('.close_box').attr('href','javascript:void(0)');
+		$('.gclovepic').click(function(){
+			$(this).parent().parent().parent().parent().parent().find('.dialogIn').fadeOut('fast');
+			$(this).parent().parent().parent().parent().find('.gcfudiv').fadeIn('fast');
+			$(this).parent().parent().parent().parent().find('.gcfudiv').addClass('dialogIn');
+			$('.gcfudivtext').val("");
+		})
+		$('.gcfudivbtn').click(function(){
+			var word=$(this).parent().find('.gcfudivtext').val();
+			if(word.length==0){
+
+			}else{
+				var userName=$('.user-name p').text();
+				var userPic=$('.user-img img').attr('src');		
+				var words="<span class='gcvp-name'>"+userName+"：</span>"+word
+				//0315
+				//setTimeout(function(){$(this).parent().next().find('p').html(words);$(this).parent().next().find('.hideMe').attr('src',userPic);},200);
+				$(this).parent().next().find('p').html(words);$(this).parent().next().find('.hideMe').attr('src',userPic);
+				$('.gcfudivtext').val("");
+			 }
+		})
+		$('.close_box').click(function(){
+			$(this).parent().parent().fadeOut();
+			$(this).parent().parent().removeClass('dialogIn');
+		})
+		//这里用于换一批效果
+		$('.vp-rec-wrap').css('position','absolute');
+		//$('.vp-rec-wrap').parent().css('overflow','hidden');
+		//$('.vp-rec-wrap').parent().parent().css('overflow','hidden');
+		$('.vp-rec-wrap').css('width','675px');
+		$('.vp-rec-wrap').css('display','none');
+		$('.vp-rec-wrap:first').css('display','block');
+		$('.vp-rec-wrap:last').addClass('last');
+		$('.dpvp-more a').click(function(){
+			$(this).parent().parent().fadeOut('slow',function(){$(this).css('left','80px');$(this).hide();});
+			$(this).parent().parent().next().fadeIn('slow');
+			if($(this).parent().parent().hasClass('last')){
+				$('.vp-rec-wrap:first').fadeIn('slow');
+			}
+		})
+		//0315
+		//实现心型联动
+		$('.vp-favor-action').click(function(){
+			$(this).find('.flag-wrapper a').click();
+			
+		})
 })

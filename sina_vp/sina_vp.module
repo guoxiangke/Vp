@@ -561,6 +561,16 @@ function sina_vp_menu() {
 	    'file' => 'sina_vp.pages.inc',
 	    'type' => MENU_CALLBACK,		
 	  );
+		//function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json_type='html'){
+		$items["plaza/$type/all/%user_uid_optional"] = array(//%user_uid_optional
+		    'title callback'  => 'plaza_title_callback',
+    		'title arguments'  => array(1),
+		    'page callback' => 'sina_vp_plaza',
+		    'page arguments' => array(1,2,3),
+		    'access callback' => TRUE,
+		    'description' => '所有的活动',
+		    'file' => 'sina_vp.pages.inc',
+		);
 		foreach ($plaza_child_types as $child_types) {
 			$items['plaza/$type/$child_types/%user_uid_optional'] = array(//%user_uid_optional
 		    'title callback'  => 'plaza_title_callback',
@@ -914,7 +924,8 @@ function sina_vp_form_alter(&$form, &$form_state, $form_id) {
 		$form['#validate'][] = 'weibo_node_form_tags_validate';//话题##
 		$form['#validate'][] = 'weibo_node_form_maxlength_validate';		
 		$form['#validate'][]= 'weibo_node_form_img_validate';//微博图片
-		
+		$form['field_weibo_image']['#weight']=-99;
+		$form['field_weibo_image']['0']['#title']='图片预览';
 		
 	
 			

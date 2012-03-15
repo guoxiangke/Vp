@@ -6,5 +6,9 @@ Drupal.behaviors.vp_theme = function (context) {
 	 $('.user-name').click(function(){
 	    $('.xllist').slideToggle('medium');
 	});
-	
+	//广场 推荐 订阅全部
+	$('.dpdybtn').one('click',function(){
+	   $(this).parent().parent().parent().find('.fasttoggle-status-user-focus-0').click();
+		 //
+	});
 }

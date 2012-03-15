@@ -5,15 +5,16 @@
  * @copyright dale
  * @package sina
  */
-include_once(drupal_get_path('module', 'user').'/user.pages.inc');
+//include_once(drupal_get_path('module', 'user').'/user.pages.inc');
 
 function sina_vp_theme_menu(){
 	$items['user_info/%user_uid_optional'] = array(
 		'page callback' => 'vp_user_info_edit',
 		'page arguments' =>  array(1),
-		'access callback' => TRUE,
-		//'access callback' => 'user_edit_access',
-    //'access arguments' => user_category_load('vp_contact'),
+		//'access callback' => TRUE,
+		'access callback' => 'user_edit_access_4vp',
+    'access arguments' => array(1),
+    //'load arguments' => array('%map', '%index'),
     'type' => MENU_LOCAL_TASK,
 		'weight' => -20,
   );
@@ -73,6 +74,13 @@ function sina_vp_theme_menu(){
     'type' => MENU_CALLBACK,
   );
 	return $items;
+}
+/**
+ * Access callback for user account editing.
+ */
+function user_edit_access_4vp($account) {
+	if(!is_object($account))$account = user_load($uid);
+  return (($GLOBALS['user']->uid == $account->uid) || user_access('administer users')) && $account->uid > 0;
 }
 function vpj_comment_ajax_submit() {
 	
@@ -222,7 +230,8 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 					
 			};
 	}
-	if($form_id == 'user_profile_form'){
+
+	if($form_id == 'user_profile_form'||$form_id == 'user_profile_form_4vp'){
 		//$form['Personal information']['#access']=FALSE;
 		$form['account']['name']['#description']=FALSE;
 		$form['account']['mail']['#description']=FALSE;
@@ -232,10 +241,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		$form['signature_settings']['signature']['#description']='您在本站的个性签名，不影响您的新浪微博签名。0/70';
 		$form['signature_settings']['signature']['#cols']=20;	 
 		$form['signature_settings']['signature']['#rows']=4;
-		global $user;
-		if( in_array('Seller', $user->roles) ){
-			$form['signature_settings']['signature']['#title']='店铺说明';
-		}
+
 		$mail=$form['account']['mail']['#default_value'];
 		if (!valid_email_address ( $mail )){
 		//if($mail==$user->init||preg_match('/@weipujie.com/', $mail)){
@@ -257,7 +263,6 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		$form['account']['mail']['#weight']=1;
 		$form['account']['pass']['#weight']=2;
 		$form['account']['name']['#weight']=3;
-		$form['account']['name']['#title']='昵称';
 		$form['account']['status']['#weight']=4;
 		$form['account']['roles']['#weight']=5;
 		
@@ -270,8 +275,19 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		// 删除头像 /?q=user/1/edit	
 		$form['picture']['picture_delete']['#access']=FALSE;
 		$form['picture']['#weight']=-11;
-		$form['picture']['picture_upload']['#title']='上传一张自己的图片';
-		$form['picture']['picture_upload']['#description']='<a id="vp-upload-userinfo">上传我的照片</a>';
+		$account = user_load(arg(1));
+		if($account && in_array('Buyer', $account->roles)){			
+			$form['account']['name']['#title']='昵称';
+			$form['picture']['picture_upload']['#title']='上传一张自己的图片';
+			$form['picture']['picture_upload']['#description']='<a id="vp-upload-userinfo">上传我的照片</a>';
+		}elseif(in_array('Seller', $account->roles)){
+			$form['account']['name']['#title']='店铺名';
+			$form['picture']['picture_upload']['#title']='上传一张店铺logo';
+			$form['picture']['picture_upload']['#description']='<a id="vp-upload-userinfo">上传店铺logo</a>';
+			$form['signature_settings']['signature']['#title']='店铺说明';
+		}
+		//
+		$form['_information']['Personal information']['profile_location']['#access']=FALSE;
 	}
 	
 	//对私信的主题处理 发私信	
@@ -352,9 +368,9 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 	);
 	if(in_array($form_id, $dispalyNone_forms)){
 		//donothing...
-		 
+		
 	}else{
-		if(function_exists(dpm)) dpm($form,$form_id);
+		 if(function_exists(dpm)) dpm($form,$form_id);
 		//
 		if($form_id=='weibo_ajax_forward'){
 			//watchdog('$type', '<pre>'.print_r($form,TRUE));
@@ -501,13 +517,78 @@ function sina_vp_theme_link_alter(&$links, $node, $comment=NULL){
 function vp_user_info_edit($user) {//$account, $category = 'account'
 	$account =$user;
   drupal_set_title(check_plain($account->name));
-  $output = drupal_get_form('user_profile_form', $account, 'account');
-	$output .= drupal_get_form('user_profile_form', $account, 'Personal information');
+  //$output = drupal_get_form('user_profile_form', $account, 'account');
+	//$output .= drupal_get_form('user_profile_form', $account, 'Personal information');
 	
-		if(in_array('Seller', $account->roles)&&(!$form[vp_contact])){//卖家联系信息 
-			$output .= drupal_get_form('user_profile_form', $account, 'vp_contact');
-		}	
+			
+	$output = drupal_get_form('user_profile_form_4vp', $account);
 	return $output;
+}
+/**
+ * Form builder; edit a user account or one of their profile categories.
+ *
+ * @ingroup forms
+ * @see user_profile_form_validate()
+ * @see user_profile_form_submit()
+ * @see user_edit_delete_submit()
+ */
+function user_profile_form_4vp($form_state, $account, $category = 'account') {
+
+  $edit = (empty($form_state['values'])) ? (array)$account : $form_state['values'];
+
+  $form = _user_forms($edit, $account, $category);
+  $form['_category'] = array('#type' => 'value', '#value' => $category);
+  $form['_account'] = array('#type' => 'value', '#value' => $account);
+	
+	$form['_information'] = _user_forms($edit, $account, $category='Personal information');
+  $form['_category2'] = array('#type' => 'value', '#value' => $category);
+	if(in_array('Seller', $account->roles)){//卖家联系信息 			
+		$form['_vp_contact'] = _user_forms($edit, $account, $category='vp_contact');
+	  $form['_category2'] = array('#type' => 'value', '#value' => $category);		
+	}
+	
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Save'), '#weight' => 30);
+  if (user_access('administer users')) {
+    $form['delete'] = array(
+      '#type' => 'submit',
+      '#value' => t('Delete'),
+      '#weight' => 31,
+      '#submit' => array('user_edit_delete_submit'),
+    );
+  }
+  $form['#attributes']['enctype'] = 'multipart/form-data';
+
+  return $form;
+}
+
+/**
+ * Validation function for the user account and profile editing form.
+ */
+function user_profile_form_4vp_validate($form, &$form_state) {
+  user_module_invoke('validate', $form_state['values'], $form_state['values']['_account'], $form_state['values']['_category']);
+  // Validate input to ensure that non-privileged users can't alter protected data.
+  if ((!user_access('administer users') && array_intersect(array_keys($form_state['values']), array('uid', 'init', 'session'))) || (!user_access('administer permissions') && isset($form_state['values']['roles']))) {
+    watchdog('security', 'Detected malicious attempt to alter protected user fields.', array(), WATCHDOG_WARNING);
+    // set this to a value type field
+    form_set_error('category', t('Detected malicious attempt to alter protected user fields.'));
+  }
+}
+
+/**
+ * Submit function for the user account and profile editing form.
+ */
+function user_profile_form_4vp_submit($form, &$form_state) {
+  $account = $form_state['values']['_account'];
+  $category = $form_state['values']['_category'];
+  unset($form_state['values']['_account'], $form_state['values']['op'], $form_state['values']['submit'], $form_state['values']['delete'], $form_state['values']['form_token'], $form_state['values']['form_id'], $form_state['values']['_category']);
+  user_module_invoke('submit', $form_state['values'], $account, $category);
+  user_save($account, $form_state['values'], $category);
+
+  // Clear the page cache because pages can contain usernames and/or profile information:
+  cache_clear_all();
+
+  drupal_set_message(t('The changes have been saved.'));
+  return;
 }
 
 /**

@@ -1453,127 +1453,25 @@ function sina_vp_Activity(){return '详见page-Activity.tpl.php';}
  * $uid 某个卖家的类型广场
  * $json_type json数据 ajax 请求。
  */
-function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json_type=null){
+function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json_type='html'){
+		//plaza/New/all/3/html
+		
+			//dpm($plaza_type);
 		$plaza_type_obj = vpj_get_terms_by_alias($plaza_type);
+			dpm($plaza_type_obj);
 		$plaza_tid = $plaza_type_obj->tid; //分类id
 		$plaza_tname = $plaza_type_obj->name;
-		
+
 		if($account&&!is_object($account))
 		$account = user_load($account);
 		{
 			if($account&&in_array('Buyer', $account->roles)){
 			drupal_set_message('您好像走叉道了，亲～');
-			return '<div class="gcbody-right-content">
-			    <div class="gcright-content-title">喜欢最多</div>
-				<div class="gcright-content-inner">
-				    <div class="gcbottom-pk-righ-body">			       
-                       <div class="gcvp-body-bottom-pk-right-img">
-                            <img width="200" height="200" src="images/3.jpg">
-						    <div class="gctm-content"></div>
-						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
-						    <div class="gctm-size">人人微铺街</div>
-                       </div>
-                       <div class="gcvp-body-bottom-pk-right-xx">
-                           <div class="gcpk-img-name">黑色修身好看经点的</div>
-                           <div class="gcpk-img-zz">
-								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
-								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
-								<div class="clear"></div>
-                           </div>
-                       </div>
-                   </div>
-				    <div class="gcbottom-pk-righ-body">			       
-                       <div class="gcvp-body-bottom-pk-right-img">
-                            <img width="200" height="200" src="images/3.jpg">
-						    <div class="gctm-content"></div>
-						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
-						    <div class="gctm-size">人人微铺街</div>
-                       </div>
-                       <div class="gcvp-body-bottom-pk-right-xx">
-                           <div class="gcpk-img-name">黑色修身好看经点的</div>
-                           <div class="gcpk-img-zz">
-								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
-								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
-								<div class="clear"></div>
-                           </div>
-                       </div>
-                   </div>
-				    <div class="gcbottom-pk-righ-body">			       
-                       <div class="gcvp-body-bottom-pk-right-img">
-                            <img width="200" height="200" src="images/3.jpg">
-						    <div class="gctm-content"></div>
-						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
-						    <div class="gctm-size">人人微铺街</div>
-                       </div>
-                       <div class="gcvp-body-bottom-pk-right-xx">
-                           <div class="gcpk-img-name">黑色修身好看经点的</div>
-                           <div class="gcpk-img-zz">
-								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
-								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
-								<div class="clear"></div>
-                           </div>
-                       </div>
-                   </div>
-				    <div class="gcbottom-pk-righ-body">			       
-                       <div class="gcvp-body-bottom-pk-right-img">
-                            <img width="200" height="200" src="images/3.jpg">
-						    <div class="gctm-content"></div>
-						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
-						    <div class="gctm-size">人人微铺街</div>
-                       </div>
-                       <div class="gcvp-body-bottom-pk-right-xx">
-                           <div class="gcpk-img-name">黑色修身好看经点的</div>
-                           <div class="gcpk-img-zz">
-								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
-								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
-								<div class="clear"></div>
-                           </div>
-                       </div>
-					    <div class="gcfudiv">
-					    <div class="gcfudiv-top"><input type="text" class="gcfudivtext"><input type="button" class="gcfudivbtn" value="点评"><div class="clear"></div></div>
-					    <div class="gcfudiv-bottom"><img width="35" height="35" src="images/5.jpg"><p><span class="gcvp-name">小精灵：</span>我觉的点点衣服好看看年年</p><div class="clear"></div></div>			
-					    </div>	
-                   </div>
-			   
-                    <div class="gcbottom-pk-righ-body">			       
-                       <div class="gcvp-body-bottom-pk-right-img">
-                            <img width="200" height="200" src="images/3.jpg">
-						    <div class="gctm-content"></div>
-						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
-						    <div class="gctm-size">人人微铺街</div>
-                       </div>
-                       <div class="gcvp-body-bottom-pk-right-xx">
-                           <div class="gcpk-img-name">黑色修身好看经点的</div>
-                           <div class="gcpk-img-zz">
-								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
-								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
-								<div class="clear"></div>
-                           </div>
-                       </div>
-                   </div>
-				    <div class="gcbottom-pk-righ-body">			       
-                       <div class="gcvp-body-bottom-pk-right-img">
-                            <img width="200" height="200" src="images/3.jpg">
-						    <div class="gctm-content"></div>
-						    <div class="gctm-pic"><img width="35" height="35" src="images/5.jpg"></div>
-						    <div class="gctm-size">人人微铺街</div>
-                       </div>
-                       <div class="gcvp-body-bottom-pk-right-xx">
-                           <div class="gcpk-img-name">黑色修身好看经点的</div>
-                           <div class="gcpk-img-zz">
-								<span class="gcvp-loveit"><div class="gclovepic"><img src="images/xin.gif"></div><div class="gclovexh">(2)</div></span>
-								<span class="gcplfx">评论(3)&nbsp;&nbsp;分享(2)</span>
-								<div class="clear"></div>
-                           </div>
-                       </div>
-                   </div>				   
-				   <div class="clear"></div>
-				</div>
-				<div class="gcvp-more">更多&gt;&gt;</div>
-			</div>';
+			return ' ';
 			}
 		}//只考虑卖家才有广场相关页面。 
 				 //ALL News
+				 	
 				 if(!is_array($plaza_tname))
 					switch ($child_type) {
 						case 'recently_active':		// (users_roles.rid = 3) 	真人秀转让潮不必是卖家的。所有每一个都单独处理。	
@@ -1753,7 +1651,7 @@ function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json
 							break;
 					}
 				//<div class="more right"><a href="#">更多</a></div>
-	   if($json_type)return drupal_json(array('status' => TRUE, 'data' =>$output)); //ajax请求获取内容。
+	   if($json_type=='json')return drupal_json(array('status' => TRUE, 'data' =>$output)); //ajax请求获取内容。
 		return $output;
 	//return '详见page-Activity.tpl.php';
 }
@@ -1779,6 +1677,15 @@ function plaza_output($results,$child_type,$plaza_type,$plaza_title){
 							
 							$activity_user = user_load($activity_node->uid);							
 							imagecache_generate_image('w200', $weibo_image_filepath);	
+							
+							$taxonomys = $activity_node->taxonomy;
+							if(is_array($taxonomys))
+							foreach($taxonomys as $key=>$obj){
+								if($obj->vid==2){//v2 == 微博类型
+									$taxonomy_name=$obj->name;
+									$taxonomy_id = 		$obj->tid;	
+								}
+							}
 							$output .= '<div class="gcbottom-pk-righ-body">			       
 	                       <div class="gcvp-body-bottom-pk-right-img">
 	                            '.theme('imagecache', 'w200',$weibo_image_filepath, '', '').'
@@ -1789,13 +1696,51 @@ function plaza_output($results,$child_type,$plaza_type,$plaza_title){
 	                       <div class="gcvp-body-bottom-pk-right-xx">
 	                           <div class="gcpk-img-name">'.$activity_node->title.'</div>
 	                           <div class="gcpk-img-zz">
-									<span class="gcvp-loveit"><div class="gclovepic"><img src="/'.path_to_theme().'/images/xin.gif"></div>
-									<div class="gclovexh">'.flag_create_link('bookmarks', $activity_node->nid).'</div></span>
-									<span class="gcplfx">评论('.$activity_node->comment_count.')&nbsp;&nbsp;分享('.$share_counts.')</span>
+									
+									<span class="gcvp-loveit">
+										<div class="vp-favor-action">
+											<div class="gclovepic"><img src="/'.path_to_theme().'/images/xin.gif"></div>										
+											<div class="gclovexh">'.flag_create_link('bookmarks', $activity_node->nid).'</div>
+										</div>
+									</span>
+									
+									<span class="gcplfx">'.l('评论'.$activity_node->comment_count,"node/$activity_node->nid",array('fragment' => 'comments','attributes'=>array('target'=>'_blank')))
+									.'&nbsp;&nbsp;'.l("分享$share_counts","forward/$taxonomy_id/$activity_node->nid",array('attributes'=>array('target'=>'_blank'))).'</span>
 									<div class="clear"></div>
 	                           </div>
-	                       </div>
-	                 </div>';
+	                       </div>';
+	            
+	             	$output .='
+	             		<div class="gcfudiv" >
+										<div class="gcfudiv-top">
+											<textarea  rows="2" cols="10" class="gcfudivtext" name="textarea" value="求点评^_^">求点评^_^</textarea>
+											<a href="#" class="close_box" style="text-decoration:none; font-color:black;position:absolute; margin-left:-10px;">x</a>
+											<input type="button" value="点评" class="gcfudivbtn">
+											<div class="clear"></div>
+										</div>
+									 	<div class="gcfudiv-bottom">
+												'; 
+									 if($activity_node->comment_count){
+									 		$cid = db_result(db_query("select cid from comments where nid=$activity_node->nid AND pid =0 order by timestamp limit 0,1"));
+											$last_comment = _comment_load($cid);
+											$last_comment_user = user_load($last_comment->uid);
+											
+			    					if(!$last_comment_user->picture)
+										$last_comment_user->picture = variable_get(user_picture_default, '/sites/default/files/users/0.gif');
+										$pic_path = imagecache_create_path('35x35', $last_comment_user->picture);
+									
+									//print theme('imagecache', 'preset_namespace', $image_filepath, $alt, $title, $attributes);
+					      		$output .=theme('imagecache', '35x35', $pic_path, $user->name, '',array('class'=>'hideMe')) ;
+			    	
+									 		//$output .='<img src="images/5.jpg" class="hideMe" width="35" height="35"/>';
+											$output .='	<p><span class="gcvp-name">'.$last_comment_user->name.'：</span>'.$last_comment->subject.'</p>
+												<div class="clear"></div>
+											';
+	             			} 
+	             	$output .='
+	             			</div>
+	             		</div>';//end_comment
+	              $output .='</div>';//end_all
 						}
 				}
 
