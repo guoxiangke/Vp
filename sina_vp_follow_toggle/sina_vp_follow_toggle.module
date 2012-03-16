@@ -5,7 +5,10 @@
  * @copyright dale
  * @package sina
  */
-
+function sina_vp_follow_toggle_init() {
+	drupal_add_css(drupal_get_path('module', 'sina_vp_follow_toggle') .'/fasttoggle.css');
+	drupal_add_js(drupal_get_path('module', 'sina_vp_follow_toggle') .'/fasttoggle.js');
+}
 /**
  * Add fasttoggle abilities to a link
  *

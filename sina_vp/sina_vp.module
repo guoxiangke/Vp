@@ -303,16 +303,17 @@ function sina_vp_menu() {
 		'type' => MENU_CALLBACK,
  	 );	
 	}
-	$Buyer_tid = taxonomy_get_term_by_name(t('Buyer'));
+	$Buyer_tid = taxonomy_get_term_by_name('Buyer');
 	$parent = $Buyer_tid['0']->tid; //23
-	$Buyer_taxonomy_tree=taxonomy_get_tree($vid, $parent, $depth = -1, $max_depth = NULL);
+	$Buyer_taxonomy_tree=taxonomy_get_tree($vid=2, $parent, $depth = -1, $max_depth = NULL);
 	foreach($Buyer_taxonomy_tree as $term){
-		$items["new/$term->tid/%"] = array(//vp/add/Transfer/% 买家发布信息
+		$items["new/$term->tid/%"] = array(//new/5|6/% 买家发布信息
     'title' => $term->name,
     'page callback' => 'sina_vp_new',
     'page arguments' => array(1,2),
-    'access callback' => 'user_access',
-    'access arguments' => array('add new Buyer info'),
+    'access callback' => TRUE,
+    //'access callback' => 'user_access',
+    //'access arguments' => array('add new Buyer info'),
     'file' => 'sina_vp.pages.inc',
 		'type' => MENU_NORMAL_ITEM,
  	 );	
@@ -524,17 +525,6 @@ function sina_vp_menu() {
     'weight' => -10,
 		'type' => MENU_CALLBACK,		
   );
-	//新品展示页
-	$items['plaza'] = array(
-    'title' => '广场',
-    'page callback' => 'sina_vp_plaza',
-     'page arguments' => array('Show'),
-    'access callback' => TRUE,
-    'description' => '所有的活动',
-    'file' => 'sina_vp.pages.inc',
-    'weight' => -11,
-    'menu_name' => 'primary-links',
-  );
 	
 	//广场频道：新品 活动 爆款 特卖  真人秀 转让潮
 	$plaza_types = array('News','Activity','Special','Sale','Show','Transfer');
@@ -542,7 +532,7 @@ function sina_vp_menu() {
 	$plaza_child_types = array('recently_active','most_comments','most_favor');
 	
 	foreach ($plaza_types as $type) {
-		$items['plaza/$type'] = array(
+		$items["plaza/$type"] = array(
 	    'title callback'  => 'plaza_title_callback',
     	'title arguments'  => array(1),
 	    'page callback' => 'sina_vp_plaza',
@@ -572,7 +562,7 @@ function sina_vp_menu() {
 		    'file' => 'sina_vp.pages.inc',
 		);
 		foreach ($plaza_child_types as $child_types) {
-			$items['plaza/$type/$child_types/%user_uid_optional'] = array(//%user_uid_optional
+			$items["plaza/$type/$child_types/%user_uid_optional"] = array(//%user_uid_optional
 		    'title callback'  => 'plaza_title_callback',
     		'title arguments'  => array(1),
 		    'page callback' => 'sina_vp_plaza',
@@ -593,6 +583,17 @@ function sina_vp_menu() {
 	  );	
 		}
 	}
+	//新品展示页
+	$items['plaza'] = array(
+    'title' => '广场',
+    'page callback' => '_plaza_page_useless',
+    'access callback' => TRUE,
+    'description' => '所有的活动',
+    'weight' => -11,
+    'access callback' => TRUE,
+    'menu_name' => 'primary-links',
+  );
+	
 	$items['messages/view_vp/%privatemsg_thread'] = array(
     'title'            => 'Read message',
     'page callback'    => 'privatemsg_view_vp',
@@ -641,6 +642,10 @@ function vpj_get_terms_by_alias($plaza_type='ALL'){
 				break;
 	}
 	return $obj;
+}
+function _plaza_page_useless()
+{
+	return 'wuyong';
 }
 function plaza_title_callback($plaza_type='ALL',$account=NULL){ //title callback
 	$title = '广场|'.vpj_get_terms_by_alias($plaza_type)->name;
@@ -927,7 +932,11 @@ function sina_vp_form_alter(&$form, &$form_state, $form_id) {
 		$form['field_weibo_image']['#weight']=-99;
 		$form['field_weibo_image']['0']['#title']='图片预览';
 		
-	
+		// 秀 和转让 不带淘宝链接。
+		if(arg(1)==5||arg(1)==6){
+			$form['field_image_link']['#access']=FALSE;
+		}
+		
 			
 	}
 	if($form['sina_open'] && $form_id == 'weibo_node_form'){
@@ -1907,7 +1916,7 @@ function comment_render_4vp($node, $cid = 0,$return=json) {
     // If enabled, show new comment form if it's not already being displayed.
     $reply = arg(0) == 'comment' && arg(1) == 'reply';
     if (user_access('post comments') && node_comment_mode($nid) == COMMENT_NODE_READ_WRITE && (variable_get('comment_form_location_'. $node->type, COMMENT_FORM_SEPARATE_PAGE) == COMMENT_FORM_BELOW) && !$reply) {
-      $output = comment_form_box(array('nid' => $nid), t('Post new comment')).$output;
+      $output = comment_form_box(array('nid' => $nid), '点评').$output;
     }
 
     if ($output) {

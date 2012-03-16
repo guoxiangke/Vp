@@ -55,12 +55,15 @@ function sina_vp_front_page()
 						$taxonomy_id = 		$obj->tid;	
 					}
 		}
+				if(!$account->picture)
+					$account->picture = variable_get(user_picture_default, '/sites/default/files/users/0.gif');
+					imagecache_generate_image('small_picture',  $user->picture);
 		$output .= '<li >
       <div class="vp-conetnt">
 					<div class="vp-conetnt-left">
-						<div class="vp-user-pic">
+						<div class="vp-user-pic login_link">
 							'.
-            l(theme('imagecache', 'small_picture', $account->picture, $account->name, $account->name, array('class'=>'front-user-picture'))
+            theme('imagecache', 'small_picture', $account->picture, '', '', array('class'=>'front-user-picture')
             ,'#'
             ,array('html'=>'true','attributes'=>array('class'=>'login_link')))
             .'
@@ -69,7 +72,7 @@ function sina_vp_front_page()
 					<div class="vp-conetnt-right">
 						<div class="content-info-top">
 							<div class="content-user vp-float">
-								<span class="username">'.l($account->name,'#',array('attributes'=>array('class'=>'login_link'))).'</span>
+								<span class="username login_link"><a href="javascript:void(0)">'.$account->name.'</a></span>
 								<span class="vp-term">['.$taxonomy_name.']</span>
 								<span class="vp-front-time">'.sina_vp_time_format($node->created).'</span>
 							</div>        
@@ -98,8 +101,8 @@ function sina_vp_front_page()
       </div></li>';
       }
       $output .= '</ul><script type="text/javascript">
-new sliderlck({id:"sliderlck"})
-</script>';
+													new sliderlck({id:"sliderlck"});
+											</script>';
        $output .= '</div>';
 		//登录弹出框
 		//drupal_add_js(drupal_get_path('module', 'sina_vp_theme').'/plugins/jquery-1.7.1.min.js');
@@ -113,15 +116,9 @@ new sliderlck({id:"sliderlck"})
     //drupal_add_css("sites/all/libraries/jquery.ui/themes/base/ui.all.css");
     $output .= '<div class="modal fade" id="loginModal" style="display: none;">
             <div class="modal-header">
-              <a data-dismiss="modal" class="close">X</a>
-              <h3>请您登录</h3>
             </div>
             <div class="modal-body">
             '.drupal_get_form('user_login').'
-            </div>
-            <div class="modal-footer">
-            <input type="submit" class="form-submit" value="登录" id="modal-submit" name="op">
-              <a data-dismiss="modal" class="btn" href="#">取消</a>
             </div>
           </div>';
     return $output;

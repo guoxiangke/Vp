@@ -36,8 +36,9 @@ function page_register_success(){
 function page_enter_regcode(){
 	if($_SESSION['roles']&&$_SESSION['reg_code'])	drupal_goto('choose_a_role');
 	return $output = '<div  id="regcode-voucher-show">
+				<lable>请输入邀请码：</lable>
 				<input type="text" maxlength="20" name="regcode" id="regcode" size="15" value="" class="form-text required" placeholder=" 邀请码"/>
-				<input  type="button"  class="sub_here" value="确定" />
+				<input  type="button"  class="sub_here" id= "er_next_sub" value="确定" />
 				<script>
 					$().ready(function(){
 						var url="'.url('choose_a_role').'&regcode=";
@@ -46,7 +47,9 @@ function page_enter_regcode(){
 							url+=values;
 							window.location=url;
 						})
-
+					$("#er_next_step").click(function(){
+						$(".sub_here").click();
+					});
 					})
 				</script>
 				</form>

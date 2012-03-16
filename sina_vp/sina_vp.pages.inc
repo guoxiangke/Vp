@@ -852,7 +852,7 @@ function sina_VCenter_page($type = 'all') {
 			}
 			$output.='<div class="clear"></div></div>';
 			$output.='<div class="clear"></div>					
-					<div class="dpvp-more">'.l('更多>>','VCenter/Sub_most').'</div>
+					<div class="vcenter-dpvp-more">'.l('更多>>','VCenter/Sub_most').'</div>
 				</div>';
 			//最新加入
 				$sql='select u.uid uid from users u  INNER JOIN users_roles users_roles ON u.uid = users_roles.uid
@@ -906,7 +906,7 @@ function sina_VCenter_page($type = 'all') {
 			}
 			$output.='<div class="clear"></div></div>';
 			$output.='<div class="clear"></div>
-					<div class="dpvp-more">'.l('更多>>','VCenter/New').'</div>
+					<div class="vcenter-dpvp-more">'.l('更多>>','VCenter/New').'</div>
 				</div>';
 			//最近更新
 			$sql='select n.uid uid from node n  INNER JOIN users_roles users_roles ON n.uid = users_roles.uid
@@ -960,7 +960,7 @@ function sina_VCenter_page($type = 'all') {
 			}
 			$output.='<div class="clear"></div></div>';
 			$output.='  <div class="clear"></div>
-					<div class="dpvp-more">'.l('更多>>','VCenter/Active').'</div>
+					<div class="vcenter-dpvp-more">'.l('更多>>','VCenter/Active').'</div>
 				</div>';
 			break;
 	}
@@ -1454,11 +1454,8 @@ function sina_vp_Activity(){return '详见page-Activity.tpl.php';}
  * $json_type json数据 ajax 请求。
  */
 function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json_type='html'){
-		//plaza/New/all/3/html
-		
-			//dpm($plaza_type);
+		//plaza/New/all/3/html\
 		$plaza_type_obj = vpj_get_terms_by_alias($plaza_type);
-			dpm($plaza_type_obj);
 		$plaza_tid = $plaza_type_obj->tid; //分类id
 		$plaza_tname = $plaza_type_obj->name;
 
@@ -1504,7 +1501,7 @@ function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json
 										ORDER BY node_created DESC";
 									}
 								}//$plaza_title = '最近更新';	
-								$results = pager_query($sql,6);
+								$results = pager_query($sql,18);
 								$output = plaza_output($results,$child_type,$plaza_type,'最近更新');
 							break;
 						case 'most_comments':	
@@ -1580,7 +1577,7 @@ function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json
 										ORDER BY counts1 desc ,node_created DESC";
 									}
 								}//$plaza_title = '喜欢最多';	
-								$results = pager_query($sql,6);	
+								$results = pager_query($sql,18);	
 								$output = plaza_output($results,$child_type,$plaza_type,'喜欢最多');
 							break;
 						default: //三个sql
@@ -1686,6 +1683,8 @@ function plaza_output($results,$child_type,$plaza_type,$plaza_title){
 									$taxonomy_id = 		$obj->tid;	
 								}
 							}
+							if(!$activity_user->picture)
+							$activity_user->picture=variable_get(user_picture_default, '/sites/default/files/users/0.gif');
 							$output .= '<div class="gcbottom-pk-righ-body">			       
 	                       <div class="gcvp-body-bottom-pk-right-img">
 	                            '.theme('imagecache', 'w200',$weibo_image_filepath, '', '').'
@@ -1712,16 +1711,19 @@ function plaza_output($results,$child_type,$plaza_type,$plaza_title){
 	            
 	             	$output .='
 	             		<div class="gcfudiv" >
+	             			<div class="gc-pl-sanjiao"></div>
+	             			<div class="gc-pl-bj">
 										<div class="gcfudiv-top">
 											<textarea  rows="2" cols="10" class="gcfudivtext" name="textarea" value="求点评^_^">求点评^_^</textarea>
 											<a href="#" class="close_box" style="text-decoration:none; font-color:black;position:absolute; margin-left:-10px;">x</a>
 											<input type="button" value="点评" class="gcfudivbtn">
+											<div class="hidden">'.comment_form_box(array('nid' =>$activity_node->nid), t('点评')).'</div>
 											<div class="clear"></div>
 										</div>
 									 	<div class="gcfudiv-bottom">
 												'; 
 									 if($activity_node->comment_count){
-									 		$cid = db_result(db_query("select cid from comments where nid=$activity_node->nid AND pid =0 order by timestamp limit 0,1"));
+									 		$cid = db_result(db_query("select cid from comments where nid=$activity_node->nid AND pid =0 order by timestamp desc limit 0,1"));
 											$last_comment = _comment_load($cid);
 											$last_comment_user = user_load($last_comment->uid);
 											
@@ -1736,9 +1738,14 @@ function plaza_output($results,$child_type,$plaza_type,$plaza_title){
 											$output .='	<p><span class="gcvp-name">'.$last_comment_user->name.'：</span>'.$last_comment->subject.'</p>
 												<div class="clear"></div>
 											';
+	             			}else{
+	             				$output .=theme('imagecache', '35x35', variable_get(user_picture_default, '/sites/default/files/users/0.gif'), '', '',array('class'=>'hideMe')) ;
+											$output .='	<p><span class="gcvp-name"></span> 还没有人评论，来抢沙发吧！</p>
+												<div class="clear"></div>
+											';
 	             			} 
 	             	$output .='
-	             			</div>
+	             			</div> </div>
 	             		</div>';//end_comment
 	              $output .='</div>';//end_all
 						}

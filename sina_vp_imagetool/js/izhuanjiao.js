@@ -113,7 +113,7 @@
 			})
 
 		// ajax plaza begin by dale 
-		var curr_p_type = 'Activity';//第一个显示的是真人秀。
+		/*var curr_p_type = 'Activity';//第一个显示的是真人秀。
 				$('.gcvp-nav').click(function(){
 					var curr_p_type = $('.showed').attr('p-type');
 					var p_type = $(this).attr('p-type');
@@ -127,7 +127,7 @@
 							type: 'POST',
 							data: '',
 							dataType: 'json',
-						  success: function(json) {
+						  	success: function(json) {
 						  	fc.children('.gcbody-right-content').not('.posted').addClass(curr_p_type).addClass('posted').fadeOut();
 						  	fc.append(json.data).fadeIn();
 						  	//c.html(fc.html()).addClass('vp_comment').removeClass('vp_share');
@@ -140,15 +140,101 @@
 					}
 					
 				});	
-		//end
+		//end*/
 		//左部效果
 		$('.gcvp-nav').css('cursor','pointer');
 		$('.gcvp-sidebar').ready(function(){
 			$('.gcvp-subnav').css('display','none');
-			$('.gcvp-subnav:first').show();
-			$('.gcvp-nav:first').css('background-color','#a1a1a1');
-			$('.gcvp-nav:first').css('color','#FFFFFF');
-			$('.gcvp-nav:first').addClass('showed');
+			
+				//0316URL解析
+			/*	
+				//广场频道：新品 活动 爆款 特卖  真人秀 转让潮
+				$plaza_types = array('News','Activity','Special','Sale','Show','Transfer');
+				//广场子频道： 最近更新 评论最多 喜欢最多
+				$plaza_child_types = array('recently_active','most_comments','most_favor');
+			*/
+				thisURL = document.URL; 
+				var my_way=thisURL.split('/');
+				var my_array=new Array();
+				for(var i=0;i<=2;i++){
+					my_array[i]=my_way[i+3];
+				}
+				if(my_array[2]==undefined){
+					my_array[2]=='base';
+				}
+				//console.log(my_array);
+				//在这里添加工厂处理。
+				if(my_array[0]=="?q=plaza"){
+					changeColor(my_array[1],my_array[2]);
+				}
+				function changeColor(box,inner){
+					/**
+					*
+					*/
+					switch (box){
+						case "News"	:
+							//console.log('News 执行了');
+							$('.gcvp-nav[p-type=News]').addClass('showed');
+							$('.gcvp-nav[p-type=News]').css('background-color','#a1a1a1');
+							$('.gcvp-nav[p-type=News]').css('color','#FFFFFF');
+							$('.gcvp-nav[p-type=News]').next().show().addClass('showed');
+							break;
+						case "Activity"	:
+							//console.log('Activity 执行了');
+							$('.gcvp-nav[p-type=Activity]').addClass('showed');
+							$('.gcvp-nav[p-type=Activity]').css('background-color','#a1a1a1');
+							$('.gcvp-nav[p-type=Activity]').css('color','#FFFFFF');
+							$('.gcvp-nav[p-type=Activity]').next().show().addClass('showed');
+							break;	
+						case "Special"	:
+							//console.log('Special 执行了');
+							$('.gcvp-nav[p-type=Special]').addClass('showed');
+							$('.gcvp-nav[p-type=Special]').css('background-color','#a1a1a1');
+							$('.gcvp-nav[p-type=Special]').css('color','#FFFFFF');
+							$('.gcvp-nav[p-type=Special]').next().show().addClass('showed');
+							break;		
+						case "Sale"	:
+						//	console.log('Special 执行了');
+							$('.gcvp-nav[p-type=Sale]').addClass('showed');
+							$('.gcvp-nav[p-type=Sale]').css('background-color','#a1a1a1');
+							$('.gcvp-nav[p-type=Sale]').css('color','#FFFFFF');
+							$('.gcvp-nav[p-type=Sale]').next().show().addClass('showed');
+							break;
+						case "Show"	:
+						//	console.log('Special 执行了');
+							$('.gcvp-nav[p-type=Show]').addClass('showed');
+							$('.gcvp-nav[p-type=Show]').css('background-color','#a1a1a1');
+							$('.gcvp-nav[p-type=Show]').css('color','#FFFFFF');
+							$('.gcvp-nav[p-type=Show]').next().show().addClass('showed');
+							break;
+						case "Transfer"	:
+						//	console.log('Special 执行了');
+							$('.gcvp-nav[p-type=Transfer]').addClass('showed');
+							$('.gcvp-nav[p-type=Transfer]').css('background-color','#a1a1a1');
+							$('.gcvp-nav[p-type=Transfer]').css('color','#FFFFFF');
+							$('.gcvp-nav[p-type=Transfer]').next().show().addClass('showed');
+							break;
+						default	: 'ok';
+					}
+					switch (inner){
+						case "recently_active":
+						//	console.log('recently_active 执行了');
+							$('.gcvp-subnav .active').css('color','#00CBFF');
+						case "most_comments":
+						//	console.log('most_comments 执行了');
+							$('.gcvp-subnav .active').css('color','#00CBFF');
+						case "most_favor":
+						//	console.log('most_favor 执行了');
+							$('.gcvp-subnav .active').css('color','#00CBFF');
+						default	: 'ok';
+					}
+					//$('.gcvp-nav:first').addClass('showed');
+					//$('.gcvp-subnav:first').show();
+					//$('.gcvp-nav:first').css('background-color','#a1a1a1');
+					//$('.gcvp-nav:first').css('color','#FFFFFF');
+				}
+
+			
 			$('.gcvp-subnav p').css('cursor','pointer');
 		})
 		$('.gcvp-nav').click(function(){
@@ -156,6 +242,7 @@
 			if($(this).hasClass('showed')){
 				
 			}else{
+				$(this).find('a').click();
 				$('.showed').css('background-color','#F0F0F0');
 				$('.showed').next().hide('200');
 				$('.showed').css('color','#A1A1A1');
@@ -180,49 +267,147 @@
 		//ajax_comment_divDialog_demo
 		$('.gcfudiv').hide();
 		$('.close_box').attr('href','javascript:void(0)');
-		$('.gclovepic').click(function(){
-			$(this).parent().parent().parent().parent().parent().find('.dialogIn').fadeOut('fast');
-			$(this).parent().parent().parent().parent().find('.gcfudiv').fadeIn('fast');
-			$(this).parent().parent().parent().parent().find('.gcfudiv').addClass('dialogIn');
-			$('.gcfudivtext').val("");
+		$('.vp-favor-action').click(function(){
+			$(this).parents().find('.dialogIn').fadeOut('fast');
+			$(this).parents().find('.dialogIn').parent().find('.gc-pl-sanjiao').fadeOut('fast');
+			$(this).parent().parent().parent().next().fadeIn('fast');
+			$(this).parent().parent().parent().next().addClass('dialogIn');
+			$(this).parent().parent().parent().next().find('.gcfudivtext').val("求点评^_^");
+
+			//alert('this is works');
 		})
 		$('.gcfudivbtn').click(function(){
-			var word=$(this).parent().find('.gcfudivtext').val();
-			if(word.length==0){
+			var textSel=$(this).parent().find('.gcfudivtext');
+			var word=textSel.val();
+			if(word.length==0 || word=='求点评^_^' || word=="评论已送出!!"){
 
 			}else{
 				var userName=$('.user-name p').text();
 				var userPic=$('.user-img img').attr('src');		
-				var words="<span class='gcvp-name'>"+userName+"：</span>"+word
-				//0315
-				//setTimeout(function(){$(this).parent().next().find('p').html(words);$(this).parent().next().find('.hideMe').attr('src',userPic);},200);
-				$(this).parent().next().find('p').html(words);$(this).parent().next().find('.hideMe').attr('src',userPic);
-				$('.gcfudivtext').val("");
-			 }
+				var words="<span class='gcvp-name'>"+userName+"：</span>"+word;
+				var hideThat=$(this).parent().next().find('p');//.fadeOut('slow',function(){$(this).html(words)});
+				//已经放到ajax$(this).parent().next().find('.hideMe').fadeOut('slow',function(){$(this).attr('src',userPic)});
+				//$(this).parent().next().find('p').html(words);$(this).parent().next().find('.hideMe').attr('src',userPic);
+				var hideThis=$(this).parent().next().find('.hideMe');
+				var pTar=$(this).parent().next().find('p');
+				var imgTar=$(this).parent().next().find('.hideMe');
+				$(this).parent().find('.hidden').find('textarea').val(word);
+				var url=$(this).parent().find('.hidden').find('form').attr('action');
+				var form=$(this).parent().find('.hidden').find('form');
+				//var disCount=$(this).
+				//
+				thisHost = location.hostname;
+				url=thisHost+url;
+				var discuz=$(this).parent().parent().parent().prev().find('.gcplfx a:first');
+				//var disCount=parseInt(discuz.text())+1;
+				var disCount=parseInt(discuz.text().substr(2))+1;
+				
+				var button=$(this);
+				button.attr('disabled','disabled');
+				$.ajax({
+					url:url,
+					type:"POST",
+					data:form.serialize(),
+					success:function(){
+						hideThat.fadeOut('slow',function(){$(this).html(words)});
+						hideThis.fadeOut('slow',function(){$(this).attr('src',userPic)});
+						pTar.fadeIn('slow');
+						imgTar.fadeIn('slow');
+						discuz.text('评论'+disCount);
+						textSel.val("评论已送出!!");
+						button.removeAttr('disabled');
+					}
+
+				})
+			}
+		})
+		$('.gcfudivtext').click(function(){
+			$(this).val('');
 		})
 		$('.close_box').click(function(){
 			$(this).parent().parent().fadeOut();
+			$(this).parent().parent().parent().find('.gc-pl-sanjiao').fadeOut();
 			$(this).parent().parent().removeClass('dialogIn');
 		})
 		//这里用于换一批效果
+		//0316换一批代码优化
+		//去掉轮播效果，下一批到底不动
+		//将分类的其他两个栏目也加入这个效果
 		$('.vp-rec-wrap').css('position','absolute');
 		//$('.vp-rec-wrap').parent().css('overflow','hidden');
 		//$('.vp-rec-wrap').parent().parent().css('overflow','hidden');
 		$('.vp-rec-wrap').css('width','675px');
 		$('.vp-rec-wrap').css('display','none');
 		$('.vp-rec-wrap:first').css('display','block');
-		$('.vp-rec-wrap:last').addClass('last');
+		$('#vp_recommend_focus .vp-rec-wrap:last').addClass('last');
+		$('#vp_recommend_new').hide();
+		$('#vp_recommend_active').hide();
+		$('#vp_recommend_new .vp-rec-wrap:last').addClass('last');
+		$('#vp_recommend_active .vp-rec-wrap:last').addClass('last');
 		$('.dpvp-more a').click(function(){
-			$(this).parent().parent().fadeOut('slow',function(){$(this).css('left','80px');$(this).hide();});
-			$(this).parent().parent().next().fadeIn('slow');
 			if($(this).parent().parent().hasClass('last')){
-				$('.vp-rec-wrap:first').fadeIn('slow');
+				
+			}else{
+				$(this).parent().parent().fadeOut('fast',function(){$(this).css('left','337.5px');$(this).hide();});
+				$(this).parent().parent().next().fadeIn('fast');
+			}
+				
+			
+		})
+/**
+*分类效果备份
+	$('.dpright-content-top .nav-tabs li a').click(function(){
+		if($(this).parent().attr('class')=='last-li' || $(this).parent().attr('class')=='active'){	
+			}else{
+				//实现toggleClass效果
+				$(this).parent().parent().find('.active').removeClass('active');
+				$(this).parent().addClass('active');
+				var flag=$(this).attr('mylist');
+				//实现切屏幕效果
+				$('.vp_recommend_scroll').hide();
+				$('.vp-rec-wrap').hide();
+			//	alert('#'+flag);
+				$('#'+flag).fadeIn('fast');
+				$('#'+flag).children('.vp-rec-wrap:first').fadeIn('fast');
 			}
 		})
+
+
+
+*备份结束
+*/
+
 		//0315
 		//实现心型联动
 		$('.vp-favor-action').click(function(){
 			$(this).find('.flag-wrapper a').click();
-			
 		})
+//浮动字体效果
+/**
+*
+		$('.gctm-content').css('display','none');
+		$('.gctm-content ~ div').css('display','none');
+		$('.gcvp-body-bottom-pk-right-img').hover(
+			function(){
+				$(this).find('.gctm-content').show();
+				$(this).find('.gctm-content~div').show();
+				$(this).addClass('show');
+			},
+			function(){
+				$(this).find('.gctm-content').fadeOut();
+				$(this).find('.gctm-content~div').fadeOut();
+				$(this).removeClass('show');
+			}
+		
+		)
+*/
+	$('.gcvp-body-bottom-pk-right-img img ~ div').hide();
+	$('.gcvp-body-bottom-pk-right-img').hover(
+		function(){
+			$(this).find('div').show();
+		},
+		function(){
+			$(this).find('div').fadeOut();
+		}
+	)
 })

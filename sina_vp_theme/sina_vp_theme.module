@@ -54,15 +54,13 @@ function sina_vp_theme_menu(){
 	//推荐关注页
 	$items['vp_recommend'] = array( 
     'title' => t('推荐卖家'),
-    'page callback' => 'drupal_get_form',
-    'page arguments'   => array('vp_recommend'),
+    'page callback' => 'vp_recommend',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
-	$items['vp_recommend/user'] = array( 
+	$items['vp_recommend_user'] = array( 
     'title' => t('推荐买家'),
-    'page callback' => 'drupal_get_form',
-    'page arguments'   => array('vp_recommend_user'),
+    'page callback' => 'vp_recommend',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
@@ -365,6 +363,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		,'user_register'
 		,'user_login'
 		,'dblog_filter_form'
+		,'user_profile_form_4vp'
 	);
 	if(in_array($form_id, $dispalyNone_forms)){
 		//donothing...
@@ -806,7 +805,8 @@ function vp_user_register_submit($form, &$form_state) {
  * 新注册用户推荐卖家 页面
  * $type 最新加入 new 关注最多  发布节点最多（ 最活跃） 
  */
-function vp_recommend(&$form_state, $type = NULL) {
+function vp_recommend() {
+	return '见page-vp_recommend.tpl,page-vp_recommend_user.tpl';
 	global $user;
 	switch ($type) {
 		case '最新加入':
