@@ -255,27 +255,26 @@
 		//这里增加延时处理
 		/**
 		*2012年3月19日 p.m.
+		 2012年3月20日 p.m.-》增加鼠标判断事件。
 		*/
 		$('.close_box').attr('href','javascript:void(0)');
-		$('.vp-favor-action').click(function(){
-			$(this).parents().find('.dialogIn').fadeOut('fast');
-			$(this).parents().find('.dialogIn').parent().find('.gc-pl-sanjiao').fadeOut('fast');
-			var dialog_div=$(this).parent().parent().parent().next();
-			dialog_div.fadeIn('fast');
-			dialog_div.addClass('dialogIn');
-			dialog_div.find('.gcfudivtext').val("求点评^_^");
-			//2012年3月19日 13:40:05 
-			
-			setTimeout(function(){
-				var flag=dialog_div.hasClass('dialogIn');
-				var word_flag=dialog_div.find('.gcfudivtext').val();
-				if(flag && (word_flag=='求点评^_^' || word_flag=="评论已送出!!")){
-					dialog_div.fadeOut('fast');
-					dialog_div.removeClass('dialogIn');
-				}
-			},10000);
-			//alert('this is works');
-		})
+
+		$('.gcfudiv').hover(
+			function(){
+				$(this).attr('mouseIn','in');
+			},
+			function(){
+				$(this).attr('mouseIn','out');
+				clearTimeout(signo);
+				var signo=setTimeout(function(){
+					if($(this).hasClass('dialogIn') && $(this).attr('mouseIn')=='out'){
+						$(this).fadeOut('fast');
+						$(this).removeClass('dialogIn');
+					}
+				},10000)
+			}
+		)
+
 		$('.gcfudivbtn').click(function(){
 			var textSel=$(this).parent().find('.gcfudivtext');
 			var word=textSel.val();
@@ -379,11 +378,7 @@
 *备份结束
 */
 
-		//0315
-		//实现心型联动
-		$('.vp-favor-action').click(function(){
-			$(this).find('.flag-wrapper a').click();
-		})
+
 //浮动字体效果
 
 	$('.gcvp-body-bottom-pk-right-img img ~ div').hide();
@@ -394,6 +389,8 @@
 		function(){
 			$(this).find('div').fadeOut();
 		}
-	)
+	).mousemove(function(){
+		$(this).find('div').show();
+	})
 
 })

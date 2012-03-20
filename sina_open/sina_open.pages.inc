@@ -39,7 +39,7 @@ function sina_open_page_t_login() {
     drupal_goto($to_url);
   } else {
     drupal_set_message('新浪服务器未响应，无法验证', 'error');
-    drupal_goto('user/login');
+    //drupal_goto('user/login');
   }
 }
 

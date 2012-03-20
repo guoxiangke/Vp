@@ -57,9 +57,8 @@ function sina_vp_form(&$node, &$param)
 function sina_vp_nodeapi(&$node, $op){
 	 global $user;
 	//copy form sina_open_nodeapi
-	if ($op == 'insert' && variable_get('sina_open_node_'.$node->type, 1)) {// && $node->sina_vp_open 1. 无绑定，不同步，2.绑定取消管勾
+	if ($op == 'insert') {// && $node->sina_vp_open 1. 无绑定，不同步，2.绑定取消管勾 && variable_get('sina_open_node_'.$node->type, 1)
 		//所有发布的都走这一步 写入表『sina_vp_weibo2node』
-    if (1||db_result(db_query('SELECT uid FROM {sina_open_user} WHERE uid = %d', $user->uid))) {
     //在sina_open_t_set_tweet2 里做判断，如果没绑定，不请求request_url了。    
       $url = url('node/'.$node->nid, array('absolute' => true));
       
@@ -68,13 +67,8 @@ function sina_vp_nodeapi(&$node, $op){
         url('sina_vp_front_page&destination=node/'.$node->nid, array('absolute' => true))
 	  		,$node //传递节点 dale
       );
-			//发布节点后不跳转node页 与简洁链接。dale
-			// 需完善 参 http://www.ludou.org/get_current_page_url.html
-			//$uri=preg_replace($patterns2, $replacements, $string);
-			//str_replace('q=','',$_SERVER['QUERY_STRING']);
-			//drupal_goto('vp/user_timeline');
-    } else {
-      //drupal_set_message('您需要先绑定新浪微博帐号，才能够推送信息。', 'warning');
+    if (!db_result(db_query('SELECT uid FROM {sina_open_user} WHERE uid = %d', $user->uid))){
+      drupal_set_message('您需要先绑定新浪微博帐号，才能够推送信息。', 'warning');
     }
   }
   switch( $node->type )
@@ -92,14 +86,20 @@ function sina_vp_nodeapi(&$node, $op){
           break;
         case 'delete':    
 					$wid= sina_vp_get_mid($node->nid);//刚开始使用wid好使，现在得用mid了，晕死了
-					if($wid){
+					
+					watchdog('$wid', $wid);
+					$wid2 = db_result(db_query("SELECT `wid` wid FROM {sina_vp_weibo2node} WHERE `nid`=%d and `cid`=0",$nid));
+						watchdog('$wid2', $wid2);
+					if($wid2){
 						$request_url="http://api.t.sina.com.cn/statuses/destroy/$wid.json"; 
 						$result = sina_open_t_set_request($request_url);
+						watchdog('$wid', json_decode($result->data));
 						if ($result->code == 200) {
 							drupal_set_message($message = '同步删除成功！', $type = 'status', $repeat = TRUE);
 							//if(function_exists(dpm)) dpm();				$data=json_decode($result->data);.$data->error
 						} else {					
 							drupal_set_message('同步删除失败！', $type = 'warning', $repeat = TRUE);
+							watchdog('$type', '同步删除失败');
 							return false;
 						}	      
 					}
@@ -844,7 +844,6 @@ function sina_vp_type_preprocess($sina_vp_type){
  */
 function _sina_vp_db_write($data,$node,$tid=NUll,$zid=NULL){
 	//if(is_array($node)){watchdog('$typedug', '<pre>'.print_r(debug_backtrace(),TRUE));}
-	
 		if(isset($node->type)){//if $node is a node 拥有type属性
 			$nid = $node->nid;
 			$cid = 0;
@@ -867,17 +866,20 @@ function _sina_vp_db_write($data,$node,$tid=NUll,$zid=NULL){
 				return;
 			};		
 		}
+		$z_uid=0;
 		if($zid){//分享的分享==转发的转发 只要根
 				$is_zf_sql = "SELECT zid zid FROM  {sina_vp_weibo2node} WHERE  `nid` =$zid AND  `cid` =0 AND  `zid` <>0 ";
 				$is_zf = db_result(db_query($is_zf_sql));
 				$zid=$is_zf?$is_zf:$zid;
 				$z_uid = db_result(db_query("SELECT uid uid FROM  {node} WHERE  `nid` =$zid")); //dale 添加被转发节点的uid。20120313
+				$z_uid?$z_uid:0;
 		}
-		db_query("INSERT INTO {sina_vp_weibo2node}
+		$zid=$zid?$zid:0;
+		$sql="INSERT INTO sina_vp_weibo2node
 						(`nid` ,`uid` ,`cid`,`wid` ,`data`,`created_at`,`sina_vp_type`,`zid`,`z_uid`)
-						VALUES ('%d','%d','%d','%d','%s','%d','%d','%d','%d')"
-						,$nid,$user->uid,$cid,$wid,$datas,$created_at,$tid,$zid,$z_uid);
-						//more... 是否需要分2个表 nid zid
+						VALUES ($nid,$user->uid,$cid,$wid,'$datas',$created_at,$tid,$zid,$z_uid)";
+						db_query($sql);
+						//more... 是否需要分2个表 nid zid*/
 		
 }
 
@@ -1376,7 +1378,7 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 			  if ($result->code == 200) {	    					  			
 					drupal_set_message('已成功同步到新浪微博！');
 			  }else{
-			    drupal_set_message('同步新浪微博失败，可能原帖在新浪上被删除或者您的网络环境不稳定，但并不影响您在本站的发布。错误代码：2011100701。', 'warning');
+			    drupal_set_message('同步新浪微博失败，可能原帖在新浪上被删除或者您的网络环境不稳定，不影响您在本站的发布。', 'warning');
 			  }
 			}
 		  _sina_vp_db_write($result->data,$node,$tid,$nid);		  
@@ -1392,7 +1394,7 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 			  if ($result->code == 200) {	    					  			
 					drupal_set_message('已成功发送到新浪微博');
 			  }else{
-			    drupal_set_message('您的网络环境不稳定，发送到新浪微博失败，错误代码：201110070100。', 'warning');
+			    drupal_set_message('您的网络环境不稳定，发送到新浪微博失败。', 'warning');
 			  }
 			}
 		  _sina_vp_db_write($result->data,$node,$tid,$nid);		  
@@ -1408,6 +1410,7 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 				//module_load_include('inc', 'sina_open', 'sina_open.pages');
 				//return sina_open_page_config(user_load($user->uid));
 				drupal_set_message('亲，想不想你的微博也同步到新浪上，获得更多关注啊！！！'.l('立即绑定','sina_open/t_login'));
+				 watchdog('想不想你的微博也同步到新浪上', __LINE__);
 			}
 			$last_key[oauth_token]=$token->key;
 			$last_key[oauth_token_secret]=$token->secret;
@@ -1422,7 +1425,7 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 				  drupal_set_message('同步失败，请检查您的网络！', 'error');
 				  //return false;
 				}
-				if(function_exists(dpm)) dpm($result,'图片微博返回数据');
+				if(function_exists(dpm)) dpm(json_encode($result),'图片微博返回数据');
 				_sina_vp_db_write(json_encode($result),$node,$tid,$nid);	
 			}else{
 				_sina_vp_db_write('',$node,$tid,$nid);
@@ -1909,7 +1912,9 @@ function comment_render_4vp($node, $cid = 0,$return=json) {
 
       $output .= $comments;
       //$output .= theme('pager', NULL, $comments_per_page, 0);
+      $output .='<div class="clear"></div><div class="vpj_more_comments">';
       $output .=l('查看更多','node/'.$nid);
+			$output .='</div>';
 
       if ($num_rows && ($comment_controls == COMMENT_CONTROLS_BELOW || $comment_controls == COMMENT_CONTROLS_ABOVE_BELOW)) {
         $output .= drupal_get_form('comment_controls', $mode, $order, $comments_per_page);

@@ -14,3 +14,7 @@ VP
 
 $size = explode('x', variable_get('imagefield_thumb_size', '100x100'));
 $size = explode('x', variable_get('imagefield_thumb_size', '220x220'));
+
+
+    drupal_set_message('新浪服务器未响应，无法验证', 'error');
+    //drupal_goto('user/login');

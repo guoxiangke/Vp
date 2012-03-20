@@ -356,6 +356,11 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		$form['name']['#title']='邮箱/用户名';
 		unset($form['sina_open_links']);
 	}
+	
+	//修改评论框,不可
+ if($form_id == 'comment_form'){
+ 	$form['comment_filter']['comment']['#resizable']=FALSE;
+ }
 
 
 	 	$dispalyNone_forms = array(
@@ -376,7 +381,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		,'weibo_ajax_forward'
 		//,'sina_vp_recommend'
 		,'regcode_voucher'
-		,'comment_form'
+	//	,'comment_form'
 		,'user_profile_form'
 		,'privatemsg_new'
 		,'privatemsg_list'
@@ -384,6 +389,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		,'user_register'
 		,'dblog_filter_form'
 		,'user_profile_form_4vp'
+		,'comment_form'
 	);
 	if(in_array($form_id, $dispalyNone_forms)){
 		//donothing...
@@ -403,15 +409,33 @@ function sina_vp_theme_u_register_validate($form, &$form_state)
     // 将字符串分解为单元
     preg_match_all('/./us', $form_state['values']['name'], $match);
     // 返回单元个数
-		if(strlen($form_state['values']['name'])==14&&count($match[0])==14){
+    dpm(strlen($form_state['values']['name']),'实际值');
+		dpm(count($match[0]),'转换值');
+		$havesize=(count($match[0])*3-strlen($form_state['values']['name']))/2;//算出有几个字符
+		$havehz=ceil(($havesize)/2);//这几个字符等于几个汉字
+		$hanzi=(strlen($form_state['values']['name']))/(count($match[0]));//判断是否全是汉字
+		dpm($havesize,'算出有几个字符');
+		dpm($hanzi,'全是没字');
+		dpm($havehz,'这几个字符等于几个汉字');
+		if((strlen($form_state['values']['name']))==(count($match[0]))){ //全是字符
+		   if(count($match[0])<=14){
 			$flag = true;
-		}elseif(strlen($form_state['values']['name'])>14&&count($match[0])<=7){
-			//说明有汉字，
-			$flag = true;
-		}elseif(count($match[0])>7&&strlen($form_state['values']['name'])<14){
-			$flag = true;
-		}else{
+		   }else{
 			form_set_error('name', '用户名应不超过7个汉字或14个英文字符');
+		   }
+        }elseif($hanzi==3){
+		   if((count($match[0]))<=7){
+			$flag = true;
+		   }else{
+			form_set_error('name', '用户名应不超过7个汉字或14个英文字符');
+		   }          		
+		}elseif(strlen($form_state['values']['name'])>count($match[0])){
+			//说明有汉字，
+			if(($havehz+(count($match[0])-$havesize))<=7){
+			  $flag = true;
+			}else{
+			form_set_error('name', '用户名应不超过7个汉字或14个英文字符(注意：2个字符等于一个汉字)');
+		    }
 		}
 }
 function regcode_voucher_submit2($form, $form_state) {

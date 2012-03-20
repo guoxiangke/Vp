@@ -485,7 +485,7 @@ function sina_vp_new_forward($tid=NULL,$nid=NULL){
 	}
 	$output = page_weibo_add();
 	drupal_set_title('分享['.$taxonomy_name.']');
-	return theme('status_messages').node_view($node,  $teaser = TRUE, $page = FALSE, $links = TRUE).$output;
+	return theme('status_messages').$output;//.node_view($node,  $teaser = TRUE, $page = FALSE, $links = TRUE)
 }
 
 /**
@@ -1003,6 +1003,7 @@ function sina_UCenter_page($tid = NULL,$uid=NUll) {
 /**
  * 卖家中心底部 sina_UCenter_page
  * 所有对卖家的转发 分享 显示在该页面。
+ * 可以删除 dale，以后增加内容
  */
 function sina_UCenter_saler_page($tid = NULL,$uid=NUll) {
 	global $user;//买家个人访问的自己的页面
@@ -1230,21 +1231,21 @@ function sina_vp_Activity(){return '详见page-Activity.tpl.php';}
  * $child_type 子类型 most_favor喜欢最多  most_comments评论最多 recently_active最新更新
  * $uid 某个卖家的类型广场
  * $json_type json数据 ajax 请求。
+ * /?q=plaza/News/all/69 某个卖家的某类型的广场。
  */
 function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json_type='html'){
 		//plaza/New/all/3/html\
 		$plaza_type_obj = vpj_get_terms_by_alias($plaza_type);
 		$plaza_tid = $plaza_type_obj->tid; //分类id
 		$plaza_tname = $plaza_type_obj->name;
-
-		if($account&&!is_object($account))
-		$account = user_load($account);
+		if($account&&!is_object($account))$account = user_load($account);
+		$uid = $account->uid;
 		{
 			if($account&&in_array('Buyer', $account->roles)){
 			drupal_set_message('您好像走叉道了，亲～');
-			return ' ';
+			return ' ';//只考虑卖家才有广场相关页面。 
 			}
-		}//只考虑卖家才有广场相关页面。 
+		}
 				 //ALL News
 				 	
 				 if(!is_array($plaza_tname))
@@ -1359,7 +1360,18 @@ function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json
 								$output = plaza_output($results,$child_type,$plaza_type,'喜欢最多');
 							break;
 						default: //三个sql
-								if($plaza_tname=='真人秀'||$plaza_tname=='转让潮'){
+								if($plaza_tname=='真人秀'||$plaza_tname=='转让潮'){//真人秀6 转让潮5 的广场频道。都是mai家的节点。
+									//?q=plaza/News/all/69 某一卖家的 买家发布的真人秀和转让潮，即sina_vp_weibo2node 中z_uid = 69 
+									if($uid){
+									$sql="SELECT node.nid AS nid, node.created AS node_created ,node.uid AS node_uid ,coalesce(flag.count,0)  AS counts1 FROM node AS node
+									LEFT JOIN flag_counts  as flag ON flag.content_id = node.nid
+									LEFT JOIN sina_vp_weibo2node  as sina_vp_weibo2node ON sina_vp_weibo2node.nid = node.nid  
+									LEFT JOIN term_node term_node ON node.vid = term_node.vid  								
+									LEFT JOIN term_data term_data ON term_node.tid = term_data.tid 
+									WHERE sina_vp_weibo2node.z_uid=$uid AND sina_vp_weibo2node.cid	=0 AND (node.status = 1)
+									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
+									ORDER BY counts1 desc ,node_created DESC LIMIT 0 , 6";//喜欢最多
+									}else{										
 									$sql="SELECT node.nid AS nid, node.created AS node_created ,node.uid AS node_uid ,coalesce(flag.count,0)  AS counts1 FROM node AS node
 									LEFT JOIN flag_counts  as flag ON flag.content_id = node.nid  
 									LEFT JOIN term_node term_node ON node.vid = term_node.vid  								
@@ -1367,19 +1379,37 @@ function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json
 									WHERE (node.status = 1)
 									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
 									ORDER BY counts1 desc ,node_created DESC LIMIT 0 , 6";//喜欢最多
+									}
 									$results = db_query($sql);
 									//$output = plaza_output($results,'喜欢最多');
 									$output = plaza_output($results,$child_type='most_favor',$plaza_type,'喜欢最多');
-									$sql="SELECT node.nid AS nid, node.created AS node_created ,node.uid AS node_uid ,coalesce(flag.count,0)  AS counts1 FROM node AS node
+									if($uid){
+										$sql="SELECT node.nid AS nid, node.created AS node_created ,node.uid AS node_uid ,coalesce(flag.count,0)  AS counts1 FROM node AS node
+									LEFT JOIN flag_counts  as flag ON flag.content_id = node.nid  
+									LEFT JOIN sina_vp_weibo2node  as sina_vp_weibo2node ON sina_vp_weibo2node.nid = node.nid  
+									LEFT JOIN term_node term_node ON node.vid = term_node.vid  	
+									WHERE sina_vp_weibo2node.z_uid=$uid AND sina_vp_weibo2node.cid	=0 AND (node.status = 1)
+									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
+									ORDER BY counts1 desc ,node_created DESC LIMIT 0 , 6";
+									}else{$sql="SELECT node.nid AS nid, node.created AS node_created ,node.uid AS node_uid ,coalesce(flag.count,0)  AS counts1 FROM node AS node
 									LEFT JOIN flag_counts  as flag ON flag.content_id = node.nid  
 									
 									LEFT JOIN term_node term_node ON node.vid = term_node.vid  	
 									WHERE (node.status = 1)
 									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
-									ORDER BY counts1 desc ,node_created DESC LIMIT 0 , 6";
+									ORDER BY counts1 desc ,node_created DESC LIMIT 0 , 6";}
+									
 									$results = db_query($sql);
 									//$output .= plaza_output($results,'点评最多');
 									$output .= plaza_output($results,$child_type='most_comments',$plaza_type,'点评最多');
+									if($uid){
+									$sql="SELECT node.nid AS nid, node.created AS node_created FROM node node  
+									LEFT JOIN sina_vp_weibo2node  as sina_vp_weibo2node ON sina_vp_weibo2node.nid = node.nid  
+									LEFT JOIN term_node term_node ON node.vid = term_node.vid 
+									LEFT JOIN term_data term_data ON term_node.tid = term_data.tid 
+									WHERE sina_vp_weibo2node.z_uid=$uid AND sina_vp_weibo2node.cid	=0 AND (node.status = 1)
+									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
+									ORDER BY node_created DESC LIMIT 0 , 6";}else{
 									$sql="SELECT node.nid AS nid, node.created AS node_created FROM node node  
 									
 									LEFT JOIN term_node term_node ON node.vid = term_node.vid 
@@ -1387,10 +1417,21 @@ function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json
 									WHERE (node.status = 1)
 									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
 									ORDER BY node_created DESC LIMIT 0 , 6";			
+									}	
 									$results = db_query($sql);
 									//$output .= plaza_output($results,'最新更新');
 									$output .= plaza_output($results,$child_type='recently_active',$plaza_type,'最新更新');
-								}else{
+								}else{//真人秀 转让潮以外的广场频道。都是卖家的节点。
+									if($uid){
+										$sql="SELECT node.nid AS nid, node.created AS node_created ,node.uid AS node_uid ,coalesce(flag.count,0)  AS counts1 FROM node AS node
+									LEFT JOIN flag_counts  as flag ON flag.content_id = node.nid  
+									LEFT JOIN users_roles users_roles ON node.uid = users_roles.uid 
+									LEFT JOIN term_node term_node ON node.vid = term_node.vid  								
+									LEFT JOIN term_data term_data ON term_node.tid = term_data.tid 
+									WHERE  node.uid = $uid AND (users_roles.rid = 3) AND (node.status = 1)
+									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
+									ORDER BY counts1 desc ,node_created DESC LIMIT 0 , 10";
+									}else{
 									$sql="SELECT node.nid AS nid, node.created AS node_created ,node.uid AS node_uid ,coalesce(flag.count,0)  AS counts1 FROM node AS node
 									LEFT JOIN flag_counts  as flag ON flag.content_id = node.nid  
 									LEFT JOIN users_roles users_roles ON node.uid = users_roles.uid 
@@ -1399,9 +1440,19 @@ function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json
 									WHERE (users_roles.rid = 3) AND (node.status = 1)
 									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
 									ORDER BY counts1 desc ,node_created DESC LIMIT 0 , 10";
+									}
 									$results = db_query($sql);
 									//$output = plaza_output($results,'喜欢最多');
 									$output = plaza_output($results,$child_type='most_favor',$plaza_type,'喜欢最多');
+									if($uid){
+											$sql="SELECT node.nid AS nid, node.created AS node_created ,node.uid AS node_uid ,coalesce(flag.count,0)  AS counts1 FROM node AS node
+									LEFT JOIN flag_counts  as flag ON flag.content_id = node.nid  
+									LEFT JOIN users_roles users_roles ON node.uid = users_roles.uid 
+									LEFT JOIN term_node term_node ON node.vid = term_node.vid  	
+									WHERE  node.uid = $uid AND (users_roles.rid = 3) AND (node.status = 1)
+									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
+									ORDER BY counts1 desc ,node_created DESC LIMIT 0 , 10";
+									}else{
 									$sql="SELECT node.nid AS nid, node.created AS node_created ,node.uid AS node_uid ,coalesce(flag.count,0)  AS counts1 FROM node AS node
 									LEFT JOIN flag_counts  as flag ON flag.content_id = node.nid  
 									LEFT JOIN users_roles users_roles ON node.uid = users_roles.uid 
@@ -1409,16 +1460,28 @@ function sina_vp_plaza($plaza_type='Shows',$child_type='all',$account=null,$json
 									WHERE (users_roles.rid = 3) AND (node.status = 1)
 									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
 									ORDER BY counts1 desc ,node_created DESC LIMIT 0 , 10";
+									}
 									$results = db_query($sql);
 									//$output .= plaza_output($results,'点评最多');
 									$output .= plaza_output($results,$child_type='most_comments',$plaza_type,'点评最多');
-									$sql3="SELECT node.nid AS nid, node.created AS node_created FROM node node  
+									if($uid){
+										$sql="SELECT node.nid AS nid, node.created AS node_created FROM node node  
+									INNER JOIN users_roles users_roles ON node.uid = users_roles.uid 
+									LEFT JOIN term_node term_node ON node.vid = term_node.vid 
+									LEFT JOIN term_data term_data ON term_node.tid = term_data.tid 
+									WHERE   node.uid = $uid AND (users_roles.rid = 3) AND (node.status = 1)
+									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
+									ORDER BY node_created DESC LIMIT 0 , 10";		
+									}else{
+										
+									$sql="SELECT node.nid AS nid, node.created AS node_created FROM node node  
 									INNER JOIN users_roles users_roles ON node.uid = users_roles.uid 
 									LEFT JOIN term_node term_node ON node.vid = term_node.vid 
 									LEFT JOIN term_data term_data ON term_node.tid = term_data.tid 
 									WHERE (users_roles.rid = 3) AND (node.status = 1)
 									AND (node.type in ('weibo')) AND ((term_node.tid) = $plaza_tid) 
-									ORDER BY node_created DESC LIMIT 0 , 10";				
+									ORDER BY node_created DESC LIMIT 0 , 10";		
+									}		
 									$results = db_query($sql);
 									//$output .= plaza_output($results,'最新更新');
 									$output .= plaza_output($results,$child_type='recently_active',$plaza_type,'最新更新');
@@ -1467,8 +1530,8 @@ function plaza_output($results,$child_type,$plaza_type,$plaza_title){
 	                       <div class="gcvp-body-bottom-pk-right-img">
 	                            '.theme('imagecache', 'w200',$weibo_image_filepath, '', '').'
 							    <div class="gctm-content"></div>
-							    <div class="gctm-pic">'.theme('imagecache', '35x35', $activity_user->picture, $activity_user->name, '').'</div>
-							    <div class="gctm-size">'.$activity_node->name.'</div>
+							    <div class="gctm-pic">'.l(theme('imagecache', '35x35', $activity_user->picture, $activity_user->name, ''),"UCenter/0/$activity_node->uid",array('html'=>true)).'</div>
+							    <div class="gctm-size">'.l($activity_node->name,"UCenter/0/$activity_node->uid").'</div>
 	                       </div>
 	                       <div class="gcvp-body-bottom-pk-right-xx">
 	                           <div class="gcpk-img-name">'.$activity_node->title.'</div>
@@ -1541,3 +1604,4 @@ function plaza_output($results,$child_type,$plaza_type,$plaza_title){
 		$output .= theme('pager', NULL, 2);
 		return $output;
 }
+

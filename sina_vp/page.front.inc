@@ -113,7 +113,6 @@ function sina_vp_front_page()
 		
 		//drupal_add_css(drupal_get_path('module', 'sina_vp_theme').'/plugins/twitter/dialog.css');
 		jquery_ui_add('ui.draggable');
-		jquery_ui_add('ui.resizable');
     //drupal_add_css("sites/all/libraries/jquery.ui/themes/base/ui.all.css");
     $output .= '<div class="modal fade" id="loginModal" style="display: none;">
             <div class="modal-header">
