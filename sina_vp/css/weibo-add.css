@@ -9,6 +9,11 @@
     font-size: 22px;
     font-weight: 700;
 }
+.sina_open_tweet_text_count{
+	  font-family: Constantia,Georgia;
+    font-size: 22px;
+    font-weight: 700;
+}
 #edit-title-wrapper .description{
     font: 12px/1.125 Arial,Helvetica,sans-serif;
     width: 345px;

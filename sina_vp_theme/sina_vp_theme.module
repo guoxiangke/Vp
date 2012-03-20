@@ -52,16 +52,18 @@ function sina_vp_theme_menu(){
 		'weight' => -20,
   );
 	//推荐关注页
-	$items['vp_recommend'] = array( 
+	$items['vp_recommend'] = array(
     'title' => t('推荐卖家'),
     'page callback' => 'vp_recommend',
-    'access callback' => TRUE,
+    'access callback' => 'user_access',
+    'access arguments' => array('recommendUsers2Buyer'),
     'type' => MENU_CALLBACK,
   );
-	$items['vp_recommend_user'] = array( 
+	$items['vp_recommend_user'] = array(
     'title' => t('推荐买家'),
     'page callback' => 'vp_recommend',
-    'access callback' => TRUE,
+    'access callback' => 'user_access',
+    'access arguments' => array('recommendUsers2Buyer'),
     'type' => MENU_CALLBACK,
   );
 	
@@ -72,6 +74,14 @@ function sina_vp_theme_menu(){
     'type' => MENU_CALLBACK,
   );
 	return $items;
+}
+/**
+ * Implementation of hook_perm().
+ */
+function sina_vp_theme_perm(){
+  return array(
+		'recommendUsers2Buyer',//推荐卖家|买家给用户
+	);
 }
 /**
  * Access callback for user account editing.
@@ -107,7 +117,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		if(module_exists('regcode_voucher')){
 			$items = array();
 		  if (variable_get('user_register', 1)) {//user/register
-		    $items[] = l(t('Create new account'), 'enter_regcode', array('attributes' => array('title' => t('Create a new user account.'))));
+		   // $items[] = l(t('Create new account'), 'enter_regcode', array('attributes' => array('title' => t('Create a new user account.'))));
 		  }
 		  $items[] = l(t('Request new password'), 'user/password', array('attributes' => array('title' => t('Request new password via e-mail.'))));		  
 		}				  
@@ -115,11 +125,17 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		//$form['pass']['#title']=FALSE;
 		//$form['name']['#default_value']='登录邮箱';
 		//$form['pass']['#default_value']='密码';
-		if (variable_get('sina_open_is_login', 1) && ($form_id == 'user_login_block' || $form_id == 'user_login')) {
-			$items[] = l('<img src="'.drupal_get_path('theme','vp').'/images/log_btn1.jpg"/>', 'sina_open/t_login', array('html' =>'true','attributes' => array('title' => t('Create a new user account.'),'class' => 'sina_open_login_links')));
-			unset($form['sina_open_links']);
-	  }
-		$form['links'] = array('#value' => theme('item_list', $items));
+
+		$form['links'] = array('#value' => theme('item_list', $items),'#weight' => 99,);
+		$form['remember_me']['#weight']=98;
+		$form['remember_me']['#title']='记住我';
+		$form['vpj_sina_links'] = array(
+			"#type" =>'markup',
+      '#value' => '<a href="'.url('sina_open/t_login').'"><img src="'.drupal_get_path('theme','vp').'/images/log_btn1.jpg"/></a>',
+      '#prefix' => '<div class="sina_open_login_links">',
+      '#suffix' => '</div>',
+      '#weight' => 999,
+    );		
 		$form['vpj_register_links'] = array(
 			"#type" =>'markup',
       '#value' => '<a href="'.url('enter_regcode').'"><input id="edit-vpj-register-links" class="form-submit btn-large btn" type="button" value="立即注册微铺街" name="op"></a>',
@@ -131,18 +147,22 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		$form['submit']['#prefix'] ='<div class="ulogin">';
 		$form['submit']['#suffix'] ='</div>';
 		$form['submit']['#attributes'] = array('class' => 'btn-large btn');
-		
-		//点击账户密码特效
+	}
+	if ($form_id == 'user_login_block' || $form_id == 'user_login') {
+		//$items[] = l('<img src="'.drupal_get_path('theme','vp').'/images/log_btn1.jpg"/>', 'sina_open/t_login', array('html' =>'true','attributes' => array('title' => t('Create a new user account.'),'class' => 'sina_open_login_links')));
+		if(variable_get('sina_open_is_login', 1)){
+			unset($form['sina_open_links']);
+		}
+		$form['name']['#description']=FALSE;
+		$form['pass']['#description']=FALSE;
+		$form['remember_me']['#title']='记住我';
+				//点击账户密码特效
 		$form['name']['#prefix'] ='<div id="email_click">';
 		$form['name']['#suffix'] ='</div>';
 		$form['pass']['#prefix'] ='<div id="pass_click">';
 		$form['pass']['#suffix'] ='</div>';		
-	}
-	
-	if($form_id == 'user_login'){
-		$form['name']['#description']=FALSE;
-		$form['pass']['#description']=FALSE;
-	}
+  }
+  
 	if($form_id == 'user_register'){
 		//$form['Personal information']['#access']=FALSE;
 		$form['account']['name']['#description']=FALSE;
@@ -345,6 +365,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		'search_block_form',
 		'devel_switch_user_form'
 		,'user_login_block'
+		,'user_login'
 		,'profile_field_form'
 		,'system_modules'
 		//,'weibo_node_form'
@@ -361,7 +382,6 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		,'privatemsg_list'
 		,'user_pass'
 		,'user_register'
-		,'user_login'
 		,'dblog_filter_form'
 		,'user_profile_form_4vp'
 	);
@@ -438,6 +458,11 @@ function sina_vp_theme_init(){
 	drupal_add_js(drupal_get_path('module', 'sina_vp_theme') .'/sina_vp_theme.js');
 	jquery_ui_add('ui.dialog'); 
 	
+	//上传图片预览图片大小。
+	//variable_get('imagefield_thumb_size', '100x100')
+	variable_set('imagefield_thumb_size', '220x220');
+	//卸载时需要del掉
+	//variable_del('imagefield_thumb_size');
 }
 /**
  * Implementation of hook_link().

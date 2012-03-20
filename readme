@@ -10,3 +10,7 @@ VP
 
 15:05 2012/3/13
 添加数据库sina_vp_weibo2node 表 字段，zid的uid，z_uid 即被转发节点的用户id，方便数据库选取。
+
+
+$size = explode('x', variable_get('imagefield_thumb_size', '100x100'));
+$size = explode('x', variable_get('imagefield_thumb_size', '220x220'));

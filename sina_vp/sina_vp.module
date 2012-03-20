@@ -192,8 +192,7 @@ function sina_vp_perm(){
 		'add new transfer',//发布转让信息
 		'add new show',//真人秀
 		'add new forward',//转发权
-		'view my follows', //查看粉丝
-		
+		'view my follows', //查看粉丝		
 		'add new Seller info',//卖家权限
 		'add new Buyer info',//买家权限
 	);
@@ -540,6 +539,7 @@ function sina_vp_menu() {
 	    'access callback' => TRUE,
 	    'description' => '各种广场频道',
 	    'file' => 'sina_vp.pages.inc',
+	    'type' => MENU_CALLBACK,		
 	  );
 		$items["plaza/$type/json"] = array(
 	    'title callback'  => 'plaza_title_callback',
@@ -560,6 +560,7 @@ function sina_vp_menu() {
 		    'access callback' => TRUE,
 		    'description' => '所有的活动',
 		    'file' => 'sina_vp.pages.inc',
+		    'type' => MENU_CALLBACK,		
 		);
 		foreach ($plaza_child_types as $child_types) {
 			$items["plaza/$type/$child_types/%user_uid_optional"] = array(//%user_uid_optional
@@ -570,6 +571,7 @@ function sina_vp_menu() {
 		    'access callback' => TRUE,
 		    'description' => '所有的活动',
 		    'file' => 'sina_vp.pages.inc',
+		    'type' => MENU_CALLBACK,		
 		  );
 			$items["plaza/$type/$child_types/json"] = array(
 	    'title callback'  => 'plaza_title_callback',
@@ -736,7 +738,8 @@ function privatemsg_view_vp($thread) {
 							<span class="pm-message-option fr">'.l('回复','',array('fragment'=>'privatemsg-new')).'</span>
 					</div>
 				</div>
-				<div class="arrow"></div>
+				<div class="arrow">'.($side=="R"?">":"<").'</div>
+				<div class="clear"></div>
 			</div>
 		</div>';
   }
@@ -903,7 +906,7 @@ function sina_vp_form_alter(&$form, &$form_state, $form_id) {
 		//drupal_add_css(drupal_get_path('module', 'sina_vp') .'/css/jquery-ui.css');
 		$form['title'] = array(
 		  '#type' => 'textarea',//field
-		  '#description' => '请文明发言，还可以输入<strong id="sina_open_tweet_text_count"></strong>字',
+		  '#description' => '<span class="sina_open_tweet_text_count"><strong id="sina_open_tweet_text_count"></strong>/140</span>',
 		  /* // @提醒 ：：：：
 		  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js">JQUERY18 = jQuery.noConflict();</script>
 		  <link media="all" type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/themes/base/jquery-ui.css" rel="stylesheet" />
@@ -937,7 +940,7 @@ function sina_vp_form_alter(&$form, &$form_state, $form_id) {
 			$form['field_image_link']['#access']=FALSE;
 		}
 		
-			
+		$form['path']['#access']=FALSE;
 	}
 	if($form['sina_open'] && $form_id == 'weibo_node_form'){
 		$form['add_option']=array(
@@ -2027,8 +2030,77 @@ function sina_vp_content_process($body){
 	$body = preg_replace($tag_pattern, '<a href="'.$_SERVER["HTTP_REFERER"].'/search?q=#${1}">#${1}#</a>', $body);
 	return $body;
 }
-
-
+//用户推荐 输出函数。
+/**
+ * 输入，$result && $row['uid']
+ * return $output html
+ */
+function sina_vp_recommend($results,$account,$type='focus'){
+	$warp_begin ='<div class="vp-rec-wrap">';
+									$warp_end ='<div class="clear"></div>
+																<div class="dpvp-more">
+																	<!--span class="vp-recommend"><a href="javascript:void(0)"><<上一批</a></span-->
+																	<a href="javascript:void(0)">换一批>></a>
+																</div>
+																<div class="tjvp-xyb">'.l('下一步','vp_recommend_user').'</div>	
+															</div>';
+									$count =1;//1--18
+									$count2 = 3;//换3批
+									while($count<=18){//
+										$row = db_fetch_array($results);
+										if($row['uid']){
+											$account = user_load($row['uid']);		
+											if($account->picture==''){$account->picture=variable_get(user_picture_default, '/sites/default/files/users/0.gif');}
+											$output.='<div class="dpdianpu-content odd">
+															<div class="dpdianpu-pic">'.
+															l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
+															.'</div>
+															<div class="dpdianpu-xx">
+																<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
+																<p class="dpdpgg">'.($account->signature?$account->signature:'暂无介绍').'</p>
+															</div>
+															<div class="dpdianpu-dy">
+																<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
+																';
+															 $my_follows =	user_relationships_load( array("between" => array($account->uid, $user->uid)),array("include_user_info" => TRUE));//获取当前用户与该卖家的关系
+															 $follow_status=0;
+																if(count($my_follows)){
+																	$follow_status=1; //已关注	
+																}
+															 $options = sina_vp_follow_toggle_options($type);
+															 global $user;
+											         if($account->uid<>$user->uid && !in_array('Seller',$user->roles)){		//卖家查看卖家/自己，不可进行粉丝操作。 			
+																$output.='<span class="focus-action focus-status focus-action-do">';
+																foreach (array_keys($options) as $key) {
+															    $output.= fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $account->uid .'/'. $options[$key]['0'] , TRUE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status,$account->uid);
+															 	} 
+																$output.='</span>';
+															}					
+										$output.='</div>						
+														</div>';
+									}else{
+										$output .='<div class="dpdianpu-content odd">
+												<div class="dpdianpu-pic"><a class="Buyer-user-link" href="/?q=UCenter">
+												<img width="65" height="65" class="vp-user-picture"  src="http://dev.weipujie.com/?q=sites/default/files/imagecache/65x65/users/0.gif"></a></div>
+												<div class="dpdianpu-xx">
+													<p class="dpdpname"><a href="/?q=UCenter">卖家名字</a></p>
+													<p class="dpdpgg">个性签名显示示例</p>
+												</div>
+												<div class="dpdianpu-dy">
+													<p>4</p>
+														<span class="focus-action focus-status focus-action-do">+订阅</span>
+												</div>						
+										</div>';
+									}
+									if($count%6==0){
+										$output1 .= $warp_begin.$output.$warp_end;
+										$count2--;
+										$output ='';
+									}
+									$count++;
+								}
+								return $output1;$output1='';$output ='';
+}
 /**
  * @} End of "sina.module".
  */

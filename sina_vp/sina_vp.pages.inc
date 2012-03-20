@@ -625,13 +625,65 @@ function sina_VCenter_page($type = 'all') {
 	switch ($type) {
 		case 'Sub_most':	//订阅最多
 			//订阅最多
-			$sql='SELECT `requestee_id` FROM `user_relationships` where `rtid`=2  group by `requestee_id` order by count(1) desc limit 0,20';
-			$results = db_query($sql);
 			$count =20;
-			$output = '<div class="dpbody-right-content VCenter-Sub_most">
+			$sql='SELECT `requestee_id` uid FROM `user_relationships` where `rtid`=2  group by `requestee_id` order by count(1) desc limit 0,20';
+			$results = db_query($sql);
+			$output .= sina_vcenter_output($results,'订阅最多',$count);			
+			break;
+		case 'New'://最新加入		
+			$count =20;
+			$sql='select u.uid uid from users u  INNER JOIN users_roles users_roles ON u.uid = users_roles.uid
+	 			WHERE (users_roles.rid = 3) AND (u.status <> 0) order by created desc';
+			//$results = db_query($sql);
+			//$result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
+			$results = pager_query(db_rewrite_sql($sql), $count);
+			$output .= sina_vcenter_output($results,'最新加入',$count);
+			//$output .= theme('pager', NULL, 20);//variable_get('default_nodes_main', 10)
+			break;
+		case 'Active'://最新更新
+			$sql='select n.uid uid from node n  INNER JOIN users_roles users_roles ON n.uid = users_roles.uid
+ WHERE (users_roles.rid = 3)  group by n.uid order by count(1) desc limit 0,20';
+			$results = db_query($sql);
+			$output .= sina_vcenter_output($results,'最近更新',$count=20);
+			break;
+		default:
+			$count =6;
+			//订阅最多			
+			$sql='SELECT `requestee_id` uid FROM `user_relationships` where `rtid`=2  group by `requestee_id` order by count(1) desc limit 0,6';
+			$results = db_query($sql);
+		
+	    $output .= sina_vcenter_output($results,'订阅最多',$count);
+			//最新加入
+				$sql='select u.uid uid from users u  INNER JOIN users_roles users_roles ON u.uid = users_roles.uid
+	 			WHERE (users_roles.rid = 3) AND (u.status <> 0) order by created desc limit 0,6';
+			
+			$results = db_query($sql);
+			$output .= sina_vcenter_output($results,'最新加入',$count);
+			//最近更新
+			$sql='select n.uid uid from node n  INNER JOIN users_roles users_roles ON n.uid = users_roles.uid
+ WHERE (users_roles.rid = 3)  group by n.uid order by count(1) desc limit 0,6';
+			$results = db_query($sql);
+			$output .= sina_vcenter_output($results,'最近更新',$count);
+			break;
+	}
+	return $output;
+	 
+}
+function sina_vcenter_output($results,$title,$count=6){
+			global $user;
+			$temp_count = $count;
+			if(in_array('Buyer', $user->roles)){
+				$focus_users = array();
+				$check_button_flag = TRUE;
+					$follows=user_relationships_load(array("requester_id" => $user->uid,"rtid" => $rtid=2),array("sort" => 'requestee_id',"include_user_info" => TRUE));
+					foreach ($follows as $follow_uid => $value) {
+						$focus_users[] = $follow_uid;
+					}
+			}
+			$output.='<div class="dpbody-right-content VCenter-Active">
 					    <div class="dpright-content-top">
-						    <div class="dpright-content-title">订阅最多</div>
-						    	<div class="dpright-content-right">';
+						    <div class="dpright-content-title">'.$title.'</div>
+								<div class="dpright-content-right">';
 			if($check_button_flag){
 			$output .= '<input type="button" class="dpdybtn"/>';
 										}
@@ -639,12 +691,11 @@ function sina_VCenter_page($type = 'all') {
 								</div>
 							<div class="clear"></div>
 						  </div>
-						  <div class="dpright-content-inner">
-						  ';
+						  <div class="dpright-content-inner">';
 			while($row = db_fetch_array($results)){
-				$account = user_load($row['requestee_id']);		
+				$account = user_load($row['uid']);		
 				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
-				$output.='<div class="dpdianpu-content odd">
+				$output.='<div class="dpdianpu-content '.($count%2?'even':'odd').'">
 									<div class="dpdianpu-pic">'.
 									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
 									.'</div>
@@ -666,62 +717,6 @@ function sina_VCenter_page($type = 'all') {
 										foreach (array_keys($options) as $key) {
 									    $output.= fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $account->uid .'/'. $options[$key]['0'] , TRUE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status,$account->uid);
 									 	} 
-										$output.='</span>';
-									}					
-				$output.='
-									</div>						
-								</div>';
-				$count--;
-			}
-			$output.='<div class="clear"></div></div>';
-			$output.='<div class="clear"></div>
-				</div>';
-			
-			break;
-		case 'New'://最新加入
-			$sql='select u.uid uid from users u  INNER JOIN users_roles users_roles ON u.uid = users_roles.uid
-	 			WHERE (users_roles.rid = 3) AND (u.status <> 0) order by created desc';
-			//$results = db_query($sql);
-			//$result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10));
-			$results = pager_query(db_rewrite_sql($sql), 20);
-			$count =20;
-			$output.='<div class="dpbody-right-content VCenter-New">
-					    <div class="dpright-content-top">
-						    <div class="dpright-content-title">最新加入</div>
-						    	<div class="dpright-content-right">';
-			if($check_button_flag){
-			$output .= '<input type="button" class="dpdybtn"/>';
-										}
-			$output .= '<div class="clear"></div>
-								</div>
-							<div class="clear"></div>
-						  </div>
-						  <div class="dpright-content-inner">';
-			while($row = db_fetch_array($results)){
-				$account = user_load($row['uid']);		
-				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
-				$output.='<div class="dpdianpu-content odd">
-									<div class="dpdianpu-pic">'.
-									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
-									.'</div>
-									<div class="dpdianpu-xx">
-										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
-										<p class="dpdpgg">'.($account->signature?$account->signature:'暂无介绍').'</p>
-									</div>
-									<div class="dpdianpu-dy">
-										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
-										';
-									 $my_follows =	user_relationships_load( array("between" => array($account->uid, $user->uid)),array("include_user_info" => TRUE));//获取当前用户与该卖家的关系
-									 $follow_status=0;
-										if(count($my_follows)){
-											$follow_status=1; //已关注	
-										}
-									 $options = sina_vp_follow_toggle_options($option='focus');
-					         if($account->uid<>$user->uid && !in_array('Seller',$user->roles)){		//卖家查看卖家/自己，不可进行粉丝操作。 			
-										$output.='	<span class="focus-action focus-status focus-action-do">';
-										foreach (array_keys($options) as $key) {
-									    $output.= fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $account->uid .'/'. $options[$key]['0'] , TRUE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status,$account->uid);
-									 	}
 										$output.='</span>';
 									}					
 				$output.='
@@ -744,228 +739,11 @@ function sina_VCenter_page($type = 'all') {
 								</div>';
 			}
 			$output.='<div class="clear"></div></div>';
-			$output.='<div class="clear"></div>
-				</div>';
-			//$output .= theme('pager', NULL, 20);//variable_get('default_nodes_main', 10)
-			break;
-		case 'Active'://最新更新
-			$sql='select n.uid uid from node n  INNER JOIN users_roles users_roles ON n.uid = users_roles.uid
- WHERE (users_roles.rid = 3)  group by n.uid order by count(1) desc limit 0,20';
-			$results = db_query($sql);
-			$count =20;
-			$output.='<div class="dpbody-right-content VCenter-Active">
-					    <div class="dpright-content-top">
-						    <div class="dpright-content-title">最近更新</div>
-						    	<div class="dpright-content-right">';
-			if($check_button_flag){
-			$output .= '<input type="button" class="dpdybtn"/>';
-										}
-			$output .= '<div class="clear"></div>
-								</div>
-							<div class="clear"></div>
-						  </div>
-						  <div class="dpright-content-inner">';
-			while($row = db_fetch_array($results)){
-				$account = user_load($row['uid']);		
-				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
-				$output.='<div class="dpdianpu-content '.($count%2?'odd':'even').'">
-									<div class="dpdianpu-pic">'.
-									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
-									.'</div>
-									<div class="dpdianpu-xx">
-										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
-										<p class="dpdpgg">'.($account->signature?$account->signature:'暂无介绍').'</p>
-									</div>
-									<div class="dpdianpu-dy">
-										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
-										';
-									 $my_follows =	user_relationships_load( array("between" => array($account->uid, $user->uid)),array("include_user_info" => TRUE));//获取当前用户与该卖家的关系
-									 $follow_status=0;
-										if(count($my_follows)){
-											$follow_status=1; //已关注	
-										}
-									 $options = sina_vp_follow_toggle_options($option='focus');
-					         if($account->uid<>$user->uid && !in_array('Seller',$user->roles)){		//卖家查看卖家/自己，不可进行粉丝操作。 			
-										$output.='	<span class="focus-action focus-status focus-action-do">';
-										foreach (array_keys($options) as $key) {
-									    $output.= fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $account->uid .'/'. $options[$key]['0'] , TRUE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status,$account->uid);
-									 	} 
-										$output.='</span>';
-									}					
-				$output.='
-									</div>						
-								</div>';
-				$count--;
-			}
-			$output.='<div class="clear"></div></div>';
-			$output.='  <div class="clear"></div>
-				</div>';
-			break;
-		default:
-			//订阅最多
-			$sql='SELECT `requestee_id` FROM `user_relationships` where `rtid`=2  group by `requestee_id` order by count(1) desc limit 0,6';
-			$results = db_query($sql);
-			$count =6;
-			$output.='<div class="dpbody-right-content VCenter-Sub_most">
-					    <div class="dpright-content-top">
-						    <div class="dpright-content-title">订阅最多</div>
-						    	<div class="dpright-content-right">';
-			if($check_button_flag){
-			$output .= '<input type="button" class="dpdybtn"/>';
-										}
-			$output .= '<div class="clear"></div>
-								</div>
-							<div class="clear"></div>
-						  </div>
-						  <div class="dpright-content-inner">';
-			while($row = db_fetch_array($results)){
-				$account = user_load($row['requestee_id']);		
-				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
-				$output.='<div class="dpdianpu-content odd">
-									<div class="dpdianpu-pic">'.
-									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
-									.'</div>
-									<div class="dpdianpu-xx">
-										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
-										<p class="dpdpgg">'.($account->signature?$account->signature:'暂无介绍').'</p>
-									</div>
-									<div class="dpdianpu-dy">
-										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
-										';
-									 $my_follows =	user_relationships_load( array("between" => array($account->uid, $user->uid)),array("include_user_info" => TRUE));//获取当前用户与该卖家的关系
-									 $follow_status=0;
-										if(count($my_follows)){
-											$follow_status=1; //已关注	
-										}
-									 $options = sina_vp_follow_toggle_options($option='focus');
-					         if($account->uid<>$user->uid && !in_array('Seller',$user->roles)){		//卖家查看卖家/自己，不可进行粉丝操作。 			
-										$output.='	<span class="focus-action focus-status focus-action-do">';
-										foreach (array_keys($options) as $key) {
-									    $output.= fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $account->uid .'/'. $options[$key]['0'] , TRUE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status,$account->uid);
-									 	} 
-										$output.='</span>';
-									}					
-				$output.='
-									</div>						
-								</div>';
-				$count--;
-			}
-			$output.='<div class="clear"></div></div>';
-			$output.='<div class="clear"></div>					
-					<div class="vcenter-dpvp-more">'.l('更多>>','VCenter/Sub_most').'</div>
-				</div>';
-			//最新加入
-				$sql='select u.uid uid from users u  INNER JOIN users_roles users_roles ON u.uid = users_roles.uid
-	 			WHERE (users_roles.rid = 3) AND (u.status <> 0) order by created desc limit 0,6';
-			
-			$results = db_query($sql);
-			$count =6;
-			$output.='<div class="dpbody-right-content VCenter-New">
-					    <div class="dpright-content-top">
-						    <div class="dpright-content-title">最新加入</div>
-						    	<div class="dpright-content-right">';
-			if($check_button_flag){
-				$output .= '<input type="button" class="dpdybtn"/>';
-			}
-			$output .= '<div class="clear"></div>
-								</div>
-							<div class="clear"></div>
-						  </div>
-						  <div class="dpright-content-inner">';
-			while($row = db_fetch_array($results)){
-				$account = user_load($row['uid']);
-				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
-				$output.='<div class="dpdianpu-content odd">
-									<div class="dpdianpu-pic">'.
-									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
-									.'</div>
-									<div class="dpdianpu-xx">
-										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
-										<p class="dpdpgg">'.($account->signature?$account->signature:'暂无介绍').'</p>
-									</div>
-									<div class="dpdianpu-dy">
-										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
-										';
-									 $my_follows =	user_relationships_load( array("between" => array($account->uid, $user->uid)),array("include_user_info" => TRUE));//获取当前用户与该卖家的关系
-									 $follow_status=0;
-										if(count($my_follows)){
-											$follow_status=1; //已关注	
-										}
-									 $options = sina_vp_follow_toggle_options($option='focus');
-					         if($account->uid<>$user->uid && !in_array('Seller',$user->roles)){		//卖家查看卖家/自己，不可进行粉丝操作。 			
-										$output.='	<span class="focus-action focus-status focus-action-do">';
-										foreach (array_keys($options) as $key) {
-									    $output.= fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $account->uid .'/'. $options[$key]['0'] , TRUE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status,$account->uid);
-									 	} 
-										$output.='</span>';
-									}					
-				$output.='
-									</div>						
-								</div>';
-				$count--;
-			}
-			$output.='<div class="clear"></div></div>';
-			$output.='<div class="clear"></div>
-					<div class="vcenter-dpvp-more">'.l('更多>>','VCenter/New').'</div>
-				</div>';
-			//最近更新
-			$sql='select n.uid uid from node n  INNER JOIN users_roles users_roles ON n.uid = users_roles.uid
- WHERE (users_roles.rid = 3)  group by n.uid order by count(1) desc limit 0,6';
-			$results = db_query($sql);
-			$count =6;
-			$output.='<div class="dpbody-right-content VCenter-Active">
-					    <div class="dpright-content-top">
-						    <div class="dpright-content-title">最近更新</div>
-								<div class="dpright-content-right">';
-			if($check_button_flag){
-			$output .= '<input type="button" class="dpdybtn"/>';
-										}
-			$output .= '
-									<div class="clear"></div>
-								</div>
-							<div class="clear"></div>
-						  </div>
-						  <div class="dpright-content-inner">';
-			while($row = db_fetch_array($results)){
-				$account = user_load($row['uid']);		
-				if($account->picture==''){$account->picture='sites/default/files/users/0.gif';}
-				$output.='<div class="dpdianpu-content '.($count%2?'odd':'even').'">
-									<div class="dpdianpu-pic">'.
-									l(theme('imagecache', '65x65', $account->picture, $account->name, $account->name, array('class'=>'vp-user-picture')),"UCenter/0/$account->uid",array('html'=>TRUE,'attributes'=>array('class'=>'Buyer-user-link')))
-									.'</div>
-									<div class="dpdianpu-xx">
-										<p class="dpdpname">'.l($account->name,"UCenter/0/$account->uid").'</p>
-										<p class="dpdpgg">'.($account->signature?$account->signature:'暂无介绍').'</p>
-									</div>
-									<div class="dpdianpu-dy">
-										<p>'.user_relationships_load(array("requestee_id" => $account->uid),array("count" => TRUE)).'</p>
-										';
-									 $my_follows =	user_relationships_load( array("between" => array($account->uid, $user->uid)),array("include_user_info" => TRUE));//获取当前用户与该卖家的关系
-									 $follow_status=0;
-										if(count($my_follows)){
-											$follow_status=1; //已关注	
-										}
-									 $options = sina_vp_follow_toggle_options($option='focus');
-					         if($account->uid<>$user->uid && !in_array('Seller',$user->roles)){		//卖家查看卖家/自己，不可进行粉丝操作。 			
-										$output.='	<span class="focus-action focus-status focus-action-do">';
-										foreach (array_keys($options) as $key) {
-									    $output.= fasttoggle2($options[$key][$follow_status], 'follow_toggle/'. $account->uid .'/'. $options[$key]['0'] , TRUE, $key .'_'. $user->uid, 'fasttoggle-status-user-'. $key .'-'. $follow_status,$account->uid);
-									 	} 
-										$output.='</span>';
-									}					
-				$output.='
-									</div>						
-								</div>';
-				$count--;
-			}
-			$output.='<div class="clear"></div></div>';
-			$output.='  <div class="clear"></div>
-					<div class="vcenter-dpvp-more">'.l('更多>>','VCenter/Active').'</div>
-				</div>';
-			break;
-	}
-	return $output;
-	 
+			$output.='  <div class="clear"></div>';
+			if($temp_count<10)
+			$output.='		<div class="vcenter-dpvp-more">'.l('更多>>','VCenter/Active').'</div>';
+			$output.='	</div>';
+				return $output;
 }
 /**
  * Menu callback; Generate a listing of promoted nodes.

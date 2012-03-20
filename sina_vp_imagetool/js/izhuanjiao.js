@@ -1,4 +1,4 @@
-﻿$().ready(function(){
+﻿$(document).ready(function(){
 	var box_width=parseInt('150px');
 	var box_height=parseInt('150px');
 	var flag=false;
@@ -238,21 +238,8 @@
 			$('.gcvp-subnav p').css('cursor','pointer');
 		})
 		$('.gcvp-nav').click(function(){
-			
-			if($(this).hasClass('showed')){
-				
-			}else{
-				$(this).find('a').click();
-				$('.showed').css('background-color','#F0F0F0');
-				$('.showed').next().hide('200');
-				$('.showed').css('color','#A1A1A1');
-				$('.showed').removeClass('showed');
-				$(this).addClass('showed');
-				$(this).css('background-color','#A1A1A1').css('color','#FFFFFF');
-				$(this).next().find('p:first').css('color','rgb(0, 203, 255)');
-				$(this).next().show('200');
-			}
-			
+			var address=$(this).find('a').attr('href');
+			window.location=address;
 		})
 		//link-Color:#00CBFF rgb(0,203,255)
 		//selected-color:#999999 rgb(153,153,153);
@@ -265,15 +252,28 @@
 		})
 		
 		//ajax_comment_divDialog_demo
-		$('.gcfudiv').hide();
+		//这里增加延时处理
+		/**
+		*2012年3月19日 p.m.
+		*/
 		$('.close_box').attr('href','javascript:void(0)');
 		$('.vp-favor-action').click(function(){
 			$(this).parents().find('.dialogIn').fadeOut('fast');
 			$(this).parents().find('.dialogIn').parent().find('.gc-pl-sanjiao').fadeOut('fast');
-			$(this).parent().parent().parent().next().fadeIn('fast');
-			$(this).parent().parent().parent().next().addClass('dialogIn');
-			$(this).parent().parent().parent().next().find('.gcfudivtext').val("求点评^_^");
-
+			var dialog_div=$(this).parent().parent().parent().next();
+			dialog_div.fadeIn('fast');
+			dialog_div.addClass('dialogIn');
+			dialog_div.find('.gcfudivtext').val("求点评^_^");
+			//2012年3月19日 13:40:05 
+			
+			setTimeout(function(){
+				var flag=dialog_div.hasClass('dialogIn');
+				var word_flag=dialog_div.find('.gcfudivtext').val();
+				if(flag && (word_flag=='求点评^_^' || word_flag=="评论已送出!!")){
+					dialog_div.fadeOut('fast');
+					dialog_div.removeClass('dialogIn');
+				}
+			},10000);
 			//alert('this is works');
 		})
 		$('.gcfudivbtn').click(function(){
@@ -286,8 +286,6 @@
 				var userPic=$('.user-img img').attr('src');		
 				var words="<span class='gcvp-name'>"+userName+"：</span>"+word;
 				var hideThat=$(this).parent().next().find('p');//.fadeOut('slow',function(){$(this).html(words)});
-				//已经放到ajax$(this).parent().next().find('.hideMe').fadeOut('slow',function(){$(this).attr('src',userPic)});
-				//$(this).parent().next().find('p').html(words);$(this).parent().next().find('.hideMe').attr('src',userPic);
 				var hideThis=$(this).parent().next().find('.hideMe');
 				var pTar=$(this).parent().next().find('p');
 				var imgTar=$(this).parent().next().find('.hideMe');
@@ -329,6 +327,10 @@
 			$(this).parent().parent().parent().find('.gc-pl-sanjiao').fadeOut();
 			$(this).parent().parent().removeClass('dialogIn');
 		})
+
+
+
+
 		//这里用于换一批效果
 		//0316换一批代码优化
 		//去掉轮播效果，下一批到底不动
@@ -346,7 +348,7 @@
 		$('#vp_recommend_active .vp-rec-wrap:last').addClass('last');
 		$('.dpvp-more a').click(function(){
 			if($(this).parent().parent().hasClass('last')){
-				
+				$(this).css('color','#CCCCCC');
 			}else{
 				$(this).parent().parent().fadeOut('fast',function(){$(this).css('left','337.5px');$(this).hide();});
 				$(this).parent().parent().next().fadeIn('fast');
@@ -383,24 +385,7 @@
 			$(this).find('.flag-wrapper a').click();
 		})
 //浮动字体效果
-/**
-*
-		$('.gctm-content').css('display','none');
-		$('.gctm-content ~ div').css('display','none');
-		$('.gcvp-body-bottom-pk-right-img').hover(
-			function(){
-				$(this).find('.gctm-content').show();
-				$(this).find('.gctm-content~div').show();
-				$(this).addClass('show');
-			},
-			function(){
-				$(this).find('.gctm-content').fadeOut();
-				$(this).find('.gctm-content~div').fadeOut();
-				$(this).removeClass('show');
-			}
-		
-		)
-*/
+
 	$('.gcvp-body-bottom-pk-right-img img ~ div').hide();
 	$('.gcvp-body-bottom-pk-right-img').hover(
 		function(){
@@ -410,4 +395,5 @@
 			$(this).find('div').fadeOut();
 		}
 	)
+
 })
