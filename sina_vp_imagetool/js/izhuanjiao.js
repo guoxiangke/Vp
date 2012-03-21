@@ -258,7 +258,7 @@
 		 2012年3月20日 p.m.-》增加鼠标判断事件。
 		*/
 		$('.close_box').attr('href','javascript:void(0)');
-
+		$('.close_box').attr('style','position:absolute;top:0;right:7px;');
 		$('.gcfudiv').hover(
 			function(){
 				$(this).attr('mouseIn','in');
@@ -291,8 +291,10 @@
 				$(this).parent().find('.hidden').find('textarea').val(word);
 				var url=$(this).parent().find('.hidden').find('form').attr('action');
 				var form=$(this).parent().find('.hidden').find('form');
+				var btn=$(this);
 				//var disCount=$(this).
 				//
+				btn.css('background-color','#999999');
 				thisHost = location.hostname;
 				url=thisHost+url;
 				var discuz=$(this).parent().parent().parent().prev().find('.gcplfx a:first');
@@ -301,6 +303,7 @@
 				
 				var button=$(this);
 				button.attr('disabled','disabled');
+				$(this).after('<img class="img_waiting" src="/sites/all/themes/vpj/images/status-active.gif" />');
 				$.ajax({
 					url:url,
 					type:"POST",
@@ -313,6 +316,8 @@
 						discuz.text('评论'+disCount);
 						textSel.val("评论已送出!!");
 						button.removeAttr('disabled');
+						$(".img_waiting").remove();
+						btn.css('background-color','#00CBFF');
 					}
 
 				})
@@ -321,12 +326,6 @@
 		$('.gcfudivtext').click(function(){
 			$(this).val('');
 		})
-		$('.close_box').click(function(){
-			$(this).parent().parent().fadeOut();
-			$(this).parent().parent().parent().find('.gc-pl-sanjiao').fadeOut();
-			$(this).parent().parent().removeClass('dialogIn');
-		})
-
 
 
 

@@ -80,11 +80,9 @@ function _sina_open_t_login($tok = NULL) {
           $account = user_load($ac);
         }        
 				//dpm($account);
-				watchdog('$account', '<pre>'.print_r($account->status,true));
-				watchdog('$account', '<pre>'.print_r($json,true));
 				//如果卖家用户注册后处于block状态，则跳转到提示under block页面
 	        if (isset($account->uid)){	        	
-						watchdog('$accoun2t', $account->status);
+						watchdog($account->name, $account->status);
 	        }
         if (isset($account->uid)) {
           // 该微博帐号已经存在

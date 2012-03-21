@@ -395,7 +395,7 @@ function sina_vp_theme_form_alter(&$form, &$form_state, $form_id) {
 		//donothing...
 		
 	}else{
-		 if(function_exists(dpm)) dpm($form,$form_id);
+		 //if(function_exists(dpm)) dpm($form,$form_id);
 		//
 		if($form_id=='weibo_ajax_forward'){
 			//watchdog('$type', '<pre>'.print_r($form,TRUE));
@@ -409,14 +409,14 @@ function sina_vp_theme_u_register_validate($form, &$form_state)
     // 将字符串分解为单元
     preg_match_all('/./us', $form_state['values']['name'], $match);
     // 返回单元个数
-    dpm(strlen($form_state['values']['name']),'实际值');
-		dpm(count($match[0]),'转换值');
+    //dpm(strlen($form_state['values']['name']),'实际值');
+		//dpm(count($match[0]),'转换值');
 		$havesize=(count($match[0])*3-strlen($form_state['values']['name']))/2;//算出有几个字符
 		$havehz=ceil(($havesize)/2);//这几个字符等于几个汉字
 		$hanzi=(strlen($form_state['values']['name']))/(count($match[0]));//判断是否全是汉字
-		dpm($havesize,'算出有几个字符');
-		dpm($hanzi,'全是没字');
-		dpm($havehz,'这几个字符等于几个汉字');
+		//dpm($havesize,'算出有几个字符');
+		//dpm($hanzi,'全是汉字');
+		//dpm($havehz,'这几个字符等于几个汉字');
 		if((strlen($form_state['values']['name']))==(count($match[0]))){ //全是字符
 		   if(count($match[0])<=14){
 			$flag = true;

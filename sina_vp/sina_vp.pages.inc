@@ -273,7 +273,6 @@ function weibo_page_default(&$form_state, $type = NULL) {
 	}
  	$form['pager'] = array('#value' => theme('pager', NULL, 1, 0));
 	$form['#theme'] = 'weibo_page_default';
-			theme();
   return $form;
 }
 /**

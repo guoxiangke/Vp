@@ -18,3 +18,10 @@ $size = explode('x', variable_get('imagefield_thumb_size', '220x220'));
 
     drupal_set_message('新浪服务器未响应，无法验证', 'error');
     //drupal_goto('user/login');
+    
+
+120321 
+bug：
+1.同步删除失败，原因：wid mid 问题。
+[error] => 40036:Error: not your own weibo! 晕啊，mid与id 微博
+写库的时候不是 json数据。

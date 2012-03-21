@@ -86,20 +86,16 @@ function sina_vp_nodeapi(&$node, $op){
           break;
         case 'delete':    
 					$wid= sina_vp_get_mid($node->nid);//刚开始使用wid好使，现在得用mid了，晕死了
-					
-					watchdog('$wid', $wid);
-					$wid2 = db_result(db_query("SELECT `wid` wid FROM {sina_vp_weibo2node} WHERE `nid`=%d and `cid`=0",$nid));
-						watchdog('$wid2', $wid2);
-					if($wid2){
+					if($wid){
 						$request_url="http://api.t.sina.com.cn/statuses/destroy/$wid.json"; 
 						$result = sina_open_t_set_request($request_url);
-						watchdog('$wid', json_decode($result->data));
+						watchdog( '$wid211','<pre>'.print_r(json_decode($result->data),true));
 						if ($result->code == 200) {
 							drupal_set_message($message = '同步删除成功！', $type = 'status', $repeat = TRUE);
 							//if(function_exists(dpm)) dpm();				$data=json_decode($result->data);.$data->error
 						} else {					
 							drupal_set_message('同步删除失败！', $type = 'warning', $repeat = TRUE);
-							watchdog('$type', '同步删除失败');
+							watchdog('$type111', '同步删除失败');
 							return false;
 						}	      
 					}
@@ -1426,7 +1422,8 @@ function sina_open_t_set_tweet2($text, $url = NULL,$node=NUll) { //dale $node=NU
 				  //return false;
 				}
 				if(function_exists(dpm)) dpm(json_encode($result),'图片微博返回数据');
-				_sina_vp_db_write(json_encode($result),$node,$tid,$nid);	
+				dpm($result,'图片微博返回数据');
+				_sina_vp_db_write($result,$node,$tid,$nid);	//json_encode($result)
 			}else{
 				_sina_vp_db_write('',$node,$tid,$nid);
 			}					
@@ -1498,15 +1495,32 @@ function get_nid_by_wid($wid){
 
 /**
  * get wid by nid
+ * "id":3.4259402789197e+15,
  */
 function sina_vp_get_wid($nid){
 	$result=db_query("SELECT `wid` wid FROM {sina_vp_weibo2node} WHERE `nid`=%d and `cid`=0",$nid);
-	return db_result($result);
+	$wid = db_result($result);
+	watchdog('$wid0',$wid );
+	if ( is_float($wid) ){
+		watchdog('$wid3',$wid );
+	}$wid = number_format($wid, 0, '', '');
+	watchdog('$wid1',$wid );
+	return $wid;
 }
+/**
+ * get wid by nid
+ * mid":"3425940278919673"
+ */
 function sina_vp_get_mid($nid){
 	$result=db_fetch_object(db_query("SELECT `data` data FROM {sina_vp_weibo2node} WHERE `nid`=%d and `cid`=0",$nid));	
 		
-	return $mid = json_decode($result->data)->mid;
+	$mid = json_decode($result->data)->mid;
+	watchdog('mid0',$mid );
+	if ( is_float($mid) ){
+		$mid = number_format($mid, 0, '', '');
+	}
+	watchdog('mid1',$mid );
+	return $mid;
 }
 /**
  *  node_link_alter
@@ -2047,7 +2061,7 @@ function sina_vp_recommend($results,$account,$type='focus'){
 																	<!--span class="vp-recommend"><a href="javascript:void(0)"><<上一批</a></span-->
 																	<a href="javascript:void(0)">换一批>></a>
 																</div>
-																<div class="tjvp-xyb">'.l('下一步','vp_recommend_user').'</div>	
+																<div class="tjvp-xyb">'.l('下一步',(arg(0)=='vp_recommend_user'?'UCenter':'vp_recommend_user')).'</div>	
 															</div>';
 									$count =1;//1--18
 									$count2 = 3;//换3批
